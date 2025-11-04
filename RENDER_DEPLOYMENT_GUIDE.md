@@ -57,14 +57,14 @@ git checkout main
 
 **Create GitHub repository:**
 1. Go to https://github.com/new
-2. Create repository named `velocity-app` (or your preferred name)
+2. Create repository named `delorme-os` (or your preferred name)
 3. Do NOT initialize with README (we already have code)
 4. Click "Create repository"
 
 **Push to GitHub:**
 ```bash
 # Add GitHub remote (replace with your URL)
-git remote add origin https://github.com/YOUR_USERNAME/velocity-app.git
+git remote add origin https://github.com/YOUR_USERNAME/delorme-os.git
 
 # Push all branches
 git push -u origin main
@@ -76,7 +76,7 @@ git push -u origin production
 
 Create two separate repositories:
 - `velocity-staging` - for staging environment
-- `velocity-production` - for production environment
+- `delorme-os-production` - for production environment
 
 ```bash
 # For staging repo
@@ -90,7 +90,7 @@ git push -u origin main
 git init
 git add .
 git commit -m "Initial commit"
-git remote add origin https://github.com/YOUR_USERNAME/velocity-production.git
+git remote add origin https://github.com/YOUR_USERNAME/delorme-os-production.git
 git push -u origin main
 ```
 
@@ -116,9 +116,9 @@ git push -u origin main
 
 1. **From Render Dashboard:**
    - Click "New +" → "PostgreSQL"
-   - **Name:** `velocity-staging-db`
-   - **Database:** `craftyourstartup`
-   - **User:** `craftyourstartup`
+   - **Name:** `delorme-os-staging-db`
+   - **Database:** `delorme_os`
+   - **User:** `delorme_os`
    - **Region:** Choose closest to your users (e.g., Oregon)
    - **Plan:** Free (for testing) or Starter ($7/month)
    - Click "Create Database"
@@ -133,7 +133,7 @@ git push -u origin main
    - Click "New +" → "Web Service"
    - Connect your GitHub repository
    - **Branch:** `staging` (if using Option A) or `main` (if using Option B)
-   - **Name:** `velocity-staging-backend`
+   - **Name:** `delorme-os-staging-backend`
    - **Region:** Same as database
    - **Root Directory:** Leave empty (or use `velocity-boilerplate` if nested)
    - **Environment:** `Python 3`
@@ -180,7 +180,7 @@ poetry run alembic upgrade head
    - Click "New +" → "Static Site"
    - Connect your GitHub repository
    - **Branch:** `staging`
-   - **Name:** `velocity-staging-frontend`
+   - **Name:** `delorme-os-staging-frontend`
    - **Root Directory:** `frontend` (or `velocity-boilerplate/frontend` if nested)
    - **Build Command:**
      ```bash
@@ -189,7 +189,7 @@ poetry run alembic upgrade head
    - **Publish Directory:** `dist`
 
 2. **Set Environment Variables:**
-   - `VITE_API_URL`: Your backend URL (e.g., `https://velocity-staging-backend.onrender.com`)
+   - `VITE_API_URL`: Your backend URL (e.g., `https://delorme-os-staging-backend.onrender.com`)
 
 3. **Configure Redirects for SPA:**
    - Go to "Redirects/Rewrites" tab
@@ -200,8 +200,8 @@ poetry run alembic upgrade head
 ### Step 5: Update Backend Environment Variables
 
 Now that you have your frontend URL, update backend environment variables:
-- `domain`: `https://velocity-staging-frontend.onrender.com`
-- `redirect_after_login`: `https://velocity-staging-frontend.onrender.com/dashboard`
+- `domain`: `https://delorme-os-staging-frontend.onrender.com`
+- `redirect_after_login`: `https://delorme-os-staging-frontend.onrender.com/dashboard`
 
 ### Step 6: Test Your Staging Environment
 
@@ -216,7 +216,7 @@ Now that you have your frontend URL, update backend environment variables:
 
 Repeat the same steps as staging, but:
 - Use `production` branch instead of `staging`
-- Name services: `velocity-production-*` instead of `velocity-staging-*`
+- Name services: `delorme-os-production-*` instead of `velocity-staging-*`
 - Use **PRODUCTION** Stripe keys (live mode)
 - Use **PRODUCTION** database plan (at least Starter, not Free)
 - Update Google OAuth redirect URI in Google Cloud Console
@@ -239,7 +239,7 @@ db_username=<from Render DB>
 db_password=<from Render DB>
 db_host=<from Render DB>
 db_port=<from Render DB>
-db_database=craftyourstartup
+db_database=delorme_os
 db_sslmode=require
 
 # Security (IMPORTANT: Generate secure random strings)

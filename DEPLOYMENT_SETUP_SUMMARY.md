@@ -10,36 +10,36 @@ Your project is now ready for staging and production deployment on Render.com! H
    - Defines all services (database, backend, frontend)
    - Auto-configures environment variables
    - Links database to backend automatically
-   - Location: `velocity-boilerplate/render.yaml`
+   - Location: `Delorme OS-boilerplate/render.yaml`
 
 2. **`staging.env.example`** - Environment Variables Template
    - Lists all required environment variables for staging
    - Shows example values
    - Use this as reference when setting up in Render Dashboard
-   - Location: `velocity-boilerplate/staging.env.example`
+   - Location: `Delorme OS-boilerplate/staging.env.example`
 
 3. **`render-build.sh`** - Automated Build Script
    - Installs dependencies with Poetry
    - Runs database migrations automatically
    - Executes during Render deployment
-   - Location: `velocity-boilerplate/render-build.sh`
+   - Location: `Delorme OS-boilerplate/render-build.sh`
 
 4. **`frontend/.env.example`** - Frontend Environment Template
    - Documents VITE_API_URL configuration
    - Shows examples for local, staging, and production
-   - Location: `velocity-boilerplate/frontend/.env.example`
+   - Location: `Delorme OS-boilerplate/frontend/.env.example`
 
 5. **`RENDER_DEPLOYMENT_GUIDE.md`** - Complete Documentation
    - Comprehensive step-by-step guide
    - Covers staging AND production setup
    - Includes troubleshooting section
-   - Location: `velocity-boilerplate/RENDER_DEPLOYMENT_GUIDE.md`
+   - Location: `Delorme OS-boilerplate/RENDER_DEPLOYMENT_GUIDE.md`
 
 6. **`QUICK_START_RENDER.md`** - Quick Reference
    - Get up and running in 30 minutes
    - Simplified step-by-step instructions
    - Perfect for first-time deployment
-   - Location: `velocity-boilerplate/QUICK_START_RENDER.md`
+   - Location: `Delorme OS-boilerplate/QUICK_START_RENDER.md`
 
 ### Files Updated
 
@@ -52,12 +52,12 @@ Your project is now ready for staging and production deployment on Render.com! H
 GitHub (staging branch)
     ↓ (auto-deploy)
 Render.com
-    ├── PostgreSQL Database (velocity-staging-db)
-    ├── Backend API (velocity-staging-backend)
+    ├── PostgreSQL Database (delorme-os-staging-db)
+    ├── Backend API (delorme-os-staging-backend)
     │   ├── FastAPI + Python
     │   ├── Auto-runs migrations via render-build.sh
     │   └── Connects to database
-    └── Frontend (velocity-staging-frontend)
+    └── Frontend (delorme-os-staging-frontend)
         ├── React + Vite
         ├── Static site
         └── Calls backend API
@@ -68,9 +68,9 @@ Render.com
 GitHub (production branch)
     ↓ (auto-deploy)
 Render.com
-    ├── PostgreSQL Database (velocity-production-db)
-    ├── Backend API (velocity-production-backend)
-    └── Frontend (velocity-production-frontend)
+    ├── PostgreSQL Database (delorme-os-production-db)
+    ├── Backend API (delorme-os-production-backend)
+    └── Frontend (delorme-os-production-frontend)
 ```
 
 ## Deployment Strategy
@@ -129,7 +129,7 @@ git push origin production
 
 ```bash
 # Navigate to project
-cd velocity-boilerplate
+cd Delorme OS-boilerplate
 
 # Make render-build.sh executable (on Mac/Linux)
 chmod +x render-build.sh

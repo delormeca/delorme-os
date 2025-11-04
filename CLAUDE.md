@@ -1,4 +1,4 @@
-# CraftYourStartup Boilerplate - Claude Code Context
+# Delorme OS - Claude Code Context
 
 This file provides Claude with essential project context for optimal code generation and assistance.
 

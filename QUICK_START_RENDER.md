@@ -28,7 +28,7 @@ git commit -m "Initial commit for staging deployment"
 
 # Create GitHub repository (do this in GitHub UI or use gh CLI)
 # Then add remote (replace with your URL)
-git remote add origin https://github.com/YOUR_USERNAME/velocity-app.git
+git remote add origin https://github.com/YOUR_USERNAME/delorme-os.git
 
 # Push
 git push -u origin staging
@@ -39,9 +39,9 @@ git push -u origin staging
 1. Log in to Render.com
 2. Click **"New +"** → **"PostgreSQL"**
 3. Configure:
-   - **Name:** `velocity-staging-db`
-   - **Database:** `craftyourstartup`
-   - **User:** `craftyourstartup`
+   - **Name:** `delorme-os-staging-db`
+   - **Database:** `delorme_os`
+   - **User:** `delorme_os`
    - **Region:** Oregon (or closest to you)
    - **Plan:** Free or Starter ($7/month)
 4. Click **"Create Database"**
@@ -54,7 +54,7 @@ git push -u origin staging
 2. **Connect GitHub repository** (authorize if needed)
 3. **Select repository** and **branch: staging**
 4. Configure:
-   - **Name:** `velocity-staging-backend`
+   - **Name:** `delorme-os-staging-backend`
    - **Region:** Same as database (Oregon)
    - **Branch:** `staging`
    - **Root Directory:** Leave empty
@@ -79,7 +79,7 @@ git push -u origin staging
    db_password = [Link from database]
    db_host = [Link from database]
    db_port = [Link from database]
-   db_database = craftyourstartup
+   db_database = delorme_os
    db_sslmode = require
 
    # Security
@@ -91,12 +91,12 @@ git push -u origin staging
    env = staging
 
    # Application URLs (update after frontend is deployed)
-   domain = https://velocity-staging-frontend.onrender.com
-   redirect_after_login = https://velocity-staging-frontend.onrender.com/dashboard
+   domain = https://delorme-os-staging-frontend.onrender.com
+   redirect_after_login = https://delorme-os-staging-frontend.onrender.com/dashboard
 
    # Email (basic config)
    from_email = noreply@yourdomain.com
-   from_name = Velocity Staging
+   from_name = Delorme OS Staging
    support_email = support@yourdomain.com
    ```
 
@@ -107,7 +107,7 @@ git push -u origin staging
 
 7. Click **"Create Web Service"**
 8. Wait for deployment (5-8 minutes first time)
-9. **Copy your backend URL** (e.g., `https://velocity-staging-backend.onrender.com`)
+9. **Copy your backend URL** (e.g., `https://delorme-os-staging-backend.onrender.com`)
 
 ## Step 4: Deploy Frontend (5 minutes)
 
@@ -115,7 +115,7 @@ git push -u origin staging
 2. **Connect GitHub repository**
 3. **Select repository** and **branch: staging**
 4. Configure:
-   - **Name:** `velocity-staging-frontend`
+   - **Name:** `delorme-os-staging-frontend`
    - **Branch:** `staging`
    - **Root Directory:** `frontend`
    - **Build Command:**
@@ -126,7 +126,7 @@ git push -u origin staging
 
 5. **Add Environment Variable:**
    ```bash
-   VITE_API_URL = https://velocity-staging-backend.onrender.com
+   VITE_API_URL = https://delorme-os-staging-backend.onrender.com
    ```
    *(Use the backend URL from Step 3)*
 
@@ -147,14 +147,14 @@ Now that frontend is deployed, update backend environment variables:
 1. Go to backend service in Render Dashboard
 2. Go to "Environment" tab
 3. Update these variables with your actual frontend URL:
-   - `domain`: `https://velocity-staging-frontend.onrender.com`
-   - `redirect_after_login`: `https://velocity-staging-frontend.onrender.com/dashboard`
+   - `domain`: `https://delorme-os-staging-frontend.onrender.com`
+   - `redirect_after_login`: `https://delorme-os-staging-frontend.onrender.com/dashboard`
 4. Click "Save Changes"
 5. Backend will automatically redeploy
 
 ## Step 6: Test Your App (5 minutes)
 
-1. Visit your frontend URL: `https://velocity-staging-frontend.onrender.com`
+1. Visit your frontend URL: `https://delorme-os-staging-frontend.onrender.com`
 2. Try to sign up with email/password
 3. Check if you can log in
 4. Test basic functionality
@@ -169,7 +169,7 @@ Now that frontend is deployed, update backend environment variables:
 ### Google OAuth
 1. Go to Google Cloud Console
 2. Create OAuth credentials
-3. Add authorized redirect URI: `https://velocity-staging-backend.onrender.com/api/auth/google_callback`
+3. Add authorized redirect URI: `https://delorme-os-staging-backend.onrender.com/api/auth/google_callback`
 4. Add to backend environment variables:
    - `google_oauth2_client_id`
    - `google_oauth2_secret`
@@ -182,7 +182,7 @@ Now that frontend is deployed, update backend environment variables:
    - `STRIPE_PUBLISHABLE_KEY` (pk_test_...)
    - `STRIPE_WEBHOOK_SECRET` (whsec_...)
 3. Set up webhook endpoint in Stripe:
-   - URL: `https://velocity-staging-backend.onrender.com/api/payments/webhook`
+   - URL: `https://delorme-os-staging-backend.onrender.com/api/payments/webhook`
    - Events: Select all payment events
 
 ### Create Admin User

@@ -11,11 +11,11 @@ services:
       - ./postgres/.env.postgres
     hostname: postgres
     healthcheck:
-      test: [ "CMD", "pg_isready", "-d", "craftyourstartup", "-U", "craftyourstartup" ]
+      test: [ "CMD", "pg_isready", "-d", "delorme_os", "-U", "delorme_os" ]
       interval: 10s
       timeout: 5s
       retries: 5
 
 networks:
   default:
-    name: craftyourstartup-app-local-dev-network
+    name: delorme-os-app-local-dev-network

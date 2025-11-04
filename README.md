@@ -1,6 +1,6 @@
-# Craft Your Startup Boilerplate - AI Velocity Edition
+# Delorme OS - AI-Powered SaaS Platform
 
-The ultimate production-ready full-stack SaaS boilerplate **optimized for AI-first development**. Complete with Stripe payments, admin panel, analytics, integrations, RBAC, **plus comprehensive Cursor rules and Claude Code optimization**.
+The ultimate production-ready full-stack SaaS platform **optimized for AI-first development**. Complete with Stripe payments, admin panel, analytics, integrations, RBAC, **plus comprehensive Cursor rules and Claude Code optimization**.
 
 ## 📚 **Complete Documentation**
 
@@ -173,7 +173,7 @@ This boilerplate is optimized for AI coding assistants:
 curl -fsSL https://claude.ai/install.sh | sh
 
 # Start Claude in your project
-cd craftyourstartup-boilerplate
+cd delorme-os
 claude
 
 # Use custom commands

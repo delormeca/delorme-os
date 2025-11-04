@@ -4,18 +4,18 @@
 services:
   # PostgreSQL Database
   - type: pserv
-    name: velocity-staging-db
+    name: delorme-os-staging-db
     env: docker
     plan: starter # or free for testing
     region: oregon # choose your preferred region
     databases:
-      - name: velocitydb
-        databaseName: craftyourstartup
-        user: craftyourstartup
+      - name: delorme_os_db
+        databaseName: delorme_os
+        user: delorme_os
 
   # Backend API Service
   - type: web
-    name: velocity-staging-backend
+    name: delorme-os-staging-backend
     env: python
     region: oregon
     plan: starter # or free for testing
@@ -33,23 +33,23 @@ services:
       # Database (automatically linked from postgres service)
       - key: db_username
         fromDatabase:
-          name: velocity-staging-db
+          name: delorme-os-staging-db
           property: user
       - key: db_password
         fromDatabase:
-          name: velocity-staging-db
+          name: delorme-os-staging-db
           property: password
       - key: db_host
         fromDatabase:
-          name: velocity-staging-db
+          name: delorme-os-staging-db
           property: host
       - key: db_port
         fromDatabase:
-          name: velocity-staging-db
+          name: delorme-os-staging-db
           property: port
       - key: db_database
         fromDatabase:
-          name: velocity-staging-db
+          name: delorme-os-staging-db
           property: database
       - key: db_sslmode
         value: require
@@ -64,9 +64,9 @@ services:
 
       # Application URLs - UPDATE AFTER DEPLOYMENT
       - key: domain
-        value: https://velocity-staging-frontend.onrender.com
+        value: https://delorme-os-staging-frontend.onrender.com
       - key: redirect_after_login
-        value: https://velocity-staging-frontend.onrender.com/dashboard
+        value: https://delorme-os-staging-frontend.onrender.com/dashboard
 
       # Google OAuth - ADD IN RENDER DASHBOARD
       - key: google_oauth2_client_id
@@ -74,7 +74,7 @@ services:
       - key: google_oauth2_secret
         sync: false # Set this manually in Render dashboard
       - key: google_oauth2_redirect_uri
-        value: https://velocity-staging-backend.onrender.com/api/auth/google_callback
+        value: https://delorme-os-staging-backend.onrender.com/api/auth/google_callback
 
       # Stripe - ADD IN RENDER DASHBOARD (use test keys for staging)
       - key: STRIPE_SECRET_KEY
@@ -96,11 +96,11 @@ services:
       - key: mailchimp_api_key
         sync: false
       - key: from_email
-        value: noreply@yourdomain.com
+        value: noreply@delorme.com
       - key: from_name
-        value: Velocity Staging
+        value: Delorme OS Staging
       - key: support_email
-        value: support@yourdomain.com
+        value: support@delorme.com
 
       # AI APIs - ADD IN RENDER DASHBOARD
       - key: openai_api_key
@@ -114,7 +114,7 @@ services:
 
   # Frontend Service
   - type: web
-    name: velocity-staging-frontend
+    name: delorme-os-staging-frontend
     env: static
     region: oregon
     buildCommand: |
@@ -128,4 +128,4 @@ services:
         destination: /index.html
     envVars:
       - key: VITE_API_URL
-        value: https://velocity-staging-backend.onrender.com
+        value: https://delorme-os-staging-backend.onrender.com
