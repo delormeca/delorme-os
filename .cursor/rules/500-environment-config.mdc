@@ -1,0 +1,484 @@
+---
+description: "Environment configuration, auto-loading system, and development workflows"
+globs: **/*.env*,**/config/**,**/dev.py,**/Taskfile*,**/.env*,local.env,prod.env
+alwaysApply: false
+---
+# Environment Configuration & Development Workflow
+
+## Automatic Environment Loading System (Implemented)
+
+### Zero Manual Sourcing Required
+The boilerplate uses **automatic environment loading**:
+
+```bash
+# ✅ CORRECT - Automatic environment loading
+task run-backend        # Automatically loads local.env
+task db:migrate-up
+poetry run python dev.py server    # Simple alternative command
+
+
+```
+
+### Environment File Hierarchy
+```bash
+# Environment detection priority:
+1. ENV_FILE environment variable (e.g., ENV_FILE=prod.env)
+2. local.env (default for development)
+3. .env (fallback)
+4. Environment variables (highest priority)
+```
+
+## Configuration Architecture (Post-Cleanup)
+
+### Base Configuration (`app/config/base.py`)
+```python
+# app/config/base.py
+from pydantic_settings import BaseSettings
+from functools import lru_cache
+import os
+
+class Settings(BaseSettings):
+    """Main application settings with automatic environment loading"""
+    
+    # Application
+    app_name: str = "CraftYourStartup"
+    debug: bool = False
+    environment: str = "development"
+    
+    # Database - Auto-constructed URL
+    database_url: str = ""
+    db_host: str = "localhost"
+    db_port: int = 5432
+    db_name: str = "craftyourstartup"
+    db_user: str = "postgres"
+    db_password: str = ""
+    
+    # Authentication & Security
+    secret_key: str
+    algorithm: str = "HS256"
+    access_token_expire_minutes: int = 30
+    refresh_token_expire_days: int = 7
+    
+    # OAuth Integration
+    google_client_id: str = ""
+    google_client_secret: str = ""
+    google_redirect_uri: str = ""
+    
+    # Frontend Integration
+    frontend_url: str = "http://localhost:5173"
+    cors_origins: list[str] = ["http://localhost:5173"]
+    
+    # Email Configuration
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_user: str = ""
+    smtp_password: str = ""
+    smtp_use_tls: bool = True
+    
+    # Storage Configuration
+    storage_backend: str = "local"  # local, s3, gcs
+    s3_bucket: str = ""
+    s3_region: str = "us-east-1"
+    
+    # API Configuration
+    api_rate_limit: int = 100  # requests per minute
+    api_timeout: int = 30  # seconds
+    
+    class Config:
+        env_file = os.getenv("ENV_FILE", "local.env")
+        env_file_encoding = "utf-8"
+        env_nested_delimiter = "__"  # For nested config like DB__HOST
+    
+    def model_post_init(self, __context) -> None:
+        """Auto-construct database URL if not provided"""
+        if not self.database_url:
+            self.database_url = (
+                f"postgresql://{self.db_user}:{self.db_password}"
+                f"@{self.db_host}:{self.db_port}/{self.db_name}"
+            )
+
+@lru_cache()
+def get_settings() -> Settings:
+    """Cached settings instance - call this to get configuration"""
+    return Settings()
+
+# Usage in services/controllers
+# settings = get_settings()
+# database_url = settings.database_url
+```
+
+### Payment Configuration (`app/config/payments.py`)
+```python
+# app/config/payments.py
+from pydantic_settings import BaseSettings
+from functools import lru_cache
+import os
+
+class PaymentSettings(BaseSettings):
+    """Stripe payment configuration with environment loading"""
+    
+    # Stripe Keys
+    stripe_secret_key: str
+    stripe_publishable_key: str
+    stripe_webhook_secret: str
+    
+    # Product Configuration
+    stripe_price_basic: str = ""
+    stripe_price_premium: str = ""
+    stripe_price_enterprise: str = ""
+    
+    # Subscription Configuration
+    trial_period_days: int = 14
+    grace_period_days: int = 3
+    
+    # Payment Flow
+    success_url: str = "http://localhost:5173/payment/success"
+    cancel_url: str = "http://localhost:5173/payment/cancel"
+    
+    # Webhook Configuration
+    webhook_tolerance: int = 300  # seconds
+    
+    class Config:
+        env_file = os.getenv("ENV_FILE", "local.env")
+        env_prefix = "STRIPE_"
+        env_file_encoding = "utf-8"
+
+@lru_cache()
+def get_payment_settings() -> PaymentSettings:
+    """Cached payment settings instance"""
+    return PaymentSettings()
+```
+
+## Development Command Interfaces
+
+### 1. Task Commands (Recommended)
+```bash
+# Essential Commands
+task run-backend                # Start backend server (auto-loads local.env)
+task run-frontend               # Start frontend server
+task db:migrate-up              # Apply migrations (auto-loads local.env)
+task create-superuser           # Create admin account
+
+# Database Operations
+task db:migrate-create -- "Migration message"  # Create new migration
+task db:migrate-down            # Rollback one migration
+task db:migrate-status          # Check current migration version
+task db:docker-start            # Start PostgreSQL via Docker Compose
+
+# Payment Setup
+task payments:setup             # Setup complete payment system
+task payments:products-create   # Create Stripe products
+task payments:test-integration  # Test payment integration
+
+# Backend Operations
+task backend:config-test        # Test configuration loading
+task backend:config-show        # Show config (masked secrets)
+task backend:shell              # Python shell with app context
+task backend:api-docs           # Open API documentation
+
+# Frontend Operations
+task frontend:install           # Install frontend dependencies
+task frontend:build             # Build for production
+task frontend:generate-client   # Generate API client from backend
+
+# Production Commands
+task backend:run-prod           # Start backend (auto-loads prod.env)
+task db:migrate-up-prod         # Apply migrations to production
+
+# Deployment
+task deployment:options         # Show all deployment options
+task deployment:railway-docker  # Deploy to Railway
+task deployment:status          # Check deployment readiness
+
+# Quality & Testing
+task quality:lint-frontend      # Lint frontend code
+task quality:lint-backend       # Lint backend code
+task quality:test-frontend      # Run frontend tests
+
+# Utilities
+task quick-start                # Test config + migrate + start server
+task full-setup                 # Complete setup guide
+task help                       # Show common commands
+```
+
+### 2. Python Development Script (Simple Alternative)
+```python
+# dev.py - Interactive development helper
+# Available commands:
+poetry run python dev.py server           # Start development server
+poetry run python dev.py migrate          # Run database migrations
+poetry run python dev.py create-super     # Create superuser account
+poetry run python dev.py setup-payments   # Setup Stripe products
+poetry run python dev.py test-config      # Test configuration loading
+
+# Example with arguments:
+poetry run python dev.py create-super --email admin@example.com --password admin123 --full_name "Admin User"
+
+# Note: Production deployment uses Task commands or direct Poetry commands
+# For production migrations: task db:migrate-up-prod
+# For production server: Use deployment platform's start command
+```
+
+### 3. Direct Commands (Also Work)
+```bash
+# Direct poetry commands with ENV_FILE
+ENV_FILE=local.env poetry run uvicorn main:app --reload
+ENV_FILE=prod.env poetry run alembic upgrade head
+
+# Or export once for session
+export ENV_FILE=local.env
+poetry run uvicorn main:app --reload
+poetry run alembic upgrade head
+```
+
+## Environment File Templates
+
+### Development Environment (`local.env`)
+```bash
+# local.env - Development configuration template
+# Application
+DEBUG=true
+ENVIRONMENT=development
+
+# Database
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=craftyourstartup
+DB_USER=postgres
+DB_PASSWORD=your_password_here
+
+# Security
+SECRET_KEY=your-secret-key-here-for-development-only
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+
+# OAuth (Optional for development)
+GOOGLE_CLIENT_ID=your-google-client-id
+GOOGLE_CLIENT_SECRET=your-google-client-secret
+
+# Frontend
+FRONTEND_URL=http://localhost:5173
+CORS_ORIGINS=["http://localhost:5173"]
+
+# Email (Optional for development)
+SMTP_HOST=localhost
+SMTP_PORT=1025
+SMTP_USER=
+SMTP_PASSWORD=
+
+# Stripe (Development keys)
+STRIPE_SECRET_KEY=sk_test_...
+STRIPE_PUBLISHABLE_KEY=pk_test_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+STRIPE_PRICE_BASIC=price_test_...
+STRIPE_PRICE_PREMIUM=price_test_...
+
+# Storage
+STORAGE_BACKEND=local
+```
+
+### Production Environment (`prod.env`)
+```bash
+# prod.env - Production configuration template
+# Application
+DEBUG=false
+ENVIRONMENT=production
+
+# Database - Use connection strings or individual components
+DATABASE_URL=postgresql://user:pass@prod-db:5432/craftyourstartup
+# OR individual components:
+# DB_HOST=prod-db.example.com
+# DB_PORT=5432
+# DB_NAME=craftyourstartup
+# DB_USER=prod_user
+# DB_PASSWORD=secure_production_password
+
+# Security - MUST be strong in production
+SECRET_KEY=very-long-random-secure-key-for-production
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+
+# OAuth
+GOOGLE_CLIENT_ID=your-production-google-client-id
+GOOGLE_CLIENT_SECRET=your-production-google-client-secret
+
+# Frontend
+FRONTEND_URL=https://yourdomain.com
+CORS_ORIGINS=["https://yourdomain.com"]
+
+# Email
+SMTP_HOST=smtp.sendgrid.net
+SMTP_PORT=587
+SMTP_USER=apikey
+SMTP_PASSWORD=your-sendgrid-api-key
+
+# Stripe (Production keys)
+STRIPE_SECRET_KEY=sk_live_...
+STRIPE_PUBLISHABLE_KEY=pk_live_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+STRIPE_PRICE_BASIC=price_live_...
+STRIPE_PRICE_PREMIUM=price_live_...
+
+# Storage
+STORAGE_BACKEND=s3
+S3_BUCKET=your-production-bucket
+S3_REGION=us-east-1
+```
+
+## Configuration Usage Patterns
+
+### In FastAPI Controllers
+```python
+# app/controllers/auth.py
+from app.config.base import get_settings
+from app.config.payments import get_payment_settings
+
+settings = get_settings()
+payment_settings = get_payment_settings()
+
+@router.post("/login")
+async def login():
+    # Use settings.secret_key, settings.frontend_url, etc.
+    access_token = create_access_token(
+        data={"sub": user.email},
+        expires_delta=timedelta(minutes=settings.access_token_expire_minutes)
+    )
+```
+
+### In Services
+```python
+# app/services/email_service.py
+from app.config.base import get_settings
+
+class EmailService:
+    def __init__(self):
+        self.settings = get_settings()
+    
+    async def send_email(self, to: str, subject: str, body: str):
+        # Use self.settings.smtp_host, etc.
+        pass
+```
+
+### Environment-Specific Behavior
+```python
+# app/services/payment_service.py
+from app.config.base import get_settings
+from app.config.payments import get_payment_settings
+
+settings = get_settings()
+payment_settings = get_payment_settings()
+
+if settings.environment == "development":
+    # Use test mode behaviors
+    stripe.api_key = payment_settings.stripe_secret_key  # sk_test_...
+else:
+    # Production mode
+    stripe.api_key = payment_settings.stripe_secret_key  # sk_live_...
+```
+
+## Configuration Testing & Validation
+
+### Test Configuration Loading
+```python
+# Development (local machine): poetry run python dev.py test-config
+# Production/Docker (deployed): python dev.py test-config
+# OR: task test-config
+# OR: ENV_FILE=local.env poetry run python -c "from app.config.base import get_settings; print(get_settings())"
+
+# Example output:
+# Settings(
+#   app_name='CraftYourStartup',
+#   debug=True,
+#   database_url='postgresql://postgres:password@localhost:5432/craftyourstartup',
+#   secret_key='your-secret-key',
+#   ...
+# )
+```
+
+### Configuration Validation Script
+```python
+# scripts/validate_config.py
+from app.config.base import get_settings
+from app.config.payments import get_payment_settings
+
+def validate_configuration():
+    """Validate that all required configuration is present"""
+    try:
+        settings = get_settings()
+        payment_settings = get_payment_settings()
+        
+        # Check required fields
+        assert settings.secret_key, "SECRET_KEY is required"
+        assert settings.database_url, "Database configuration is required"
+        
+        if settings.environment == "production":
+            assert settings.secret_key != "your-secret-key-here", "Production SECRET_KEY must be changed"
+            assert payment_settings.stripe_secret_key.startswith("sk_live_"), "Production Stripe key required"
+        
+        print("✅ Configuration validation passed")
+        return True
+        
+    except Exception as e:
+        print(f"❌ Configuration validation failed: {e}")
+        return False
+
+if __name__ == "__main__":
+    validate_configuration()
+```
+
+## Development Workflow Best Practices
+
+### Quick Start Commands
+```bash
+# Clone and setup
+git clone <repo>
+cd craftyourstartup-boilerplate
+
+# Install dependencies
+poetry install
+cd frontend && npm install && cd ..
+
+# Setup environment
+cp local.env.example local.env
+# Edit local.env with your configuration
+
+# Quick start (recommended)
+task quick-start            # Auto: test config + migrate + start server
+
+# Or step by step
+task db:migrate-up          # Apply migrations
+task create-superuser       # Create admin account
+task run-backend            # Start backend
+task run-frontend           # Start frontend (in new terminal)
+
+# Alternative: dev.py script
+poetry run python dev.py migrate
+poetry run python dev.py create-super
+poetry run python dev.py server
+
+# Payment setup (optional)
+task payments:setup         # Complete payment setup
+```
+
+### Environment Switching
+```bash
+# Development (default - local.env)
+task run-backend
+task db:migrate-up
+
+# Production
+task backend:run-prod       # Uses prod.env
+task db:migrate-up-prod     # Uses prod.env
+
+# Custom environment
+ENV_FILE=staging.env task run-backend
+```
+
+### Troubleshooting Configuration
+1. **Check environment file exists**: `ls -la local.env`
+2. **Validate configuration**: `task backend:config-test` or `poetry run python dev.py test-config`
+3. **Show configuration**: `task backend:config-show` (secrets masked)
+4. **Check environment**: `task check-env` (validates required files)
+5. **Test Stripe**: `task payments:test-integration`
+
+This system eliminates the complexity of manual environment sourcing while providing multiple user-friendly interfaces for development and deployment.

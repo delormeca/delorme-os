@@ -1,0 +1,487 @@
+---
+description: Feature implementation guidelines, code quality, and maintenance standards
+globs: 
+alwaysApply: false
+---
+# Development Best Practices & Feature Implementation
+
+## Quick Reference Commands
+
+### Most Common Commands (Start Here)
+```bash
+# Essential development workflow
+task run-backend                  # Start backend server
+task run-frontend                 # Start frontend server  
+task db:migrate-up                # Apply database migrations
+task create-superuser             # Create admin account
+
+# Payment setup (if needed)
+task payments:setup               # Setup payment integration
+task payments:products-create     # Create Stripe products
+task payments:test-integration    # Test payment setup
+
+# Other useful commands
+task help                         # Show all available commands
+task quick-start                  # Auto config test + migrate + server
+task full-setup                   # Complete project setup guide
+```
+
+### Development Commands (Choose Your Preferred Method)
+```bash
+# Method 1: Task Commands (Recommended)
+task run-backend                  # Start development server
+task run-frontend                 # Start frontend development server
+task db:migrate-up                # Apply database migrations
+task create-superuser             # Create admin user
+task payments:setup               # Setup payment integration
+task payments:products-create     # Create Stripe products
+task payments:test-integration    # Test payment setup
+
+# Method 2: Python Development Script (Simple)
+poetry run python dev.py server              # Start development server
+poetry run python dev.py migrate             # Apply migrations
+poetry run python dev.py create-super        # Create admin user
+poetry run python dev.py setup-payments      # Setup Stripe products
+
+# Method 3: Direct Commands (Also Available)
+ENV_FILE=local.env poetry run uvicorn main:app --reload
+ENV_FILE=prod.env poetry run alembic upgrade head
+```
+
+### Frontend Commands
+```bash
+cd frontend
+npm run dev                       # Start frontend development
+task frontend:generate-client     # Generate API client from backend
+npm run build                     # Build for production
+npm run lint                      # Run ESLint
+```
+
+### User Management Commands
+```bash
+# Create superuser/admin account
+task create-superuser -- --email admin@example.com --password admin123 --full_name "Admin User"
+
+# Alternative command (same functionality)
+task db:user-create -- --email admin@example.com --password admin123 --full_name "Admin User"
+
+# Production superuser creation
+ENV_FILE=prod.env task create-superuser -- --email admin@yourdomain.com --password secure_pass --full_name "Site Admin"
+```
+
+## Feature Implementation Workflow (ALWAYS Follow)
+
+### 1. Planning Phase
+```bash
+# Create a feature plan in tmp directory
+mkdir -p tmp
+touch tmp/feature-[name]-plan.md
+
+# Feature plan template:
+# 1. Overview of current state
+# 2. Overview of final state
+# 3. List of files to change with descriptions
+# 4. Checklist of tasks (2-level markdown checkboxes)
+```
+
+### 2. Backend Implementation Order
+```python
+# Step 1: Define Schemas (app/schemas/)
+# Step 2: Update Models (app/models.py) + Create Migration
+# Step 3: Implement Service Layer (app/services/)
+# Step 4: Create Controller (app/controllers/)
+# Step 5: Register Router (main.py)
+# Step 6: Generate Frontend Client
+```
+
+### 3. Frontend Implementation Order
+```typescript
+// Step 1: Generate API client (task frontend:generate-client)
+// Step 2: Create API hooks (hooks/api/)
+// Step 3: Create/Update components
+// Step 4: Add routes if needed
+// Step 5: Test integration
+```
+
+## Architecture Compliance Checklist
+
+### Backend Feature Checklist
+- [ ] **Schemas**: Pydantic models in `app/schemas/`
+- [ ] **Models**: SQLModel database models with proper relationships
+- [ ] **Service**: Business logic separated from HTTP concerns
+- [ ] **Controller**: HTTP endpoints with dependency injection
+- [ ] **Error Handling**: Custom exceptions with proper HTTP status codes
+- [ ] **Authentication**: Protected endpoints use `get_current_user` dependency
+- [ ] **Validation**: Input validation at schema level
+- [ ] **Database**: Migration created and applied
+- [ ] **Configuration**: Uses `get_settings()` for configuration
+- [ ] **Logging**: Important operations logged in service layer
+
+### Frontend Feature Checklist
+- [ ] **API Client**: Generated from backend OpenAPI spec
+- [ ] **Hooks**: React Query hooks with error handling
+- [ ] **Components**: Use unified components from `@/components/ui` (no duplicates)
+- [ ] **Error Handling**: Uses `useErrorHandler` hook
+- [ ] **Loading States**: Use `LoadingState`, `EmptyState` from unified system
+- [ ] **Type Safety**: TypeScript interfaces for all props
+- [ ] **Styling**: Uses MUI theme with `theme.shape.borderRadius`, standardized containers
+- [ ] **Responsive**: Mobile-first with responsive props (`sx={{ width: { xs: '100%', sm: 'auto' } }}`)
+- [ ] **Accessibility**: Proper ARIA labels and keyboard navigation
+- [ ] **Permissions**: Protected features use `PermissionGuard` component
+
+## Code Quality Standards
+
+### Python/Backend Standards
+```python
+# GOOD: Proper service pattern
+class ArticleService:
+    def __init__(self, db: Session):
+        self.db = db
+    
+    async def create_article(self, data: ArticleCreate, user_id: uuid.UUID) -> ArticleRead:
+        # Validation
+        if len(data.title.strip()) < 3:
+            raise ValidationException("Title too short")
+        
+        # Business logic
+        article = Article(**data.model_dump(), user_id=user_id)
+        self.db.add(article)
+        self.db.commit()
+        self.db.refresh(article)
+        
+        return ArticleRead.model_validate(article)
+
+# BAD: Business logic in controller
+@router.post("/articles")
+async def create_article(data: ArticleCreate, db: Session = Depends(get_session)):
+    # Don't put business logic directly in controllers
+    article = Article(**data.model_dump())  # Missing validation
+    db.add(article)  # No error handling
+    return article
+```
+
+### TypeScript/Frontend Standards
+```typescript
+// GOOD: Proper component structure with unified components
+import { ModernCard, StandardButton, StatusBadge } from '@/components/ui';
+
+interface ArticleCardProps {
+  article: Article;
+  onEdit?: (id: string) => void;
+}
+
+const ArticleCard: React.FC<ArticleCardProps> = ({ article, onEdit }) => {
+  const { handleError } = useErrorHandler();
+  
+  const handleEditClick = useCallback(() => {
+    onEdit?.(article.id);
+  }, [article.id, onEdit]);
+  
+  return (
+    <ModernCard>
+      <Stack spacing={2}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Typography variant="h6">{article.title}</Typography>
+          <StatusBadge 
+            status={article.is_published ? "success" : "pending"} 
+            label={article.is_published ? "Published" : "Draft"} 
+          />
+        </Box>
+        <StandardButton 
+          variant="outlined" 
+          startIcon={<Edit />} 
+          onClick={handleEditClick}
+        >
+          Edit
+        </StandardButton>
+      </Stack>
+    </ModernCard>
+  );
+};
+
+// BAD: Missing types, error handling, and using duplicated components
+const ArticleCard = ({ article, onEdit }) => {  // No types
+  const MyCard = styled(Card)({ ... });  // Duplicating existing components
+  
+  return (
+    <div onClick={() => onEdit(article.id)}>  {/* No error handling */}
+      {article.title}
+    </div>
+  );
+};
+```
+
+## Database Migration Best Practices
+
+### Migration Workflow
+```bash
+# 1. Update models in app/models.py
+# 2. Create migration
+task db:migrate-create -- "Add article tags"
+
+# 3. Review generated migration file
+# 4. Apply migration
+task db:migrate-up
+
+# 5. For production
+task db:migrate-up-prod
+```
+
+### Migration Guidelines
+- **Always review**: Check generated migration before applying
+- **Backup first**: Backup database before production migrations
+- **Test locally**: Test migration on local development database
+- **Rollback plan**: Know how to rollback if needed
+- **Data migration**: Include data migration scripts if needed
+
+## Error Handling Patterns
+
+### Backend Error Handling
+```python
+# Service layer - throw specific exceptions
+if not article:
+    raise NotFoundException(f"Article {article_id} not found")
+
+if article.user_id != user_id:
+    raise AuthorizationException("Cannot access this article")
+
+# Controller layer - convert to HTTP errors
+try:
+    return await service.create_article(data, user.id)
+except ValidationException as e:
+    raise HTTPException(status_code=400, detail=str(e))
+except NotFoundException as e:
+    raise HTTPException(status_code=404, detail=str(e))
+```
+
+### Frontend Error Handling
+```typescript
+// Always use error handler hook
+const { handleApiError } = useErrorHandler();
+
+// In API hooks
+export const useCreateArticle = () => {
+  return useMutation({
+    mutationFn: ArticlesService.createArticle,
+    onError: handleApiError,  // Automatic error handling
+  });
+};
+
+// In components
+const Component: React.FC = () => {
+  const { handleError } = useErrorHandler();
+  
+  const handleAction = async () => {
+    try {
+      await riskyOperation();
+    } catch (error) {
+      handleError(error, { component: 'ComponentName' });
+    }
+  };
+};
+```
+
+## Security Best Practices
+
+### Backend Security
+```python
+# Always authenticate protected endpoints
+@router.get("/protected")
+async def protected_endpoint(current_user: User = Depends(get_current_user)):
+    # Endpoint is automatically protected
+    pass
+
+# Validate and sanitize input
+class ArticleCreate(SQLModel):
+    title: str = Field(..., min_length=3, max_length=200)
+    
+    @validator('title')
+    def sanitize_title(cls, v):
+        return html.escape(v.strip())  # Prevent XSS
+
+# Use environment variables for secrets
+settings = get_settings()
+secret_key = settings.secret_key  # From environment
+```
+
+### Frontend Security
+```typescript
+// Never store sensitive data in localStorage
+// Use httpOnly cookies for authentication tokens
+
+// Validate user permissions in components
+const { data: currentUser } = useCurrentUser();
+
+if (!currentUser?.can_edit_articles) {
+  return <AccessDenied />;
+}
+
+// Sanitize user-generated content
+import DOMPurify from 'dompurify';
+
+const SafeContent: React.FC<{ content: string }> = ({ content }) => (
+  <div dangerouslySetInnerHTML={{ 
+    __html: DOMPurify.sanitize(content) 
+  }} />
+);
+```
+
+## Performance Optimization
+
+### Backend Performance
+```python
+# Use proper database queries
+# GOOD: Explicit loading with selectinload
+from sqlalchemy.orm import selectinload
+
+statement = select(User).options(selectinload(User.articles))
+users_with_articles = db.exec(statement).all()
+
+# BAD: N+1 queries
+users = db.exec(select(User)).all()
+for user in users:
+    articles = user.articles  # This triggers additional queries
+
+# Implement pagination for large datasets
+def get_articles(db: Session, skip: int = 0, limit: int = 100):
+    return db.exec(select(Article).offset(skip).limit(limit)).all()
+```
+
+### Frontend Performance
+```typescript
+// Memoize expensive computations
+const processedData = useMemo(() => 
+  data.filter(item => expensiveFilter(item)), 
+  [data]
+);
+
+// Memoize event handlers
+const handleClick = useCallback((id: string) => {
+  onItemClick(id);
+}, [onItemClick]);
+
+// Use React.memo for components with stable props
+const MemoizedComponent = memo<ComponentProps>(({ data }) => (
+  <div>{data.title}</div>
+));
+```
+
+## Testing Guidelines
+
+### Backend Testing
+```python
+# Test services independently
+def test_article_service_create():
+    service = ArticleService(mock_db)
+    article_data = ArticleCreate(title="Test", content="Content")
+    
+    result = await service.create_article(article_data, user_id)
+    
+    assert result.title == "Test"
+    assert result.user_id == user_id
+
+# Test controllers with TestClient
+def test_create_article_endpoint():
+    response = client.post("/api/articles", 
+                          json={"title": "Test", "content": "Content"},
+                          headers={"Authorization": f"Bearer {token}"})
+    
+    assert response.status_code == 201
+    assert response.json()["title"] == "Test"
+```
+
+### Frontend Testing
+```typescript
+// Test components with React Testing Library
+const renderWithProviders = (component: React.ReactElement) => {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  
+  return render(
+    <QueryClientProvider client={queryClient}>
+      {component}
+    </QueryClientProvider>
+  );
+};
+
+test('ArticleCard displays title', () => {
+  const article = { id: '1', title: 'Test Article' };
+  renderWithProviders(<ArticleCard article={article} />);
+  
+  expect(screen.getByText('Test Article')).toBeInTheDocument();
+});
+```
+
+## Deployment Checklist
+
+### Pre-Deployment
+- [ ] **Environment**: Production environment variables configured
+- [ ] **Database**: Migrations applied to production database
+- [ ] **Payments**: Stripe live keys configured (if applicable)
+- [ ] **Security**: Secret keys rotated and secure
+- [ ] **Frontend**: Build completed and tested
+- [ ] **Health Checks**: API health endpoints working
+- [ ] **Monitoring**: Error tracking and logging configured
+
+### Post-Deployment
+- [ ] **Verification**: All endpoints responding correctly
+- [ ] **Database**: Data integrity verified
+- [ ] **Payments**: Payment flows tested (with test cards)
+- [ ] **User Flow**: Critical user journeys tested
+- [ ] **Performance**: Response times within acceptable limits
+- [ ] **Monitoring**: Error rates and logs monitored
+
+## Troubleshooting Common Issues
+
+### Environment Issues
+```bash
+# Configuration not loading
+poetry run python dev.py test-config
+
+# Database connection issues
+task db:migrate-up  # Check if migrations apply
+
+# Payment setup issues
+task setup-payments-local   # Verify Stripe configuration
+```
+
+### Development Issues
+```bash
+# Frontend client out of sync
+task frontend:generate-client
+
+# Database out of sync
+task db:migrate-up
+
+# Dependencies out of sync
+poetry install && cd frontend && npm install
+```
+
+### Production Issues
+- **502/503 Errors**: Check server logs and database connectivity
+- **Payment Failures**: Verify webhook endpoints and signatures
+- **Authentication Issues**: Verify JWT secret configuration
+- **Database Errors**: Check connection strings and migrations
+
+## Maintenance Tasks
+
+### Weekly Maintenance
+- [ ] Update dependencies (security patches)
+- [ ] Review error logs and fix critical issues
+- [ ] Monitor database performance
+- [ ] Check payment webhook deliveries
+
+### Monthly Maintenance
+- [ ] Update development dependencies
+- [ ] Review and optimize database queries
+- [ ] Update documentation
+- [ ] Security audit of dependencies
+
+### Quarterly Maintenance
+- [ ] Major dependency updates
+- [ ] Performance optimization review
+- [ ] Security architecture review
+- [ ] Backup and disaster recovery testing
+
+By following these practices, you'll maintain code quality, security, and performance while building features efficiently on the CraftYourStartup boilerplate foundation.

@@ -1,0 +1,201 @@
+---
+description: "Stripe integration patterns, payment manager, webhook handling, and frontend payment hooks"
+globs: app/services/payment_manager.py,app/services/webhook_handler.py,app/controllers/payments.py,frontend/src/hooks/api/usePayments.ts
+alwaysApply: false
+---
+# Stripe Payment Integration
+
+## Payment Manager Service
+
+```python
+# app/services/payment_manager.py
+import stripe
+from app.config.payments import get_payment_settings
+
+class PaymentManager:
+    def __init__(self, db: Session):
+        self.db = db
+        self.settings = get_payment_settings()
+        stripe.api_key = self.settings.stripe_secret_key
+    
+    async def create_checkout_session(self, user: User, request: CreateCheckoutRequest):
+        customer_id = await self._get_or_create_customer(user)
+        
+        session_config = {
+            "customer": customer_id,
+            "success_url": self.settings.success_url,
+            "cancel_url": self.settings.cancel_url,
+            "metadata": {"user_id": str(user.id)},
+        }
+        
+        if request.payment_type == "subscription":
+            session_config.update({
+                "mode": "subscription",
+                "line_items": [{"price": price_id, "quantity": 1}],
+            })
+        else:
+            session_config.update({
+                "mode": "payment",
+                "line_items": [{"price": price_id, "quantity": 1}],
+            })
+        
+        session = stripe.checkout.Session.create(**session_config)
+        return CheckoutSessionResponse(session_id=session.id, url=session.url)
+    
+    async def create_customer_portal_session(self, user: User):
+        customer_id = await self._get_or_create_customer(user)
+        session = stripe.billing_portal.Session.create(
+            customer=customer_id,
+            return_url=self.settings.frontend_url + "/dashboard",
+        )
+        return CustomerPortalResponse(url=session.url)
+```
+
+## Webhook Handler Service
+
+```python
+# app/services/webhook_handler.py
+import stripe
+from fastapi import HTTPException
+
+class WebhookHandler:
+    def __init__(self, db: Session):
+        self.db = db
+        self.settings = get_payment_settings()
+    
+    async def handle_webhook(self, payload: bytes, signature: str):
+        try:
+            event = stripe.Webhook.construct_event(
+                payload, signature, self.settings.stripe_webhook_secret
+            )
+        except stripe.SignatureVerificationError:
+            raise HTTPException(status_code=400, detail="Invalid signature")
+        
+        # Handle event types
+        if event["type"] == "checkout.session.completed":
+            await self._handle_checkout_completed(event["data"]["object"])
+        elif event["type"] == "customer.subscription.updated":
+            await self._handle_subscription_updated(event["data"]["object"])
+        elif event["type"] == "customer.subscription.deleted":
+            await self._handle_subscription_deleted(event["data"]["object"])
+        
+        return {"status": "success"}
+    
+    async def _handle_checkout_completed(self, session: Dict):
+        user_id = session["metadata"]["user_id"]
+        user = await self.db.get(User, user_id)
+        
+        if session["mode"] == "subscription":
+            # Create subscription record
+            subscription = Subscription(
+                user_id=user.id,
+                stripe_subscription_id=session["subscription"],
+                plan=session["metadata"]["tier"],
+                status="active",
+            )
+            self.db.add(subscription)
+        else:
+            # Create purchase record
+            purchase = Purchase(
+                user_id=user.id,
+                product_type=session["metadata"]["product_type"],
+                transaction_id=session["payment_intent"],
+                is_successful=True,
+            )
+            self.db.add(purchase)
+        
+        # Update user plan
+        from app.core.access_control import update_user_plan
+        await update_user_plan(user, self.db)
+        
+        self.db.commit()
+```
+
+## Payment Controller
+
+```python
+# app/controllers/payments.py
+from fastapi import APIRouter, Depends, Request
+
+router = APIRouter(prefix="/api/payments", tags=["payments"])
+
+@router.post("/checkout/create")
+async def create_checkout(
+    request: CreateCheckoutRequest,
+    current_user: User = Depends(get_current_user),
+    payment_manager: PaymentManager = Depends(get_payment_manager),
+):
+    return await payment_manager.create_checkout_session(current_user, request)
+
+@router.post("/portal/create")
+async def create_portal(
+    current_user: User = Depends(get_current_user),
+    payment_manager: PaymentManager = Depends(get_payment_manager),
+):
+    return await payment_manager.create_customer_portal_session(current_user)
+
+@router.post("/webhook")
+async def stripe_webhook(
+    request: Request,
+    webhook_handler: WebhookHandler = Depends(get_webhook_handler),
+):
+    payload = await request.body()
+    signature = request.headers.get("stripe-signature")
+    return await webhook_handler.handle_webhook(payload, signature)
+```
+
+## Frontend Integration
+
+```typescript
+// frontend/src/hooks/api/usePayments.ts
+import { useMutation } from '@tanstack/react-query';
+import { PaymentsService } from '@/client';
+
+export const useCreateCheckout = () => {
+  return useMutation({
+    mutationFn: PaymentsService.createCheckoutSession,
+    onSuccess: (data) => {
+      window.location.href = data.url;
+    },
+  });
+};
+
+export const useCustomerPortal = () => {
+  return useMutation({
+    mutationFn: PaymentsService.createPortalSession,
+    onSuccess: (data) => {
+      window.location.href = data.url;
+    },
+  });
+};
+
+export const useCheckoutWithProduct = () => {
+  const createCheckout = useCreateCheckout();
+  
+  const checkoutWithProduct = (productId: string) => {
+    createCheckout.mutate({
+      payment_type: "subscription",
+      tier: productId,
+    });
+  };
+  
+  return { checkoutWithProduct };
+};
+```
+
+## Testing Webhooks Locally
+
+```bash
+# Terminal 1: Start backend
+task run-backend
+
+# Terminal 2: Start Stripe CLI
+stripe listen --forward-to localhost:8000/api/payments/webhook
+
+# Terminal 3: Trigger test events
+stripe trigger payment_intent.succeeded
+stripe trigger checkout.session.completed
+stripe trigger customer.subscription.updated
+```
+
+Follow these patterns for secure payment processing!

@@ -1,0 +1,112 @@
+---
+description: "Core project overview, stack, architecture, and directory structure"
+globs: 
+alwaysApply: true
+---
+# CraftYourStartup Boilerplate Core System
+
+## Project Overview
+Full-stack startup boilerplate with comprehensive authentication, payments, content management, and modern dashboard interface.
+
+## Core Architecture Stack
+- **Backend**: FastAPI + SQLModel + PostgreSQL + Alembic
+- **Frontend**: React 18 + TypeScript + Vite + Material-UI v6
+- **Authentication**: JWT + OAuth (Google) + Session management
+- **Payments**: Stripe integration (subscriptions + one-time)
+- **State Management**: TanStack React Query + Context API
+- **Development**: Python Poetry + Task runner + Auto environment loading
+
+## Clean Architecture Pattern
+**ALWAYS follow**: Controllers → Services → Models
+- **Controllers** (`app/controllers/`): HTTP endpoints, request/response handling
+- **Services** (`app/services/`): Business logic, external integrations
+- **Models** (`app/models.py`): SQLModel database models
+- **Schemas** (`app/schemas/`): Pydantic request/response models
+
+## Configuration System (Post-Cleanup)
+- **Base Config**: `app/config/base.py` (auth, database, domains, storage)
+- **Payment Config**: `app/config/payments.py` (Stripe settings)
+- **Auto Environment Loading**: Pydantic Settings with .env file detection
+- **No Manual Sourcing**: All commands use automatic environment loading
+
+## Key Directories & Organization
+### Backend (`app/`)
+- `controllers/`: API endpoints (auth.py, payments.py, article.py, plans.py, upgrades.py, analytics.py, integrations.py)
+- `services/`: Business logic (payment_manager.py, webhook_handler.py, plan_service.py, upgrade_service.py, etc.)
+- `schemas/`: Pydantic models for API
+- `config/`: Configuration modules (base.py, payments.py)
+- `core/`: Core utilities (exceptions.py, access_control.py)
+- `commands/`: CLI commands (create_superuser.py, setup_stripe_products.py)
+- `permissions.py`: Plan types and feature permissions
+
+### Frontend (`frontend/src/`)
+- `client/`: Auto-generated API client (TypeScript)
+- `components/`: Unified UI components (`ui/`) + feature components (Articles, Profile, etc.)
+- `pages/`: Route components
+- `hooks/`: 
+  - `api/`: API interaction hooks (useArticles, usePayments, usePlans, etc.)
+  - `forms/`: Form validation hooks (useStandardForm, formSchemas)
+- `theme/`: MUI theme system with light/dark mode + customizations
+- `context/`: React Context providers (SignUpDialogContext, SnackBarContext)
+- `utils/`: Utilities (errorHandler.ts)
+
+## Error Handling System (Implemented)
+- **ErrorBoundary**: React error boundary with fallback UI
+- **Error Pages**: NotFound (404), ServerError (customizable), comprehensive routing
+- **Error Utilities**: Centralized error handler with HTTP classification
+- **useErrorHandler Hook**: Convenient error handling methods
+
+## Environment & Development
+- **Automatic Environment Loading**: Zero manual sourcing required
+- **Multiple Interfaces**: Task commands, Python dev script, direct commands
+- **Environment Files**: local.env (default), prod.env, .env support
+- **Development Script**: `poetry run python dev.py server|migrate|create-super|setup-payments`
+- **Task Commands**: `task run-backend`, `task db:migrate-up` (auto-loading)
+
+## Development Principles
+1. **TypeScript Everywhere**: Strict typing for reliability
+2. **Unified Component System**: Reusable components, zero duplication (~1,500 LOC consolidated)
+3. **Theme-Aware Design**: Consistent MUI styling with dark/light mode
+4. **Mobile-First**: Responsive design with optimized mobile experience
+5. **Security First**: Proper authentication, plan-based authorization, validation
+6. **Performance Focused**: Lazy loading, memoization, optimized APIs
+7. **Developer Experience**: Auto-generated clients, consistent patterns
+8. **Error Resilience**: Comprehensive error handling at all levels
+
+## Route Organization
+- **Public Routes**: `/`, `/pricing`, `/login`, `/signup` (MainLayout)
+- **Dashboard Routes**: `/dashboard/*` (DashboardLayout with sidebar)
+- **Auth Routes**: `/login`, `/signup`, `/forgot-password`, `/reset-password`
+- **Error Routes**: `/404`, `/500`, `/error` (with error pages)
+- **API Routes**: `/api/auth/*`, `/api/articles/*`, `/api/payment/*`
+
+## Payment Integration (Stripe)
+- **Subscriptions**: Multiple tiers (Premium, Enterprise) with trial periods
+- **One-time Payments**: Product purchases (Starter, Pro) with success/cancel flows
+- **Customer Portal**: Self-service billing management
+- **Webhook Security**: Signature verification and event processing
+- **Environment Setup**: Automated product creation scripts
+- **Plan-Based RBAC**: Automatic permission updates based on subscriptions/purchases
+
+## Database Patterns
+- **SQLModel**: Type-safe models with Pydantic compatibility
+- **Alembic**: Database migrations with auto environment loading
+- **Relationships**: Proper foreign keys and relationship mapping (selectin loading)
+- **Plan-Based Access**: User.current_plan field tracks active plan tier
+- **Purchases & Subscriptions**: Dedicated models for payment tracking
+
+## Security Implementation
+- **JWT Tokens**: Secure authentication with refresh tokens
+- **Password Hashing**: Bcrypt with proper salt rounds
+- **CORS**: Configured for frontend domain
+- **Input Validation**: Pydantic schemas with proper validation
+- **Environment Security**: Secrets management via environment variables
+
+## Code Quality Standards
+- **Linting**: Python (ruff), TypeScript (ESLint)
+- **Type Safety**: mypy for Python, strict TypeScript
+- **Error Handling**: Explicit error types, proper HTTP status codes
+- **Testing**: Structure ready for pytest and React Testing Library
+- **Documentation**: Comprehensive inline documentation
+
+This boilerplate provides a production-ready foundation with all systems integrated and error-handling comprehensive. All subsequent rules build upon this core architecture.

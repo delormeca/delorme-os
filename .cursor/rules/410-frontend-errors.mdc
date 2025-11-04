@@ -1,0 +1,183 @@
+---
+description: "Frontend error boundaries, error pages, and error handling hooks"
+globs: frontend/src/components/ErrorBoundary.tsx,frontend/src/pages/NotFound.tsx,frontend/src/pages/ServerError.tsx,frontend/src/utils/errorHandler.ts
+alwaysApply: false
+---
+# Frontend Error Handling
+
+## Error Boundary (Always Use)
+
+```typescript
+import { ErrorBoundary } from '@/components/ErrorBoundary';
+
+function App() {
+  return (
+    <ErrorBoundary>
+      <Router>
+        <Routes>{/* routes */}</Routes>
+      </Router>
+    </ErrorBoundary>
+  );
+}
+```
+
+## Error Pages
+
+### 404 Not Found
+```typescript
+// frontend/src/pages/NotFound.tsx
+import { Container, Typography, Button } from '@mui/material';
+import { Home, ArrowBack } from '@mui/icons-material';
+import { Link, useNavigate } from 'react-router-dom';
+
+const NotFound: React.FC = () => {
+  const navigate = useNavigate();
+
+  return (
+    <Container maxWidth="md" sx={{ py: 8, textAlign: 'center' }}>
+      <Typography variant="h1" sx={{ fontSize: '8rem', color: 'primary.main' }}>
+        404
+      </Typography>
+      <Typography variant="h4">Page Not Found</Typography>
+      
+      <Button variant="contained" startIcon={<Home />} component={Link} to="/">
+        Go Home
+      </Button>
+      <Button variant="outlined" startIcon={<ArrowBack />} onClick={() => navigate(-1)}>
+        Go Back
+      </Button>
+    </Container>
+  );
+};
+```
+
+### 500 Server Error
+```typescript
+// frontend/src/pages/ServerError.tsx
+const ServerError: React.FC<{ errorCode?: number; message?: string }> = ({
+  errorCode = 500,
+  message = "Internal server error"
+}) => {
+  return (
+    <Container maxWidth="md" sx={{ py: 8, textAlign: 'center' }}>
+      <Typography variant="h1" sx={{ fontSize: '8rem', color: 'error.main' }}>
+        {errorCode}
+      </Typography>
+      <Typography variant="h4">{message}</Typography>
+      
+      <Button variant="contained" onClick={() => window.location.reload()}>
+        Refresh Page
+      </Button>
+    </Container>
+  );
+};
+```
+
+## Error Handler Hook
+
+```typescript
+// frontend/src/utils/errorHandler.ts
+import { useNavigate } from 'react-router-dom';
+import { useSnackBarContext } from '@/context/SnackBarContext';
+
+export const useErrorHandler = () => {
+  const navigate = useNavigate();
+  const { createSnackBar } = useSnackBarContext();
+
+  const handleApiError = (error: any) => {
+    const status = error?.status || error?.response?.status;
+    
+    if (status === 401) {
+      createSnackBar({ content: "Please log in", severity: "warning" });
+      navigate('/login');
+    } else if (status === 403) {
+      createSnackBar({ content: "Access denied", severity: "error" });
+    } else if (status === 404) {
+      navigate('/404');
+    } else if (status >= 500) {
+      navigate('/500');
+    } else {
+      createSnackBar({ 
+        content: error?.message || "An error occurred", 
+        severity: "error" 
+      });
+    }
+  };
+
+  const handle404 = () => navigate('/404');
+  const handle500 = () => navigate('/500');
+  
+  return { handleApiError, handle404, handle500 };
+};
+```
+
+## React Query Integration
+
+```typescript
+export const useArticles = () => {
+  const { handleApiError } = useErrorHandler();
+  
+  return useQuery({
+    queryKey: ['articles'],
+    queryFn: ArticlesService.listArticles,
+    onError: handleApiError,
+    retry: (failureCount, error) => {
+      if (error?.status === 404 || error?.status === 403) return false;
+      return failureCount < 3;
+    },
+  });
+};
+```
+
+## Component Error Handling
+
+```typescript
+const Component: React.FC = () => {
+  const { data, error } = useArticles();
+  const { handleApiError } = useErrorHandler();
+  
+  if (error) {
+    handleApiError(error);
+    return null;
+  }
+  
+  return <div>{/* content */}</div>;
+};
+```
+
+## Form Error Handling
+
+```typescript
+const FormComponent: React.FC = () => {
+  const { handleApiError } = useErrorHandler();
+  const { setError } = useForm();
+  
+  const onSubmit = async (data: FormData) => {
+    try {
+      await submitForm(data);
+    } catch (error) {
+      if (error.status === 422 && error.details) {
+        Object.entries(error.details).forEach(([field, msg]) => {
+          setError(field, { message: msg as string });
+        });
+      } else {
+        handleApiError(error);
+      }
+    }
+  };
+};
+```
+
+## Routing with Error Pages
+
+```typescript
+<Routes>
+  <Route path="/" element={<Home />} />
+  <Route path="/404" element={<NotFound />} />
+  <Route path="/500" element={<ServerError />} />
+  <Route path="/error" element={<ServerError />} />
+  <Route path="*" element={<Navigate to="/404" replace />} />
+</Routes>
+```
+
+Consistent error handling ensures great UX across the app!

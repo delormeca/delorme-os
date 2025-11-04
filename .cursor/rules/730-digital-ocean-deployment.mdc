@@ -1,0 +1,293 @@
+---
+description: Digital Ocean deployment guide for App Platform and Droplets with cost optimization
+globs: 
+alwaysApply: false
+---
+# Digital Ocean Deployment Guide
+
+Detailed guide for deploying to Digital Ocean App Platform and Droplets.
+
+## Digital Ocean App Platform (Recommended)
+
+### 1. Prerequisites
+```bash
+# Install DO CLI
+brew install doctl  # macOS
+# or download from: https://github.com/digitalocean/doctl
+
+# Authenticate
+doctl auth init
+```
+
+### 2. App Platform Setup
+```yaml
+# .do/app.yaml
+name: craftyourstartup
+services:
+- name: api
+  source_dir: /
+  github:
+    repo: your-username/your-repo
+    branch: main
+  run_command: poetry run uvicorn main:app --host 0.0.0.0 --port 8080
+  environment_slug: python
+  instance_count: 1
+  instance_size_slug: basic-xxs
+  envs:
+  - key: DATABASE_URL
+    value: ${DATABASE_URL}
+  - key: JWT_SECRET_KEY
+    value: ${JWT_SECRET_KEY}
+  - key: GOOGLE_CLIENT_ID
+    value: ${GOOGLE_CLIENT_ID}
+  - key: GOOGLE_CLIENT_SECRET
+    value: ${GOOGLE_CLIENT_SECRET}
+  - key: FRONTEND_URL
+    value: ${FRONTEND_URL}
+  health_check:
+    http_path: /docs
+
+- name: frontend
+  source_dir: /frontend
+  build_command: npm run build
+  run_command: npx serve -s dist -l 5173
+  environment_slug: node-js
+  instance_count: 1
+  instance_size_slug: basic-xxs
+
+databases:
+- engine: PG
+  name: craftyourstartup-db
+  num_nodes: 1
+  size: db-s-dev-database
+```
+
+### 3. Deploy to App Platform
+```bash
+# Create app from spec
+doctl apps create --spec .do/app.yaml
+
+# Or deploy via GitHub integration (recommended)
+# 1. Push .do/app.yaml to your repo
+# 2. Connect GitHub repo in DO console
+# 3. Auto-deploys on push to main
+```
+
+## Digital Ocean Managed Database
+
+### 1. Create Database Cluster
+```bash
+# Create PostgreSQL cluster
+doctl databases create craftyourstartup-db \
+  --engine pg \
+  --region nyc3 \
+  --size db-s-1vcpu-1gb \
+  --num-nodes 1
+
+# Get connection details
+doctl databases connection craftyourstartup-db
+```
+
+### 2. Configure Database Access
+```bash
+# Add trusted sources (your local IP for migrations)
+doctl databases firewalls append craftyourstartup-db \
+  --rule ip_addr:your.local.ip.address
+
+# Add App Platform to trusted sources (automatic via console)
+```
+
+### 3. Run Production Migrations
+```bash
+# Update prod.env with DO database connection
+DATABASE_URL=postgresql://user:password@host:25060/db?sslmode=require
+
+# Apply migrations
+task db:migrate-up-prod
+```
+
+## Digital Ocean Droplets (Alternative)
+
+### 1. Create Droplet
+```bash
+# Create droplet with Docker pre-installed
+doctl compute droplet create craftyourstartup \
+  --image docker-20-04 \
+  --size s-2vcpu-2gb \
+  --region nyc3 \
+  --ssh-keys your-ssh-key-id
+
+# Get droplet IP
+doctl compute droplet list
+```
+
+### 2. Setup Docker Deployment
+```yaml
+# docker-compose.prod.yml
+version: '3.8'
+services:
+  app:
+    build: .
+    ports:
+      - "80:8080"
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+    depends_on:
+      - db
+      
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: craftyourstartup
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
+```
+
+### 3. Deploy to Droplet
+```bash
+# Copy files to droplet
+scp docker-compose.prod.yml root@your-droplet-ip:/app/
+scp .env.prod root@your-droplet-ip:/app/.env
+
+# SSH and deploy
+ssh root@your-droplet-ip
+cd /app
+docker-compose -f docker-compose.prod.yml up -d
+```
+
+## Domain and SSL Setup
+
+### 1. Add Domain to DO
+```bash
+# Add domain to your DO project
+doctl compute domain create your-domain.com
+
+# Add A record pointing to your app
+# App Platform: Automatic via console
+# Droplet: Point to droplet IP
+doctl compute domain records create your-domain.com \
+  --record-type A \
+  --record-name @ \
+  --record-data your-droplet-ip
+```
+
+### 2. SSL Certificate
+```bash
+# App Platform: Automatic SSL
+# Droplet: Use Certbot
+ssh root@your-droplet-ip
+apt install certbot python3-certbot-nginx
+certbot --nginx -d your-domain.com
+```
+
+## Digital Ocean Spaces (CDN)
+
+### 1. Setup Spaces for Static Assets
+```bash
+# Create Space via DO console or CLI
+doctl compute cdn create \
+  --origin your-space.nyc3.digitaloceanspaces.com \
+  --certificate-id your-cert-id
+
+# Upload frontend assets
+aws s3 sync frontend/dist/ s3://your-space/frontend/ \
+  --endpoint-url https://nyc3.digitaloceanspaces.com \
+  --acl public-read
+```
+
+## Monitoring and Maintenance
+
+### 1. Digital Ocean Monitoring
+```bash
+# Enable monitoring for droplets
+doctl monitoring alert policy create \
+  --type droplet \
+  --description "High CPU usage" \
+  --compare GreaterThan \
+  --value 80 \
+  --window 5m
+
+# View app logs (App Platform)
+doctl apps logs your-app-id --follow
+```
+
+### 2. Database Backups
+```bash
+# Managed database backups are automatic
+# Manual backup
+doctl databases backups list craftyourstartup-db
+
+# Restore from backup
+doctl databases backups restore craftyourstartup-db backup-id
+```
+
+### 3. Scaling
+```bash
+# Scale App Platform services
+doctl apps update your-app-id --spec .do/app.yaml
+
+# Scale droplet
+doctl compute droplet resize droplet-id --size s-4vcpu-8gb
+```
+
+## Cost Optimization
+
+### App Platform Pricing
+- Basic tier: $5/month per service
+- Production tier: $12/month per service
+- Database: $15/month for development cluster
+
+### Droplet Pricing
+- Basic: $6/month (1 vCPU, 1GB RAM)
+- Standard: $12/month (1 vCPU, 2GB RAM)
+- Plus managed database: $15/month
+
+### Tips
+- Use development database cluster for staging
+- Start with basic droplets and scale up
+- Enable DO monitoring to track usage
+- Use Spaces CDN only when needed
+
+## Emergency Procedures
+
+### App Platform Issues
+```bash
+# View application logs
+doctl apps logs your-app-id --type build
+doctl apps logs your-app-id --type deploy
+
+# Restart app
+doctl apps create-deployment your-app-id
+
+# Rollback to previous deployment
+doctl apps get-deployment your-app-id previous-deployment-id
+```
+
+### Database Issues
+```bash
+# Check database status
+doctl databases get craftyourstartup-db
+
+# View database logs (via console)
+# Scale database if needed
+doctl databases resize craftyourstartup-db --size db-s-2vcpu-4gb
+```
+
+### Droplet Issues
+```bash
+# SSH into droplet
+ssh root@your-droplet-ip
+
+# Check Docker containers
+docker ps -a
+docker logs container-name
+
+# Restart services
+docker-compose -f docker-compose.prod.yml restart
+```

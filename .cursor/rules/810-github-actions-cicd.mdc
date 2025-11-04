@@ -1,0 +1,481 @@
+---
+description: Automated testing and deployment workflows for the CraftYourStartup boilerplate.
+globs: 
+alwaysApply: false
+---
+# GitHub Actions CI/CD Workflows
+
+Automated testing and deployment workflows for the CraftYourStartup boilerplate.
+
+## Basic CI Workflow
+
+### `.github/workflows/ci.yml`
+```yaml
+name: Continuous Integration
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test-backend:
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: Install Poetry
+      uses: snok/install-poetry@v1
+      with:
+        version: latest
+        virtualenvs-create: true
+        virtualenvs-in-project: true
+        
+    - name: Load cached venv
+      id: cached-poetry-dependencies
+      uses: actions/cache@v3
+      with:
+        path: .venv
+        key: venv-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
+        
+    - name: Install dependencies
+      if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+      run: poetry install --no-interaction --no-root
+      
+    - name: Run backend tests
+      env:
+        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
+      run: |
+        poetry run pytest --cov=app --cov-report=xml
+        
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+
+  test-frontend:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+        
+    - name: Install frontend dependencies
+      working-directory: ./frontend
+      run: npm ci
+      
+    - name: Run frontend tests
+      working-directory: ./frontend
+      run: npm test -- --coverage --watchAll=false
+      
+    - name: Build frontend
+      working-directory: ./frontend
+      run: npm run build
+
+  lint-and-format:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: Install Poetry
+      uses: snok/install-poetry@v1
+      
+    - name: Install dependencies
+      run: poetry install --no-interaction
+      
+    - name: Lint backend code
+      run: |
+        poetry run flake8 app/
+        poetry run pylint app/
+        
+    - name: Check backend formatting
+      run: |
+        poetry run black --check app/
+        poetry run isort --check-only app/
+        
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+        
+    - name: Install frontend dependencies
+      working-directory: ./frontend
+      run: npm ci
+      
+    - name: Lint frontend code
+      working-directory: ./frontend
+      run: npm run lint
+```
+
+## Deployment Workflows
+
+### Digital Ocean App Platform
+```yaml
+# .github/workflows/deploy-do.yml
+name: Deploy to Digital Ocean
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install doctl
+      uses: digitalocean/action-doctl@v2
+      with:
+        token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+        
+    - name: Update app spec with latest commit
+      run: |
+        sed -i 's/branch: main/branch: main/' .do/app.yaml
+        
+    - name: Deploy to DO App Platform
+      run: |
+        doctl apps update ${{ secrets.DO_APP_ID }} --spec .do/app.yaml
+        
+    - name: Wait for deployment
+      run: |
+        doctl apps list-deployments ${{ secrets.DO_APP_ID }} --format ID,Phase --no-header | head -1 | while read deployment_id phase; do
+          while [ "$phase" = "PENDING_BUILD" ] || [ "$phase" = "BUILDING" ] || [ "$phase" = "PENDING_DEPLOY" ] || [ "$phase" = "DEPLOYING" ]; do
+            echo "Deployment $deployment_id is $phase..."
+            sleep 30
+            phase=$(doctl apps get-deployment ${{ secrets.DO_APP_ID }} $deployment_id --format Phase --no-header)
+          done
+          echo "Deployment $deployment_id completed with status: $phase"
+        done
+```
+
+### Render Deployment
+```yaml
+# .github/workflows/deploy-render.yml
+name: Deploy to Render
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    
+    steps:
+    - name: Deploy to Render
+      uses: johnbeynon/render-deploy-action@v0.0.8
+      with:
+        service-id: ${{ secrets.RENDER_SERVICE_ID }}
+        api-key: ${{ secrets.RENDER_API_KEY }}
+```
+
+### Railway Deployment
+```yaml
+# .github/workflows/deploy-railway.yml
+name: Deploy to Railway
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install Railway CLI
+      run: npm install -g @railway/cli
+      
+    - name: Deploy to Railway
+      env:
+        RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+      run: railway up
+```
+
+## Environment-Specific Workflows
+
+### Staging Environment
+```yaml
+# .github/workflows/deploy-staging.yml
+name: Deploy to Staging
+
+on:
+  push:
+    branches: [ develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  deploy-staging:
+    runs-on: ubuntu-latest
+    environment: staging
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Run tests first
+      run: |
+        # Run CI tests before staging deployment
+        echo "Running full test suite..."
+        
+    - name: Deploy to staging environment
+      run: |
+        # Deploy to staging platform
+        echo "Deploying to staging..."
+        
+    - name: Run integration tests
+      run: |
+        # Run end-to-end tests against staging
+        echo "Running integration tests..."
+        
+    - name: Comment PR with staging URL
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v6
+      with:
+        script: |
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: '🚀 Staging deployment available at: https://staging-url.com'
+          })
+```
+
+## Database Migration Workflows
+
+### Production Migration
+```yaml
+# .github/workflows/migrate-db.yml
+name: Database Migration
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to migrate'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+        - staging
+        - production
+      migration_direction:
+        description: 'Migration direction'
+        required: true
+        default: 'upgrade'
+        type: choice
+        options:
+        - upgrade
+        - downgrade
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: Install Poetry
+      uses: snok/install-poetry@v1
+      
+    - name: Install dependencies
+      run: poetry install --no-interaction
+      
+    - name: Run migration
+      env:
+        DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      run: |
+        if [ "${{ github.event.inputs.migration_direction }}" = "upgrade" ]; then
+          poetry run alembic upgrade head
+        else
+          poetry run alembic downgrade -1
+        fi
+        
+    - name: Verify migration
+      env:
+        DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      run: poetry run alembic current
+```
+
+## Required GitHub Secrets
+
+### For Digital Ocean
+```bash
+# Repository secrets to add in GitHub
+DIGITALOCEAN_ACCESS_TOKEN=your_do_token
+DO_APP_ID=your_app_id
+```
+
+### For Render
+```bash
+RENDER_API_KEY=your_render_api_key
+RENDER_SERVICE_ID=your_service_id
+```
+
+### For Railway
+```bash
+RAILWAY_TOKEN=your_railway_token
+```
+
+### For Database
+```bash
+DATABASE_URL=postgresql://user:pass@host:port/db
+```
+
+## Workflow Environments
+
+### Setting up GitHub Environments
+1. Go to repository Settings → Environments
+2. Create environments: `staging`, `production`
+3. Add environment-specific secrets
+4. Configure protection rules for production
+
+### Environment Protection Rules
+```yaml
+# For production environment
+protection_rules:
+  required_reviewers:
+    users: ["admin-username"]
+  wait_timer: 5  # minutes
+  prevent_self_review: true
+```
+
+## Monitoring and Notifications
+
+### Slack Notifications
+```yaml
+- name: Notify Slack on failure
+  if: failure()
+  uses: 8398a7/action-slack@v3
+  with:
+    status: failure
+    channel: '#deployments'
+    webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+```
+
+### Discord Notifications
+```yaml
+- name: Notify Discord on success
+  if: success()
+  uses: Ilshidur/action-discord@master
+  with:
+    args: '🚀 Deployment successful to production!'
+  env:
+    DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+```
+
+## Security Best Practices
+
+### Secrets Management
+- Never commit secrets to repository
+- Use GitHub secrets for sensitive data
+- Rotate secrets regularly
+- Use environment-specific secrets
+
+### Dependency Security
+```yaml
+- name: Run security audit
+  run: |
+    # Backend security audit
+    poetry run safety check
+    
+    # Frontend security audit
+    cd frontend && npm audit --audit-level high
+```
+
+### Container Security
+```yaml
+- name: Scan Docker image
+  uses: aquasecurity/trivy-action@master
+  with:
+    image-ref: 'your-image:latest'
+    format: 'sarif'
+    output: 'trivy-results.sarif'
+```
+
+## Performance Monitoring
+
+### Lighthouse CI
+```yaml
+- name: Run Lighthouse CI
+  uses: treosh/lighthouse-ci-action@v9
+  with:
+    uploadDir: './frontend/dist'
+    configPath: './lighthouserc.json'
+```
+
+### Load Testing
+```yaml
+- name: Load test API
+  run: |
+    # Install k6 and run load tests
+    curl https://github.com/grafana/k6/releases/download/v0.45.0/k6-v0.45.0-linux-amd64.tar.gz -L | tar xvz --strip-components 1
+    ./k6 run loadtest.js
+```
+
+## Troubleshooting
+
+### Common Issues
+1. **Test failures**: Check test logs in Actions tab
+2. **Deployment failures**: Verify secrets and environment configuration
+3. **Migration failures**: Check database connectivity and migration files
+
+### Debug Actions
+```yaml
+- name: Debug environment
+  run: |
+    echo "Node version: $(node --version)"
+    echo "Python version: $(python --version)"
+    echo "Current directory: $(pwd)"
+    echo "Environment variables:"
+    env | grep -E '^(DATABASE_URL|NODE_ENV)' || true
+```

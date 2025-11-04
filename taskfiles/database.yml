@@ -1,0 +1,175 @@
+version: "3"
+
+includes:
+  ui: ./ui.yml
+
+# Database & Infrastructure - Complete database management
+# Usage: task db:migrate-up, db:docker-start, db:user-create, db:migrate-status
+
+tasks:
+  # Alembic Migrations
+
+  migrate-create:
+    desc: Create new database migration (auto-loads local.env)
+    silent: true
+    cmds:
+      - task: ui:info
+        vars:
+          TEXT: "Creating database migration..."
+      - poetry run alembic revision --autogenerate -m {{.CLI_ARGS}}
+
+  migrate-up:
+    desc: Apply database migrations (auto-loads local.env)
+    silent: true
+    cmds:
+      - task: ui:info
+        vars:
+          TEXT: "Applying database migrations..."
+      - poetry run alembic upgrade head
+      - task: ui:success
+        vars:
+          TEXT: "Database migrations applied"
+
+  migrate-down:
+    desc: Rollback database migration (auto-loads local.env)
+    silent: true
+    cmds:
+      - task: ui:warning
+        vars:
+          TEXT: "Rolling back database migration..."
+      - poetry run alembic downgrade -1
+
+  migrate-history:
+    desc: Show migration history
+    silent: true
+    cmds:
+      - echo "[INFO] Database migration history"
+      - poetry run alembic history
+
+  migrate-current:
+    desc: Show current migration version
+    silent: true
+    cmds:
+      - echo "[INFO] Current database migration"
+      - poetry run alembic current
+
+  migrate-status:
+    desc: Check database status and migration version
+    silent: true
+    cmds:
+      - task: ui:banner
+        vars:
+          TITLE: "Database Status"
+      - task: migrate-current
+      - poetry run python -c "from app.db import engine; print('✅ [SUCCESS] Database connection successful')" 2>/dev/null || echo "❌ [ERROR] Database connection failed"
+
+  # Production Migrations
+
+  migrate-create-prod:
+    desc: Create migration revision (production environment)
+    silent: true
+    cmds:
+      - echo "[INFO] Creating database migration for production..."
+      - ENV_FILE=prod.env poetry run alembic revision --autogenerate -m {{.CLI_ARGS}}
+
+  migrate-up-prod:
+    desc: Apply database migrations (production environment)
+    silent: true
+    cmds:
+      - echo "[INFO] Applying database migrations to production..."
+      - echo "[WARN] This will modify the production database"
+      - ENV_FILE=prod.env poetry run alembic upgrade head
+
+  migrate-down-prod:
+    desc: Rollback database migration (production - CAUTION!)
+    silent: true
+    cmds:
+      - echo "[ERROR] CAUTION - Rolling back production database migration"
+      - echo "[WARN] This action cannot be undone"
+      - ENV_FILE=prod.env poetry run alembic downgrade -1
+
+  # Docker & Infrastructure
+
+  docker-start:
+    desc: Start database with Docker Compose
+    silent: true
+    cmds:
+      - |
+        echo "[INFO] Starting database with Docker Compose..."
+        if command -v docker >/dev/null 2>&1; then
+          if docker compose version >/dev/null 2>&1; then
+            echo "[INFO] Using modern docker compose"
+            docker compose up -d
+          elif command -v docker-compose >/dev/null 2>&1; then
+            echo "[INFO] Using legacy docker-compose"
+            docker-compose up -d
+          else
+            echo "[ERROR] Docker Compose not available"
+            echo "[INFO] Installation options"
+            echo "  - Modern Docker - Docker Compose is included"
+            echo "  - Legacy Docker - Install docker-compose separately"
+            exit 1
+          fi
+        else
+          echo "[ERROR] Docker not installed or not in PATH"
+          echo "[INFO] Install Docker from https://docker.com/get-started"
+          exit 1
+        fi
+        echo "[INFO] Waiting for database to start..."
+      - sleep 2
+      - task: migrate-up
+
+  docker-check:
+    desc: Check Docker and Docker Compose installation
+    silent: true
+    cmds:
+      - |
+        echo "[INFO] Checking Docker installation..."
+        if command -v docker >/dev/null 2>&1; then
+          echo "[SUCCESS] Docker installed: $(docker --version)"
+          
+          if docker info >/dev/null 2>&1; then
+            echo "[SUCCESS] Docker daemon is running"
+          else
+            echo "[WARN] Docker installed but daemon not running"
+            echo "[INFO] Please start Docker Desktop or Docker daemon"
+          fi
+          
+          echo ""
+          echo "[INFO] Checking Docker Compose..."
+          if docker compose version >/dev/null 2>&1; then
+            echo "[SUCCESS] Modern docker compose available"
+          else
+            echo "[WARN] Modern docker compose not available"
+          fi
+          
+          if command -v docker-compose >/dev/null 2>&1; then
+            echo "[SUCCESS] Legacy docker-compose available"
+          else
+            echo "[WARN] Legacy docker-compose not available"
+          fi
+          
+          echo ""
+          if docker compose version >/dev/null 2>&1; then
+            echo "[INFO] Modern Docker Compose detected (recommended)"
+          elif command -v docker-compose >/dev/null 2>&1; then
+            echo "[INFO] Legacy docker-compose detected. Consider upgrading."
+          else
+            echo "[WARN] No Docker Compose found. Please install Docker Compose."
+          fi
+          
+        else
+          echo "[ERROR] Docker not installed or not in PATH"
+          echo "[INFO] Install Docker from https://docker.com/get-started"
+        fi
+
+  # User Management
+
+  user-create:
+    desc: Create superuser account (auto-loads local.env)
+    silent: true
+    cmds:
+      - task: ui:info
+        vars:
+          TEXT: "Creating superuser account..."
+      - poetry run python -m app.commands.create_superuser {{.CLI_ARGS}}

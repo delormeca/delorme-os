@@ -1,0 +1,285 @@
+---
+description: Railway-specific deployment with tested workflows and troubleshooting
+globs: 
+alwaysApply: false
+---
+# Railway Deployment - Complete Guide
+
+**Tested and proven Railway deployment workflow that prevents common issues.**
+
+## Prerequisites Setup
+
+### 1. Install Railway CLI
+```bash
+npm install -g @railway/cli
+```
+
+### 2. Test Build Locally (CRITICAL!)
+```bash
+# Always test Docker build locally first to catch issues
+task build-docker
+```
+
+**Common build failures:**
+- TypeScript errors: Fix dependencies in `frontend/package.json`
+- Missing packages: Run `cd frontend && npm install`
+- Build timeouts: Ensure clean build environment
+
+## Railway Deployment Steps
+
+### 1. Login to Railway
+```bash
+railway login --browserless
+```
+- Copy the URL and pairing code from terminal
+- Complete authentication in browser
+- Return to terminal once logged in
+
+### 2. Create Project and Database
+```bash
+railway new  # Create new project
+railway add --database postgres  # Add PostgreSQL database
+```
+
+### 3. Link to App Service (CRITICAL!)
+```bash
+railway service
+```
+**IMPORTANT**: Select your main **app service**, NOT the Postgres service.
+This ensures environment variables are set on the correct service.
+
+### 4. Configure Environment Variables
+Set all required environment variables using Railway service references:
+
+```bash
+# Database connection variables
+railway variables --set 'db_host=${{Postgres.PGHOST}}' \
+  --set 'db_port=${{Postgres.PGPORT}}' \
+  --set 'db_database=${{Postgres.PGDATABASE}}' \
+  --set 'db_username=${{Postgres.PGUSER}}' \
+  --set 'db_password=${{Postgres.PGPASSWORD}}' \
+  --set 'db_sslmode=require'
+
+# Complete database URL for migrations (if needed)
+railway variables --set 'DATABASE_URL=postgresql+asyncpg://${{Postgres.PGUSER}}:${{Postgres.PGPASSWORD}}@${{Postgres.PGHOST}}:${{Postgres.PGPORT}}/${{Postgres.PGDATABASE}}'
+
+# App configuration
+railway variables --set 'env=production' \
+  --set 'support_email=support@yourdomain.com' \
+  --set 'jwt_secret_key=your-super-secret-jwt-key-minimum-32-characters-long'
+```
+
+**Optional environment variables:**
+```bash
+# Google OAuth (for social login)
+railway variables --set 'google_oauth2_client_id=your-google-client-id' \
+  --set 'google_oauth2_secret=your-google-client-secret'
+
+# Stripe (for payments)
+railway variables --set 'stripe_api_key=your-stripe-secret-key' \
+  --set 'stripe_webhook_secret=your-stripe-webhook-secret'
+```
+
+### 5. Deploy Application
+```bash
+railway up --detach
+```
+
+This will:
+- Upload your code to Railway
+- Build the Docker image
+- Deploy to production
+- Auto-create database tables on startup (no manual migrations needed!)
+
+### 6. Get Your Live URL
+```bash
+railway domain
+```
+
+### 7. Update Redirect URL
+```bash
+railway variables --set 'redirect_after_login=https://your-actual-domain.railway.app'
+```
+
+## Database Management
+
+### Auto-Migration (Recommended)
+The boilerplate includes **automatic table creation** on startup via `main.py`:
+
+```python
+@app.on_event("startup")
+async def create_db_and_tables():
+    """Create database tables on startup"""
+    async with async_engine.begin() as conn:
+        await conn.run_sync(SQLModel.metadata.create_all)
+```
+
+**Why auto-migration works better than manual:**
+- ✅ Works with Railway's internal networking
+- ✅ Handles initial deployment automatically
+- ✅ No manual migration commands needed
+- ✅ Consistent across all deployments
+
+### Manual Migrations (Advanced)
+For schema changes after initial deployment:
+
+1. Create migration locally: `task db:migrate-create -- "Description"`
+2. Test locally: `task db:migrate-up`
+3. Deploy with updated code: `railway up --detach`
+4. Tables auto-update on next startup
+
+**Note**: Railway's internal network (`postgres.railway.internal`) prevents external migration connections, which is why auto-migration is used.
+
+## Common Issues & Solutions
+
+### Issue: "relation 'user' does not exist"
+**Solution**: This is normal! Auto-migration is working. Wait for deployment to complete.
+
+**Verification**:
+```bash
+curl https://your-domain.railway.app/api/auth/current
+# Should return: {"detail":"User not logged in"}
+```
+
+### Issue: "Address already in use" during local build
+**Solution**: Kill processes on conflicting ports
+```bash
+lsof -ti:8020 | xargs kill -9
+lsof -ti:5173 | xargs kill -9
+```
+
+### Issue: "DATABASE_URL not found"
+**Solution**: Make sure you're linked to **app service**, not Postgres service
+```bash
+railway service  # Select your main app
+```
+
+### Issue: Can't connect to Railway database from local machine
+**Expected behavior**: Railway's internal network is not accessible externally. This is why auto-migration is used instead of manual migration commands.
+
+### Issue: Docker build fails with TypeScript errors
+**Solution**: Fix dependencies and test locally
+```bash
+cd frontend && npm install
+cd .. && task build-docker
+```
+
+### Issue: Frontend not loading
+**Solution**: Check if static files are built correctly
+```bash
+cd frontend && npm run build
+railway up --detach  # Redeploy
+```
+
+## Monitoring & Debugging
+
+### View Logs
+```bash
+railway logs
+railway logs --tail  # Live logs
+```
+
+### Check Status
+```bash
+railway status
+railway variables  # Check environment variables
+```
+
+### Project Dashboard
+```bash
+railway open  # Opens Railway dashboard in browser
+```
+
+## Development Workflow
+
+### Local Development
+```bash
+# Terminal 1: Backend
+task run-backend
+
+# Terminal 2: Generate API client
+task frontend:generate-client
+
+# Terminal 3: Frontend
+task run-frontend
+```
+
+### Deploy Updates
+```bash
+# After making changes
+railway up --detach
+```
+
+### Environment Updates
+```bash
+# Update any environment variable
+railway variables --set 'KEY=value'
+```
+
+## Production Checklist
+
+Before going live:
+- [ ] Set strong `jwt_secret_key` (32+ characters)
+- [ ] Configure Google OAuth credentials
+- [ ] Set up Stripe for payments (if needed)
+- [ ] Configure email service
+- [ ] Set custom domain in Railway dashboard
+- [ ] Test all user flows (signup, login, payments)
+- [ ] Set up monitoring and alerts
+- [ ] Configure backups in Railway dashboard
+
+## Railway Free Tier
+
+**Railway offers generous free tier:**
+- ✅ $5 free credits per month
+- ✅ 500 hours of usage
+- ✅ Custom domains
+- ✅ Automatic deployments
+- ✅ Database hosting
+
+Perfect for startup MVPs and development!
+
+## Task Commands
+
+### Quick Railway Deployment
+```bash
+task deploy-help  # See all deployment options
+```
+
+### Verify Deployment
+```bash
+# Test API health
+curl https://your-domain.railway.app/api/auth/current
+
+# Test frontend
+curl https://your-domain.railway.app/
+```
+
+## Success Indicators
+
+Your deployment is successful when:
+- ✅ API returns `{"detail":"User not logged in"}` at `/api/auth/current`
+- ✅ Frontend loads HTML at root URL
+- ✅ Signup/login endpoints work
+- ✅ Database tables exist and queries work
+- ✅ No "relation does not exist" errors in production
+
+## Emergency Procedures
+
+### Quick Restart
+```bash
+railway restart  # Restart the app service
+```
+
+### Rollback Deployment
+```bash
+# Use Railway dashboard to rollback to previous deployment
+railway open
+```
+
+### Access Database
+```bash
+railway connect postgres  # Direct database access (if needed)
+```
+
+This workflow has been tested and eliminates all common Railway deployment issues!

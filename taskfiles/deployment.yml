@@ -1,0 +1,193 @@
+version: "3"
+
+includes:
+  ui: ./ui.yml
+
+# Deployment automation for CraftYourStartup
+# Supports multiple platforms: Railway, Vercel, Docker, etc.
+
+vars:
+  DOMAIN_DEV: "http://localhost:3000"
+  DOMAIN_STAGING: "https://staging.YOUR_DOMAIN.com"
+  DOMAIN_PROD: "https://YOUR_DOMAIN.com"
+
+tasks:
+  # Primary deployment methods
+  railway-docker:
+    desc: Deploy to Railway (single Docker image)
+    cmds:
+      - task: ui:banner
+        vars:
+          TITLE: "Railway Docker Deployment"
+      - echo "Prerequisites - Railway CLI installed and authenticated"
+      - task: ui:info
+        vars:
+          TEXT: "Building Docker image..."
+      - task: backend:docker-build
+      - task: ui:success
+        vars:
+          TEXT: "Docker image built"
+      - echo ""
+      - echo "[INFO] Next steps:"
+      - echo "  1. railway new"
+      - echo "  2. railway up"
+      - echo ""
+      - echo "[INFO] "
+
+  railway-complete:
+    desc: Complete Railway deployment guide
+    silent: true
+    cmds:
+      - echo "🚀 Railway Deployment Guide"
+      - echo "============================"
+      - echo ""
+      - echo "Prerequisites:"
+      - echo "  ✓ Railway CLI installed (railway --version)"
+      - echo "  ✓ Docker running (docker --version)"
+      - echo ""
+      - echo ""
+      - echo "Deployment Steps:"
+      - echo "  1. Test build locally    → task build-docker"
+      - echo "  2. Login to Railway      → railway login --browserless"
+      - echo "  3. Create project        → railway new"
+      - echo "  4. Add database          → railway add --database postgres"
+      - echo "  5. Link to app service   → railway service"
+      - echo "  6. Set environment variables (see guide)"
+      - echo "  7. Deploy                → railway up --detach"
+      - echo "  8. Get URL               → railway domain"
+      - echo "  9. Update redirect URL with actual domain"
+      - echo ""
+      - echo "Features:"
+      - echo "  🚀 Database tables auto-create on startup"
+      - echo "  🔧 No manual migrations needed"
+      - echo ""
+      - echo "Common Issues & Solutions:"
+      - echo "  ⚠️  'relation user does not exist' → Wait for deployment"
+      - echo "  ⚠️  Build failures → Test locally first"
+      - echo "  ⚠️  Cannot connect to DB → Expected during startup"
+      - echo ""
+      - echo "Verification:"
+      - echo "  🧪 curl https://your-domain.railway.app/api/auth/current"
+
+  vercel-railway:
+    desc: Deploy frontend to Vercel + backend to Railway
+    cmds:
+      - echo "🚀 Vercel + Railway Deployment"
+      - echo "================================"
+      - echo "[INFO] Prerequisites - vercel and railway CLI tools installed"
+      - echo ""
+      - echo "Deployment Steps:"
+      - echo "  1. Deploy backend to Railway first"
+      - echo "  2. Generate latest API client:"
+      - echo "     → task backend:run (in another terminal)"
+      - echo "     → task frontend:generate-client"
+      - echo "  3. Get Railway URL and build frontend"
+      - echo "  4. Deploy to Vercel"
+      - echo ""
+
+  single-docker:
+    desc: Build single Docker image for deployment
+    cmds:
+      - task: ui:banner
+        vars:
+          TITLE: "📦 Single Docker Build"
+      - task: ui:info
+        vars:
+          TEXT: "Building single Docker image with embedded frontend..."
+      - task: backend:docker-build
+      - task: ui:success
+        vars:
+          TEXT: "Image ready for deployment to your platform"
+
+  separate-services:
+    desc: Build for separate frontend/backend deployment
+    cmds:
+      - echo "🔗 Separate Services Build"
+      - echo "=========================="
+      - echo "[WARN] Set API_URL environment variable first"
+      - echo "  Example - API_URL=https://api.YOUR_DOMAIN.com"
+      - echo ""
+      - echo "[INFO] Building for separate service deployment..."
+      - task: frontend:build
+      - echo "[SUCCESS] Frontend built for separate deployment"
+      - echo ""
+      - echo "[INFO] Deploy frontend dist/ to static hosting"
+      - echo "[INFO] Deploy backend separately with CORS enabled"
+
+  # Environment-specific deployments
+  staging:
+    desc: Deploy to staging environment
+    cmds:
+      - echo "🧪 Staging Deployment"
+      - echo "====================="
+      - echo "[INFO] Pre-deployment testing..."
+      - task: quality:test-all
+      - echo "[SUCCESS] Tests passed"
+      - echo ""
+      - echo "Staging Deployment Options:"
+      - echo "  → task deployment:single-docker"
+      - echo "  → task deployment:separate-services"
+      - echo "    (API_URL={{.DOMAIN_STAGING}}/api)"
+
+  production:
+    desc: Deploy to production environment
+    cmds:
+      - echo "🌟 Production Deployment"
+      - echo "========================"
+      - echo "[INFO] Pre-deployment testing..."
+      - task: quality:test-all
+      - echo "[SUCCESS] Tests passed"
+      - echo ""
+      - echo "Production Deployment Options:"
+      - echo "  → task deployment:single-docker"
+      - echo "  → task deployment:separate-services"
+      - echo "    (API_URL={{.DOMAIN_PROD}}/api)"
+
+  # Helper and information tasks
+  options:
+    desc: Show all deployment options
+    silent: true
+    cmds:
+      - echo "🚀 Deployment Options"
+      - echo "====================="
+      - echo ""
+      - echo "Most Popular (Modern):"
+      - echo "  🚀 task deployment:vercel-railway"
+      - echo ""
+      - echo "Most Popular (Simple):"
+      - echo "  🐳 task deployment:railway-docker"
+      - echo ""
+      - echo "Other Options:"
+      - echo "  📦 task deployment:single-docker"
+      - echo "  🔗 task deployment:separate-services"
+      - echo ""
+      - echo "Environment-Specific:"
+      - echo "  🧪 task deployment:staging"
+      - echo "  🌟 task deployment:production"
+      - echo ""
+
+  status:
+    desc: Check deployment readiness and system status
+    cmds:
+      - echo "🔍 Deployment Readiness Check"
+      - echo "============================="
+      - echo ""
+      - echo "System Requirements:"
+      - |
+        command -v docker >/dev/null 2>&1 && echo "  ✅ Docker installed" || echo "  ❌ Docker missing"
+        command -v railway >/dev/null 2>&1 && echo "  ✅ Railway CLI installed" || echo "  ⚠️  Railway CLI missing (optional)"
+        command -v vercel >/dev/null 2>&1 && echo "  ✅ Vercel CLI installed" || echo "  ⚠️  Vercel CLI missing (optional)"
+      - echo ""
+      - echo "Build Status:"
+      - task: quality:test-backend
+      - echo ""
+      - echo "Ready for Deployment:"
+      - echo "  ✅ All checks passed"
+      - echo "  🚀 Choose your deployment method:"
+      - echo "     → task deployment:options"
+
+  help:
+    desc: Show deployment help and quick commands
+    silent: true
+    cmds:
+      - task: options

@@ -1,0 +1,299 @@
+version: "3"
+
+# Include organized taskfiles for better structure
+includes:
+  ui: ./taskfiles/ui.yml
+  db: ./taskfiles/database.yml
+  payments: ./taskfiles/payments.yml
+  quality: ./taskfiles/quality.yml
+  backend: ./taskfiles/backend.yml
+  frontend: ./taskfiles/frontend.yml
+  deployment: ./taskfiles/deployment.yml
+
+# Project configuration
+vars:
+  PROJECT: "CraftYourStartup"
+  VERSION: "2.0.0"
+
+tasks:
+  default:
+    desc: Show help information
+    cmds:
+      - task: help
+
+  # Main development aliases (redirect to specialized namespaces)
+  install:
+    desc: Install backend dependencies (use backend:install for more options)
+    cmds:
+      - task: backend:install
+
+  run-backend:
+    desc: Start backend development server (alias for backend:run)
+    cmds:
+      - task: backend:run
+
+  dev:
+    desc: Alias for backend development server
+    cmds:
+      - task: backend:run
+
+  create-superuser:
+    desc: Create superuser account (usage - --email EMAIL --password PASS --full_name NAME)
+    cmds:
+      - task: db:user-create
+        vars:
+          CLI_ARGS: "{{.CLI_ARGS}}"
+
+  quick-start:
+    desc: Quick development start (config test + migrate + server)
+    silent: true
+    cmds:
+      - task: ui:info
+        vars:
+          TEXT: "Running quick development setup..."
+      - task: backend:config-test
+      - task: db:migrate-up
+      - task: ui:info
+        vars:
+          TEXT: "Starting server at http://localhost:8020"
+      - task: backend:run
+
+  # Frontend aliases (use frontend: namespace for more options)
+  install-frontend:
+    desc: Install frontend dependencies
+    cmds:
+      - task: frontend:install
+
+  run-frontend:
+    desc: Start frontend development server (alias for frontend:run)
+    cmds:
+      - task: frontend:run
+
+  setup-env:
+    desc: Setup environment files from examples
+    silent: true
+    cmds:
+      - task: ui:info
+        vars:
+          TEXT: "Setting up environment files..."
+      - cp local.env.example local.env
+      - cp local.env.example prod.env
+      - task: ui:success
+        vars:
+          TEXT: "Environment files created"
+      - task: ui:warning
+        vars:
+          TEXT: "Update values in local.env and prod.env before use"
+
+  check-env:
+    desc: Verify environment files exist
+    silent: true
+    cmds:
+      - task: ui:info
+        vars:
+          TEXT: "Checking environment files..."
+      - test -f local.env || (echo "❌ [ERROR] local.env not found! Run 'task setup-env' first" && exit 1)
+      - test -f prod.env || (echo "❌ [ERROR] prod.env not found! Run 'task setup-env' first" && exit 1)
+      - task: ui:success
+        vars:
+          TEXT: "Environment files found"
+
+  dev-workflow:
+    desc: Show complete development workflow
+    silent: true
+    cmds:
+      - task: ui:banner
+        vars:
+          TITLE: "CraftYourStartup Development Workflow"
+      - echo "1. Start backend"
+      - echo "   task backend:run"
+      - echo ""
+      - echo "2. Generate API client (after backend changes)"
+      - echo "   task frontend:generate-client"
+      - echo ""
+      - echo "3. Start frontend"
+      - echo "   task frontend:run"
+      - echo ""
+      - task: ui:info
+        vars:
+          TEXT: "Remember to run 'task frontend:generate-client' after backend API changes"
+
+  full-setup:
+    desc: Complete project setup for new developers
+    silent: true
+    cmds:
+      - task: ui:banner
+        vars:
+          TITLE: "Complete CraftYourStartup Setup"
+      - task: ui:progress
+        vars:
+          MSG: "Running complete setup..."
+      - task: db:docker-check
+      - task: backend:install
+      - task: frontend:install
+      - task: frontend:fix-rollup
+      - task: setup-env
+      - task: payments:setup
+      - task: db:docker-start
+      - echo ""
+      - task: ui:success
+        vars:
+          TEXT: "Setup completed!"
+      - echo ""
+      - echo "Next steps:"
+      - echo "  1. Update local.env and prod.env with your values"
+      - echo "  2. Set up Stripe account and update payment keys"
+      - echo "  3. Start backend - task run-backend"
+      - echo "  4. Start frontend - task run-frontend"
+      - echo ""
+      - echo "Troubleshooting:"
+      - echo "  If you encounter frontend issues run task frontend:troubleshoot"
+
+  help:
+    desc: Show common commands with enhanced unified output
+    silent: true
+    cmds:
+      - task: ui:banner
+        vars:
+          TITLE: "{{.PROJECT}} Task Runner"
+      - task: ui:section
+        vars:
+          TITLE: "Development Commands"
+          COLOR: "{{.GREEN}}"
+      - task: ui:command
+        vars:
+          CMD: "task backend:run"
+          DESC: "Start backend development server"
+      - task: ui:command
+        vars:
+          CMD: "task frontend:run"
+          DESC: "Start frontend development server"
+      - task: ui:command
+        vars:
+          CMD: "task db:migrate-up"
+          DESC: "Apply database migrations"
+      - task: ui:command
+        vars:
+          CMD: "task db:user-create"
+          DESC: "Create superuser account"
+      - task: ui:command
+        vars:
+          CMD: "task db:docker-start"
+          DESC: "Start database services"
+      - task: ui:section
+        vars:
+          TITLE: "Payment Commands"
+          COLOR: "{{.PURPLE}}"
+      - task: ui:command
+        vars:
+          CMD: "task payments:setup"
+          SPACING: "                    "
+          DESC: "Setup payment integration"
+      - task: ui:command
+        vars:
+          CMD: "task payments:products-create"
+          SPACING: "      "
+          DESC: "Create Stripe products"
+      - task: ui:command
+        vars:
+          CMD: "task payments:test-integration"
+          SPACING: "   "
+          DESC: "Test payment setup"
+      - task: ui:section
+        vars:
+          TITLE: "Deployment Commands"
+          COLOR: "{{.RED}}"
+      - task: ui:command
+        vars:
+          CMD: "task deployment:options"
+          SPACING: "        "
+          DESC: "Show deployment options"
+      - task: ui:command
+        vars:
+          CMD: "task deployment:railway-docker"
+          SPACING: " "
+          DESC: "Deploy to Railway (Docker)"
+      - task: ui:command
+        vars:
+          CMD: "task deployment:vercel-railway"
+          SPACING: " "
+          DESC: "Deploy to Vercel + Railway"
+      - task: ui:section
+        vars:
+          TITLE: "Testing Commands"
+          COLOR: "{{.BLUE}}"
+      - task: ui:command
+        vars:
+          CMD: "task quality:test"
+          SPACING: "            "
+          DESC: "Run all tests (backend + frontend)"
+      - task: ui:command
+        vars:
+          CMD: "task quality:test-backend"
+          SPACING: "      "
+          DESC: "Run backend tests only"
+      - task: ui:command
+        vars:
+          CMD: "task quality:test-frontend"
+          SPACING: "     "
+          DESC: "Run frontend tests only"
+      - task: ui:section
+        vars:
+          TITLE: "Shortcuts"
+          COLOR: "{{.YELLOW}}"
+      - task: ui:command
+        vars:
+          CMD: "task dev"
+          SPACING: "                    "
+          DESC: "Alias for run-backend"
+      - task: ui:command
+        vars:
+          CMD: "task quick-start"
+          SPACING: "            "
+          DESC: "Config + migrate + server"
+      - task: ui:command
+        vars:
+          CMD: "task backend:config-test"
+          SPACING: "      "
+          DESC: "Test configuration loading"
+
+      - echo ""
+      - echo "All commands automatically load environment variables"
+      - echo "Run 'task --list' to see all available tasks"
+
+  health-check:
+    desc: Check service status (health check for all services)
+    silent: true
+    cmds:
+      - task: ui:banner
+        vars:
+          TITLE: "Full Stack Health Check"
+      - task: backend:health
+      - echo ""
+      - task: ui:section
+        vars:
+          TITLE: "Frontend Status"
+          COLOR: "{{.GREEN}}"
+      - "curl -s http://localhost:5173 2>/dev/null && echo '✅ [SUCCESS] Frontend running' || echo '⚠️ [WARNING] Frontend not running'"
+      - echo ""
+      - task: ui:section
+        vars:
+          TITLE: "Database Status"
+          COLOR: "{{.BLUE}}"
+      - "docker ps | grep postgres && echo '✅ [SUCCESS] Database running' || echo '⚠️ [WARNING] Database not running'"
+
+  env-template:
+    desc: Show all required environment variables
+    silent: true
+    cmds:
+      - echo "[INFO] Complete Environment Variables Template"
+      - echo "=============================================="
+      - echo ""
+      - echo "Backend environment (see backend:env-template for details):"
+      - task: backend:env-template
+      - echo ""
+      - echo "Frontend environment (see frontend:env-template for details):"
+      - task: frontend:env-template
+      - echo ""
+      - echo "Payment environment (see payments:config-template for details):"
+      - task: payments:config-template

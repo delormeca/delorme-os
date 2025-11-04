@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:15.3-alpine3.18
+    volumes:
+      - /var/lib/postgresql/data
+      - ./postgres/databases:/docker-entrypoint-initdb.d
+    ports:
+      - "54323:5432"
+    restart: always
+    env_file:
+      - ./postgres/.env.postgres
+    hostname: postgres
+    healthcheck:
+      test: [ "CMD", "pg_isready", "-d", "craftyourstartup", "-U", "craftyourstartup" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+networks:
+  default:
+    name: craftyourstartup-app-local-dev-network

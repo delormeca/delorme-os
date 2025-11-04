@@ -1,0 +1,223 @@
+---
+description: "Complete API development workflow from schemas to frontend hooks"
+globs: app/controllers/**,app/services/**,app/schemas/**,frontend/src/hooks/api/**
+alwaysApply: false
+---
+# Complete API Development Workflow
+
+## 1. Define Pydantic Schemas First
+Start with request/response schemas in `app/schemas/`:
+
+```python
+# app/schemas/article.py
+from sqlmodel import SQLModel
+from typing import Optional
+import uuid
+
+class ArticleCreate(SQLModel):
+    title: str
+    content: str
+    is_published: Optional[bool] = False
+
+class ArticleUpdate(SQLModel):
+    title: Optional[str] = None
+    content: Optional[str] = None
+    is_published: Optional[bool] = None
+
+class ArticleRead(SQLModel):
+    id: int
+    title: str
+    content: str
+    is_published: bool
+    user_id: uuid.UUID
+    created_at: datetime
+    updated_at: datetime
+```
+
+## 2. Implement Service Layer (Business Logic)
+Create services in `app/services/` following the established patterns:
+
+```python
+# app/services/article_service.py
+from sqlmodel import Session, select
+from app.models import Article
+from app.schemas.article import ArticleCreate, ArticleUpdate, ArticleRead
+from app.core.exceptions import NotFoundException, ValidationException
+
+class ArticleService:
+    def __init__(self, db: Session):
+        self.db = db
+    
+    async def create_article(self, article_data: ArticleCreate, user_id: uuid.UUID) -> ArticleRead:
+        """Create new article with validation and business logic"""
+        # Validation
+        if len(article_data.title.strip()) < 3:
+            raise ValidationException("Title must be at least 3 characters")
+        
+        # Business logic
+        article = Article(**article_data.model_dump(), user_id=user_id)
+        self.db.add(article)
+        self.db.commit()
+        self.db.refresh(article)
+        
+        return ArticleRead.model_validate(article)
+    
+    async def get_articles(self, user_id: uuid.UUID, published_only: bool = False) -> list[ArticleRead]:
+        """Get articles with filtering"""
+        query = select(Article).where(Article.user_id == user_id)
+        if published_only:
+            query = query.where(Article.is_published == True)
+        
+        articles = self.db.exec(query).all()
+        return [ArticleRead.model_validate(article) for article in articles]
+```
+
+## 3. Create Controller Endpoints
+Add API endpoints in `app/controllers/` with proper dependency injection:
+
+```python
+# app/controllers/article.py
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlmodel import Session
+from app.db import get_session
+from app.services.article_service import ArticleService
+from app.schemas.article import ArticleCreate, ArticleUpdate, ArticleRead
+from app.auth_backend import get_current_user
+from app.models import User
+
+router = APIRouter(prefix="/api/articles", tags=["articles"])
+
+def get_article_service(db: Session = Depends(get_session)) -> ArticleService:
+    return ArticleService(db)
+
+@router.post("", response_model=ArticleRead, status_code=status.HTTP_201_CREATED)
+async def create_article(
+    article_data: ArticleCreate,
+    current_user: User = Depends(get_current_user),
+    service: ArticleService = Depends(get_article_service),
+):
+    """Create new article"""
+    try:
+        return await service.create_article(article_data, current_user.id)
+    except ValidationException as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+@router.get("", response_model=list[ArticleRead])
+async def list_articles(
+    published_only: bool = False,
+    current_user: User = Depends(get_current_user),
+    service: ArticleService = Depends(get_article_service),
+):
+    """List user's articles"""
+    return await service.get_articles(current_user.id, published_only)
+```
+
+## 4. Register Router in Main App
+Add to `main.py`:
+```python
+from app.controllers.article import router as article_router
+app.include_router(article_router)
+```
+
+## 5. Generate Frontend Client
+Run client generation after backend changes:
+```bash
+task frontend:generate-client
+```
+
+## 6. Create React API Hooks
+Add hooks in `frontend/src/hooks/api/`:
+
+```typescript
+// frontend/src/hooks/api/useArticles.ts
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { ArticlesService } from '@/client';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
+
+export const useArticles = (publishedOnly: boolean = false) => {
+  const { handleApiError } = useErrorHandler();
+  
+  return useQuery({
+    queryKey: ['articles', { publishedOnly }],
+    queryFn: () => ArticlesService.listArticlesApiArticlesGet(publishedOnly),
+    onError: handleApiError,
+  });
+};
+
+export const useCreateArticle = () => {
+  const queryClient = useQueryClient();
+  const { handleApiError } = useErrorHandler();
+  
+  return useMutation({
+    mutationFn: ArticlesService.createArticleApiArticlesPost,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['articles'] });
+    },
+    onError: handleApiError,
+  });
+};
+```
+
+## 7. Use in React Components
+Implement in components with proper error handling:
+
+```typescript
+// frontend/src/pages/Article/MyArticles.tsx
+import { useArticles, useCreateArticle } from '@/hooks/api/useArticles';
+import { StandardButton } from '@/components/ui/StandardButton';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
+
+const MyArticles: React.FC = () => {
+  const { data: articles, isLoading, error } = useArticles();
+  const createMutation = useCreateArticle();
+  const { handleError } = useErrorHandler();
+
+  if (error) {
+    handleError(error);
+    return null;
+  }
+
+  return (
+    <div>
+      {isLoading ? (
+        <CircularProgress />
+      ) : (
+        articles?.map(article => (
+          <ArticleCard key={article.id} article={article} />
+        ))
+      )}
+    </div>
+  );
+};
+```
+
+## Error Handling Standards
+- **Service Layer**: Throw specific exceptions (ValidationException, NotFoundException)
+- **Controller Layer**: Catch service exceptions and convert to HTTP errors
+- **Frontend**: Use useErrorHandler hook for consistent error handling
+- **API Client**: All hooks include error handling with user feedback
+
+## Database Integration
+- **Migrations**: Run `task db:migrate-create` and `task db:migrate-up`
+- **Models**: Ensure SQLModel fields match schema definitions
+- **Relationships**: Use proper foreign keys and Relationship() for joins
+
+## Testing Integration
+- **Backend**: Test services independently with mock data
+- **API**: Test controllers with FastAPI TestClient
+- **Frontend**: Mock API calls in component tests
+- **E2E**: Test complete workflow from UI to database
+
+## Security Considerations
+- **Authentication**: All protected endpoints require current_user dependency
+- **Authorization**: Check user permissions in service layer
+- **Validation**: Validate all inputs at schema level
+- **Sanitization**: Clean data before database operations
+
+## Performance Optimization
+- **Pagination**: Implement for large datasets with skip/limit parameters
+- **Caching**: Use React Query cache for API responses
+- **Database**: Add proper indexes for common queries
+- **Loading States**: Show loading indicators during API calls
+
+Follow this complete workflow for all new API features to maintain consistency and reliability across the application.

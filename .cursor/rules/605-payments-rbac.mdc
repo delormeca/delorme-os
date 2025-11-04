@@ -1,0 +1,194 @@
+---
+description: "Payment-to-RBAC integration, permission updates, and security best practices"
+globs: app/core/access_control.py,app/permissions.py
+alwaysApply: false
+---
+# Payment-to-RBAC Integration
+
+## Critical Integration Pattern
+
+When payment events occur, permissions MUST be updated immediately:
+
+```python
+# ALWAYS follow this pattern in webhook handlers:
+
+async def _handle_checkout_completed(self, session: Dict):
+    # 1. Create/update subscription or purchase
+    subscription = Subscription(...)
+    self.db.add(subscription)
+    
+    # 2. CRITICAL: Update user plan
+    from app.core.access_control import update_user_plan
+    user = await self.db.get(User, user_id)
+    new_plan = await update_user_plan(user, self.db)
+    
+    # 3. Commit changes
+    self.db.commit()
+    
+    # User now has new permissions immediately
+```
+
+## update_user_plan Function
+
+```python
+# app/core/access_control.py
+from app.models import User, Subscription, Purchase
+from app.permissions import PlanType
+from sqlmodel import select
+
+async def update_user_plan(user: User, db: Session) -> PlanType:
+    """
+    Recalculate user's plan based on subscriptions and purchases.
+    Returns highest available plan.
+    """
+    # Check for active subscription (highest priority)
+    subscription = await db.execute(
+        select(Subscription).where(
+            Subscription.user_id == user.id,
+            Subscription.status == "active"
+        )
+    )
+    sub = subscription.scalar_one_or_none()
+    
+    if sub:
+        if sub.plan == "enterprise":
+            user.current_plan = PlanType.ENTERPRISE
+        elif sub.plan == "premium":
+            user.current_plan = PlanType.PREMIUM
+    else:
+        # Check purchases
+        purchases = await db.execute(
+            select(Purchase).where(
+                Purchase.user_id == user.id,
+                Purchase.is_successful == True
+            )
+        )
+        user_purchases = purchases.scalars().all()
+        
+        has_pro = any(p.product_type == "pro" for p in user_purchases)
+        has_starter = any(p.product_type == "starter" for p in user_purchases)
+        
+        if has_pro:
+            user.current_plan = PlanType.PRO
+        elif has_starter:
+            user.current_plan = PlanType.STARTER
+        else:
+            user.current_plan = PlanType.FREE
+    
+    db.add(user)
+    return user.current_plan
+```
+
+## Permission Checking
+
+```python
+# app/core/access_control.py
+from app.permissions import FeaturePermission, user_has_permission
+
+class PlanChecker:
+    def __init__(self, user: User, db: Session, current_plan: PlanType):
+        self.user = user
+        self.db = db
+        self.current_plan = current_plan
+    
+    def require_permission(self, permission: FeaturePermission):
+        if not user_has_permission(self.current_plan, permission):
+            raise AuthorizationException(
+                f"This feature requires {permission.value} permission"
+            )
+    
+    def has_permission(self, permission: FeaturePermission) -> bool:
+        return user_has_permission(self.current_plan, permission)
+```
+
+## Security Best Practices
+
+### Webhook Security
+```python
+# Always verify signatures
+def verify_webhook_signature(payload: bytes, signature: str):
+    try:
+        event = stripe.Webhook.construct_event(
+            payload, signature, webhook_secret
+        )
+        return event
+    except stripe.SignatureVerificationError:
+        raise HTTPException(status_code=400, detail="Invalid signature")
+```
+
+### Customer Data Protection
+```python
+# Never store payment data
+class User(SQLModel, table=True):
+    stripe_customer_id: Optional[str]  # Reference only
+    # Never store: card numbers, CVV, billing addresses
+
+class Subscription(SQLModel, table=True):
+    stripe_subscription_id: str  # Reference only
+    # Store: status, dates, tier
+    # Never store: payment methods
+```
+
+### Environment Configuration
+```python
+# Use environment-specific keys
+from app.config.base import get_settings
+
+settings = get_settings()
+
+if settings.environment == "development":
+    stripe.api_key = "sk_test_..."
+else:
+    stripe.api_key = "sk_live_..."
+```
+
+### Input Validation
+```python
+# app/schemas/payment.py
+from pydantic import validator
+
+class CreateCheckoutRequest(SQLModel):
+    payment_type: Literal["subscription", "one_time"]
+    tier: Optional[str]
+    
+    @validator('tier')
+    def validate_tier(cls, v, values):
+        if values.get('payment_type') == 'subscription' and not v:
+            raise ValueError('Tier required for subscriptions')
+        return v
+```
+
+## Payment Setup Script
+
+```python
+# app/commands/setup_stripe_products.py
+import stripe
+from app.config.payments import get_payment_settings
+
+def setup_stripe_products():
+    settings = get_payment_settings()
+    stripe.api_key = settings.stripe_secret_key
+    
+    products = [
+        {
+            "name": "Premium",
+            "prices": [{"amount": 2999, "interval": "month"}]
+        },
+    ]
+    
+    for product_data in products:
+        product = stripe.Product.create(
+            name=product_data["name"],
+        )
+        
+        price = stripe.Price.create(
+            product=product.id,
+            unit_amount=product_data["prices"][0]["amount"],
+            currency="usd",
+            recurring={"interval": product_data["prices"][0]["interval"]},
+        )
+        
+        print(f"Price ID: {price.id}")
+```
+
+**CRITICAL**: Always call `update_user_plan()` after payment events!

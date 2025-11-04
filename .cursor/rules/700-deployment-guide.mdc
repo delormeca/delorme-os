@@ -1,0 +1,312 @@
+---
+description: Helpful for deployment architecture strategies
+globs: 
+alwaysApply: false
+---
+# Production Deployment Guide
+
+## Deployment Architecture Strategies
+
+### 1. **Single Docker Container** ⭐ *Simplest* (Recommended for MVPs)
+
+**How it works:**
+- Frontend builds into `static/` directory  
+- FastAPI serves both static files and API
+- Single deployment unit
+
+**Current setup (no changes needed):**
+```python
+# main.py - Auto-migration included
+@app.on_event("startup")
+async def create_db_and_tables():
+    """Create database tables on startup"""
+    async with async_engine.begin() as conn:
+        await conn.run_sync(SQLModel.metadata.create_all)
+
+# Static file serving
+app.mount("/static", StaticFiles(directory="static/static"))
+app.mount("/assets", StaticFiles(directory="static/assets"))
+```
+
+**Deployment platforms:**
+- Railway (recommended - see `railway-deployment.mdc`)
+- Render, DigitalOcean, Heroku
+
+**Pros:** Zero config, no CORS issues, cost-effective, perfect for MVPs
+**Cons:** No independent scaling, slower frontend updates
+
+### 2. **Separate Services** ⭐⭐ *Scalable* (Recommended for Production)
+
+**Architecture:** Frontend (Static Hosting) ↔ Backend (API Only)
+
+**Required changes:**
+```python
+# main.py - Add CORS for separate frontend
+from fastapi.middleware.cors import CORSMiddleware
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["https://your-frontend-domain.com"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Remove static file serving for API-only mode
+# app.mount("/static", ...) # Remove
+# app.mount("/assets", ...) # Remove
+```
+
+```typescript
+// frontend/src/config/api.ts
+const getApiBaseUrl = () => {
+  if (import.meta.env.DEV) return ''; // Vite proxy
+  return import.meta.env.VITE_API_URL || '';
+};
+
+export const API_BASE_URL = getApiBaseUrl();
+```
+
+**Deployment combinations:**
+- Frontend: Vercel/Netlify + Backend: Railway/Render
+- Both on DigitalOcean App Platform
+
+**Pros:** Independent scaling, CDN benefits, faster deployments
+**Cons:** CORS configuration, two deployment pipelines
+
+## Platform-Specific Quick Deploy
+
+### Railway (Single Container)
+```bash
+# Test build locally first
+docker build -t test-build .
+
+# Deploy to Railway
+railway login
+railway new
+railway add --database postgres
+railway up --detach
+```
+
+### Vercel + Railway (Separate Services)
+```bash
+# Deploy backend to Railway
+railway up --detach
+
+# Deploy frontend to Vercel
+cd frontend
+VITE_API_URL=https://your-app.railway.app npm run build
+vercel --prod
+```
+
+### DigitalOcean App Platform
+```yaml
+# .do/app.yaml
+name: craftyourstartup
+services:
+- name: fullstack
+  source_dir: /
+  build_command: cd frontend && npm run build && cp -r dist/* ../static/
+  run_command: uvicorn main:app --host 0.0.0.0 --port 8080
+  environment_slug: python
+```
+
+## Environment Configuration
+
+### Production Environment Variables
+```bash
+# Required for all deployments
+DATABASE_URL=postgresql://user:pass@host:port/db
+SECRET_KEY=your-secure-jwt-secret-32-chars-minimum
+FRONTEND_URL=https://yourdomain.com
+
+# OAuth (if enabled)  
+GOOGLE_CLIENT_ID=your-google-oauth-id
+GOOGLE_CLIENT_SECRET=your-google-oauth-secret
+
+# Payments (if enabled)
+STRIPE_SECRET_KEY=sk_live_...
+STRIPE_PUBLISHABLE_KEY=pk_live_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+```
+
+### Platform-Specific Setup
+- **Railway:** `railway variables --set KEY=value`
+- **Vercel:** Dashboard or `vercel env add`
+- **DigitalOcean:** App Platform environment variables
+- **Render:** Service settings environment section
+
+## Database Migration Strategy
+
+### Auto-Migration (Recommended for Cloud)
+**Already included in your boilerplate** - works automatically:
+
+```python
+# main.py handles this automatically
+@app.on_event("startup") 
+async def create_db_and_tables():
+    async with async_engine.begin() as conn:
+        await conn.run_sync(SQLModel.metadata.create_all)
+```
+
+**When to use:**
+- ✅ Initial cloud deployment
+- ✅ Cloud platforms with networking restrictions  
+- ✅ Simple schema updates
+- ✅ Development/staging environments
+
+### Manual Migrations (Advanced)
+**For complex schema changes:**
+
+```bash
+# Local development
+task db:migrate-create -- "Add new feature"
+task db:migrate-up
+
+# Production (after testing locally)
+task db:migrate-up-prod
+```
+
+**When to use:**
+- ✅ Complex data migrations
+- ✅ Production with critical data
+- ✅ Team development with migration history
+
+## Pre-Deployment Checklist
+
+### Security & Configuration
+- [ ] Strong `SECRET_KEY` (32+ characters) in production environment
+- [ ] Production OAuth credentials configured
+- [ ] Stripe live keys (if using payments)  
+- [ ] CORS configured for production domain
+- [ ] Database backups enabled
+
+### Code Quality
+- [ ] All tests passing: `task test-backend && task test-frontend`
+- [ ] Code linted: `task lint-backend && task lint-frontend`
+- [ ] Frontend optimized: `task build-frontend`
+- [ ] Docker build tested locally: `docker build -t test .`
+
+### Post-Deployment Verification
+- [ ] API health check: `/docs` endpoint accessible
+- [ ] Frontend loads correctly
+- [ ] User registration/login flow works
+- [ ] Database connections working
+- [ ] Payment processing (if applicable)
+
+## CI/CD Integration
+
+### GitHub Actions Workflow
+```yaml
+# .github/workflows/deploy.yml
+name: Deploy
+on:
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: |
+          pip install poetry
+          poetry install
+      - name: Run tests
+        run: poetry run pytest
+      
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Deploy
+        run: echo "Platform auto-deploys on main branch push"
+```
+
+## Architecture Migration Path
+
+### From Single Container → Separate Services
+1. **Add API configuration to frontend**
+2. **Enable CORS in FastAPI backend**  
+3. **Remove static file serving from FastAPI**
+4. **Deploy frontend and backend separately**
+
+### Migration Commands
+```bash
+# Test separate deployment locally
+cd frontend
+VITE_API_URL=http://localhost:8020 npm run build
+npx serve dist/ --port 5173
+
+# Production deployment
+VITE_API_URL=https://api.yourdomain.com npm run build
+# Deploy dist/ to static hosting platform
+```
+
+## Cost Optimization
+
+### Free Tier Options
+- **Railway:** $5/month with $5 free credits
+- **Vercel:** Free for frontend hosting
+- **Render:** Free tier for hobby projects
+- **Netlify:** Free for static sites
+
+### Scaling Strategy
+1. **Start with single container** (Railway/Render)
+2. **Scale to separate services** when traffic grows
+3. **Add CDN** for static assets at scale
+4. **Consider serverless** for variable traffic
+
+## Monitoring & Maintenance
+
+### Essential Monitoring
+- **Health checks:** API `/docs` endpoint
+- **Error tracking:** Sentry integration recommended
+- **Uptime monitoring:** Platform built-in or external
+- **Database monitoring:** Platform provided
+
+### Regular Maintenance
+- **Weekly:** Monitor application metrics and error logs
+- **Monthly:** Update dependencies, review performance
+- **Quarterly:** Security audit, rotate secrets
+
+## Troubleshooting Common Issues
+
+### Build Failures
+```bash
+# Always test Docker build locally first
+docker build -t test-build .
+
+# Frontend build issues
+cd frontend && npm install && npm run build
+```
+
+### Database Connection Issues
+- Verify `DATABASE_URL` format and credentials
+- Check auto-migration logs in deployment platform
+- For Railway: Ensure linked to app service, not postgres service
+
+### CORS Errors (Separate Services)
+```python
+# Ensure CORS is properly configured in main.py
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["https://your-frontend-domain.com"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+```
+
+### Environment Variable Issues
+- Verify all required variables are set in platform
+- Check variable names match exactly (case-sensitive)
+- Test with configuration validation script
+
+This deployment guide works with your existing Vite proxy setup and automatic environment loading system, ensuring a smooth development-to-production workflow.

@@ -1,0 +1,52 @@
+{
+  "allowedTools": [
+    "Edit",
+    "Bash(poetry:*)",
+    "Bash(task:*)",
+    "Bash(npm:*)",
+    "Bash(git commit:*)",
+    "Bash(git push:*)",
+    "Bash(git checkout:*)",
+    "Bash(git branch:*)",
+    "Bash(docker-compose:*)",
+    "Bash(pytest:*)",
+    "Bash(alembic:*)",
+    "Bash(stripe:*)"
+  ],
+  "workingDirectory": ".",
+  "permissions": {
+    "autoApprove": {
+      "fileEdit": true,
+      "gitCommands": [
+        "status",
+        "diff",
+        "log",
+        "branch",
+        "checkout"
+      ],
+      "safeCommands": [
+        "poetry install",
+        "poetry run pytest",
+        "npm install",
+        "npm run dev",
+        "npm run build",
+        "npm run test",
+        "task run-backend",
+        "task run-frontend",
+        "task db:migrate-up",
+        "task frontend:generate-client",
+        "docker-compose up",
+        "docker-compose down"
+      ]
+    },
+    "requireApproval": {
+      "destructiveCommands": [
+        "rm -rf",
+        "docker-compose down -v",
+        "alembic downgrade",
+        "git push --force"
+      ]
+    }
+  }
+}
+

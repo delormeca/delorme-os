@@ -1,0 +1,131 @@
+# Render.com Deployment Configuration
+# This file defines all services for your staging/production environment
+
+services:
+  # PostgreSQL Database
+  - type: pserv
+    name: velocity-staging-db
+    env: docker
+    plan: starter # or free for testing
+    region: oregon # choose your preferred region
+    databases:
+      - name: velocitydb
+        databaseName: craftyourstartup
+        user: craftyourstartup
+
+  # Backend API Service
+  - type: web
+    name: velocity-staging-backend
+    env: python
+    region: oregon
+    plan: starter # or free for testing
+    buildCommand: |
+      pip install poetry
+      poetry config virtualenvs.create false
+      poetry install --no-dev
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    envVars:
+      # Environment
+      - key: env
+        value: staging
+
+      # Database (automatically linked from postgres service)
+      - key: db_username
+        fromDatabase:
+          name: velocity-staging-db
+          property: user
+      - key: db_password
+        fromDatabase:
+          name: velocity-staging-db
+          property: password
+      - key: db_host
+        fromDatabase:
+          name: velocity-staging-db
+          property: host
+      - key: db_port
+        fromDatabase:
+          name: velocity-staging-db
+          property: port
+      - key: db_database
+        fromDatabase:
+          name: velocity-staging-db
+          property: database
+      - key: db_sslmode
+        value: require
+
+      # Security - ADD THESE IN RENDER DASHBOARD (use secrets)
+      - key: secret_key
+        generateValue: true
+      - key: algorithm
+        value: HS256
+      - key: access_token_expire_minutes
+        value: 10080
+
+      # Application URLs - UPDATE AFTER DEPLOYMENT
+      - key: domain
+        value: https://velocity-staging-frontend.onrender.com
+      - key: redirect_after_login
+        value: https://velocity-staging-frontend.onrender.com/dashboard
+
+      # Google OAuth - ADD IN RENDER DASHBOARD
+      - key: google_oauth2_client_id
+        sync: false # Set this manually in Render dashboard
+      - key: google_oauth2_secret
+        sync: false # Set this manually in Render dashboard
+      - key: google_oauth2_redirect_uri
+        value: https://velocity-staging-backend.onrender.com/api/auth/google_callback
+
+      # Stripe - ADD IN RENDER DASHBOARD (use test keys for staging)
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_PUBLISHABLE_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: STRIPE_PRICE_STARTER
+        sync: false
+      - key: STRIPE_PRICE_PRO
+        sync: false
+      - key: STRIPE_PRICE_PREMIUM_SUB
+        sync: false
+      - key: STRIPE_PRICE_ENTERPRISE_SUB
+        sync: false
+
+      # Email - ADD IN RENDER DASHBOARD
+      - key: mailchimp_api_key
+        sync: false
+      - key: from_email
+        value: noreply@yourdomain.com
+      - key: from_name
+        value: Velocity Staging
+      - key: support_email
+        value: support@yourdomain.com
+
+      # AI APIs - ADD IN RENDER DASHBOARD
+      - key: openai_api_key
+        sync: false
+      - key: tavily_api_key
+        sync: false
+      - key: research_max_iterations
+        value: 5
+      - key: research_default_retriever
+        value: tavily
+
+  # Frontend Service
+  - type: web
+    name: velocity-staging-frontend
+    env: static
+    region: oregon
+    buildCommand: |
+      cd frontend
+      npm install
+      npm run build
+    staticPublishPath: frontend/dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_URL
+        value: https://velocity-staging-backend.onrender.com

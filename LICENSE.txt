@@ -1,0 +1,41 @@
+CraftYourStartup Boilerplate License Agreement
+
+1. Grant of License
+
+1.1 Personal License
+Subject to the terms and conditions of this Agreement, CraftYourStartup grants Licensee a non-exclusive, non-transferable, and non-sublicensable Personal License to use the CraftYourStartup coding boilerplate for the following purposes:
+- Create unlimited projects.
+- Build and develop applications or websites for personal or commercial use.
+
+1.2 Team License
+Subject to the terms and conditions of this Agreement, CraftYourStartup grants Licensee a non-exclusive, non-transferable, and non-sublicensable Team License to use the CraftYourStartup coding boilerplate for the following purposes:
+- Create unlimited projects.
+- Build and develop applications or websites as part of a team.
+- Share the code with other members of the team.
+
+2. Restrictions
+Licensee shall not:
+- Resell or redistribute the CraftYourStartup boilerplate as a standalone product.
+- Remove, alter, or obscure any copyright, trademark, or other proprietary notices from the CraftYourStartup boilerplate.
+- Use the CraftYourStartup boilerplate in any way that violates applicable laws, regulations, or third-party rights.
+- Sub-license, rent, lease, or transfer the CraftYourStartup boilerplate or any rights granted under this Agreement.
+
+3. Ownership and Intellectual Property
+CraftYourStartup retains all ownership and intellectual property rights in and to the CraftYourStartup boilerplate. This Agreement does not grant Licensee any ownership rights in the CraftYourStartup boilerplate.
+
+4. Warranty and Disclaimer
+THE CRAFTYOURSTARTUP BOILERPLATE IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, OR NONINFRINGEMENT.
+
+5. Limitation of Liability
+TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, CRAFTYOURSTARTUP SHALL NOT BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES ARISING OUT OF OR RELATING TO THE USE OR INABILITY TO USE THE CRAFTYOURSTARTUP BOILERPLATE, EVEN IF CRAFTYOURSTARTUP HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
+
+6. Governing Law and Jurisdiction
+This Agreement shall be governed by and construed in accordance with the laws of Poland, without regard to its conflict of law principles. Any dispute arising out of or in connection with this Agreement shall be subject to the exclusive jurisdiction of the courts located in Poland.
+
+7. Entire Agreement
+This Agreement constitutes the entire agreement between Licensee and CraftYourStartup concerning the subject matter herein and supersedes all prior or contemporaneous agreements, representations, warranties, and understandings.
+
+Last updated: 2024-10-12
+
+CraftYourStartup
+Contact Information: info@siukadev.com

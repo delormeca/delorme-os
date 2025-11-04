@@ -1,0 +1,207 @@
+---
+description: "Performance optimization, memoization, theming, and testing patterns"
+globs: frontend/src/**/*.test.tsx,frontend/src/theme/**
+alwaysApply: false
+---
+# Frontend Performance & Testing
+
+## Performance Optimization
+
+### Memoization
+```typescript
+import { memo, useMemo, useCallback } from 'react';
+
+const Component: React.FC<Props> = ({ data, filters }) => {
+  // Memoize expensive computations
+  const processedData = useMemo(() => 
+    data.filter(item => applyFilters(item, filters)), 
+    [data, filters]
+  );
+  
+  // Memoize event handlers
+  const handleClick = useCallback((id: string) => {
+    onItemClick(id);
+  }, [onItemClick]);
+  
+  return (
+    <div>
+      {processedData.map(item => (
+        <MemoizedListItem key={item.id} item={item} onClick={handleClick} />
+      ))}
+    </div>
+  );
+};
+
+// Memoize components with stable props
+const MemoizedListItem = memo<ListItemProps>(({ item, onClick }) => (
+  <Card onClick={() => onClick(item.id)}>
+    {item.title}
+  </Card>
+));
+```
+
+### Code Splitting & Lazy Loading
+```typescript
+import { lazy, Suspense } from 'react';
+
+const Analytics = lazy(() => import('./pages/Analytics'));
+const Integrations = lazy(() => import('./pages/Integrations'));
+
+<Suspense fallback={<LoadingState />}>
+  <Routes>
+    <Route path="analytics" element={<Analytics />} />
+    <Route path="integrations" element={<Integrations />} />
+  </Routes>
+</Suspense>
+```
+
+## Theme System
+
+### Using Theme Values
+```typescript
+import { useTheme } from '@mui/material';
+import { designTokens } from '@/theme/customizations';
+
+const Component = () => {
+  const theme = useTheme();
+  
+  return (
+    <Box sx={{
+      // Border radius
+      borderRadius: `${theme.shape.borderRadius}px`,
+      
+      // Colors
+      color: theme.palette.text.primary,
+      bgcolor: theme.palette.background.paper,
+      
+      // Spacing
+      padding: theme.spacing(3),
+      
+      // Typography
+      ...theme.typography.body1,
+    }}>
+      Content
+    </Box>
+  );
+};
+```
+
+### Dark Mode Support
+```typescript
+// All components automatically support dark mode via theme
+// Use theme colors, never hardcoded values
+
+// ✅ GOOD
+<Box sx={{ bgcolor: 'background.paper', color: 'text.primary' }}>
+
+// ❌ BAD
+<Box sx={{ bgcolor: '#ffffff', color: '#000000' }}>
+```
+
+### Animations
+```typescript
+import { keyframes } from '@emotion/react';
+
+const floatAnimation = keyframes`
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+`;
+
+const AnimatedBox = styled(Box)({
+  animation: `${floatAnimation} 8s ease-in-out infinite`,
+  willChange: 'transform',
+});
+```
+
+## Component Testing
+
+### Testing with React Testing Library
+```typescript
+import { render, screen, fireEvent } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
+const renderWithProviders = (component: React.ReactElement) => {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  
+  return render(
+    <QueryClientProvider client={queryClient}>
+      {component}
+    </QueryClientProvider>
+  );
+};
+
+describe('Component', () => {
+  it('should render correctly', () => {
+    renderWithProviders(<Component title="Test" />);
+    expect(screen.getByText('Test')).toBeInTheDocument();
+  });
+  
+  it('should handle user interaction', () => {
+    const handleClick = jest.fn();
+    renderWithProviders(<Component onClick={handleClick} />);
+    fireEvent.click(screen.getByRole('button'));
+    expect(handleClick).toHaveBeenCalled();
+  });
+});
+```
+
+### Testing Hooks
+```typescript
+import { renderHook, waitFor } from '@testing-library/react';
+
+describe('useArticles', () => {
+  it('should fetch articles', async () => {
+    const { result } = renderHook(() => useArticles(), {
+      wrapper: ({ children }) => (
+        <QueryClientProvider client={queryClient}>
+          {children}
+        </QueryClientProvider>
+      ),
+    });
+    
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data).toBeDefined();
+  });
+});
+```
+
+## TypeScript Best Practices
+
+- Use strict mode: `"strict": true`
+- Define interfaces for all props
+- Use union types for variations
+- Avoid `any` - use `unknown` when necessary
+- Use proper type guards
+
+```typescript
+// Type guards
+function isError(error: unknown): error is Error {
+  return error instanceof Error;
+}
+
+// Proper typing
+interface UserData {
+  id: string;
+  name: string;
+  email: string;
+}
+
+const Component: React.FC<{ user: UserData }> = ({ user }) => {
+  // Fully typed
+};
+```
+
+## Performance Checklist
+
+- ✅ Memoize expensive computations with `useMemo`
+- ✅ Memoize callbacks with `useCallback`
+- ✅ Use `memo()` for pure components
+- ✅ Lazy load routes
+- ✅ Optimize images
+- ✅ Avoid inline object/array creation in render
+- ✅ Use React Query cache effectively
+- ✅ Monitor bundle size
+
+Follow these patterns for optimal performance and reliability!

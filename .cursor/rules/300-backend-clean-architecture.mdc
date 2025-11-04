@@ -1,0 +1,184 @@
+---
+description: "FastAPI clean architecture pattern with controllers, services, and models"
+globs: app/controllers/**,app/services/**,app/models.py
+alwaysApply: false
+---
+# Backend Clean Architecture
+
+## Pattern: Controllers → Services → Models
+
+### 1. Controllers (HTTP Layer)
+```python
+# app/controllers/article.py
+from fastapi import APIRouter, Depends, HTTPException, status
+from app.services.article_service import ArticleService
+from app.schemas.article import ArticleCreate, ArticleRead
+from app.auth_backend import get_current_user
+
+router = APIRouter(prefix="/api/articles", tags=["articles"])
+
+def get_article_service(db: Session = Depends(get_session)) -> ArticleService:
+    return ArticleService(db)
+
+@router.post("", response_model=ArticleRead, status_code=status.HTTP_201_CREATED)
+async def create_article(
+    article_data: ArticleCreate,
+    current_user: User = Depends(get_current_user),
+    service: ArticleService = Depends(get_article_service),
+):
+    try:
+        return await service.create_article(article_data, current_user.id)
+    except ValidationException as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+```
+
+### 2. Services (Business Logic)
+```python
+# app/services/article_service.py
+from sqlmodel import Session, select
+from app.models import Article
+from app.core.exceptions import ValidationException
+
+class ArticleService:
+    def __init__(self, db: Session):
+        self.db = db
+    
+    async def create_article(self, article_data: ArticleCreate, user_id: uuid.UUID):
+        if len(article_data.title.strip()) < 3:
+            raise ValidationException("Title must be at least 3 characters")
+        
+        article = Article(**article_data.model_dump(), user_id=user_id)
+        self.db.add(article)
+        self.db.commit()
+        self.db.refresh(article)
+        
+        return ArticleRead.model_validate(article)
+```
+
+### 3. Models (Database Schema)
+```python
+# app/models.py
+from sqlmodel import SQLModel, Field, Relationship
+import uuid
+import datetime
+
+class UUIDModelBase(SQLModel):
+    id: uuid.UUID = Field(
+        default_factory=uuid.uuid4,
+        primary_key=True,
+        index=True,
+    )
+
+class User(UUIDModelBase, table=True):
+    email: str = Field(sa_column_kwargs={"unique": True})
+    password_hash: Optional[str]
+    full_name: str
+    created_at: datetime.datetime = Field(default_factory=datetime.datetime.utcnow)
+    is_superuser: bool = Field(default=False)
+    current_plan: PlanType = PlanType.FREE
+    stripe_customer_id: Optional[str]
+    
+    articles: List["Article"] = Relationship(back_populates="user")
+    purchases: List["Purchase"] = Relationship(back_populates="user")
+    subscription: Optional["Subscription"] = Relationship(back_populates="user")
+
+class Article(UUIDModelBase, table=True):
+    title: str
+    content: str
+    is_published: bool = Field(default=False)
+    user_id: uuid.UUID = Field(foreign_key="user.id")
+    user: "User" = Relationship(back_populates="articles")
+```
+
+## Configuration System
+
+### Base Config
+```python
+# app/config/base.py
+from pydantic_settings import BaseSettings
+import os
+
+class BaseConfig(BaseSettings):
+    secret_key: str
+    algorithm: str = "HS256"
+    database_url: str
+    google_oauth2_client_id: Optional[str]
+    frontend_url: str = "http://localhost:5173"
+    
+    class Config:
+        env_file = os.getenv("ENV_FILE", "local.env")
+
+config = BaseConfig()
+```
+
+### Payment Config
+```python
+# app/config/payments.py
+from pydantic_settings import BaseSettings
+
+class PaymentSettings(BaseSettings):
+    stripe_secret_key: str
+    stripe_webhook_secret: str
+    
+    class Config:
+        env_prefix = "STRIPE_"
+
+payment_config = PaymentSettings()
+```
+
+## Dependency Injection
+
+```python
+# Service injection
+def get_article_service(db: Session = Depends(get_session)) -> ArticleService:
+    return ArticleService(db)
+
+# Usage in controller
+@router.post("/")
+async def create(
+    data: ArticleCreate,
+    service: ArticleService = Depends(get_article_service),
+):
+    return await service.create_article(data)
+```
+
+## Error Handling
+
+### Custom Exceptions
+```python
+# app/core/exceptions.py
+class ValidationException(Exception):
+    pass
+
+class NotFoundException(Exception):
+    pass
+```
+
+### Exception Handling
+```python
+# Services raise specific exceptions
+if not article:
+    raise NotFoundException(f"Article {id} not found")
+
+# Controllers convert to HTTP
+except NotFoundException as e:
+    raise HTTPException(status_code=404, detail=str(e))
+```
+
+## Pydantic Schemas
+
+```python
+# app/schemas/article.py
+from pydantic import Field, validator
+import html
+
+class ArticleCreate(SQLModel):
+    title: str = Field(min_length=3, max_length=200)
+    content: str = Field(min_length=10)
+    
+    @validator('title')
+    def sanitize_title(cls, v):
+        return html.escape(v.strip())
+```
+
+Follow this pattern for all API features!

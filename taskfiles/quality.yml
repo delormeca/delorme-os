@@ -1,0 +1,30 @@
+version: "3"
+
+# Testing
+# Usage: task quality:test, quality:test-backend, quality:test-frontend
+
+tasks:
+  # Core Testing
+  test:
+    desc: Run all tests (backend + frontend)
+    silent: true
+    cmds:
+      - echo "🧪 Running backend tests..."
+      - poetry run pytest
+      - echo "🧪 Running frontend tests..."
+      - cd frontend && npm run test:run
+      - echo "✅ All tests passed!"
+
+  test-backend:
+    desc: Run backend tests only
+    silent: true
+    cmds:
+      - echo "🧪 Running backend tests..."
+      - poetry run pytest
+
+  test-frontend:
+    desc: Run frontend tests only
+    silent: true
+    cmds:
+      - echo "🧪 Running frontend tests..."
+      - cd frontend && npm run test:run

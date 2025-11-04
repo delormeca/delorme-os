@@ -1,0 +1,102 @@
+{% extends "sqladmin/layout.html" %}
+
+{% block head %}
+{{ super() }}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+    .metric-card { 
+        background: white; 
+        border-radius: 8px; 
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1); 
+        padding: 20px;
+        text-align: center;
+        margin-bottom: 20px;
+    }
+    .metric-value { 
+        font-size: 2.5rem; 
+        font-weight: bold; 
+        color: #0d6efd; 
+    }
+    .metric-label { 
+        color: #6c757d; 
+        font-size: 0.9rem;
+        text-transform: uppercase;
+    }
+    .chart-card { 
+        background: white; 
+        border-radius: 8px; 
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1); 
+        padding: 20px;
+        margin-top: 20px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <!-- Metrics Row -->
+            <div class="row g-3 mb-4">
+                <div class="col-md-3">
+                    <div class="metric-card">
+                        <div class="metric-value">${{ "%.2f"|format(analytics_data.total_revenue) }}</div>
+                        <div class="metric-label">Total Revenue</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="metric-card">
+                        <div class="metric-value">{{ analytics_data.total_transactions }}</div>
+                        <div class="metric-label">Total Transactions</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="metric-card">
+                        <div class="metric-value">{{ analytics_data.active_subscriptions }}</div>
+                        <div class="metric-label">Active Subscriptions</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="metric-card">
+                        <div class="metric-value">
+                            {% if analytics_data.total_transactions > 0 %}
+                                ${{ "%.2f"|format(analytics_data.total_revenue / analytics_data.total_transactions) }}
+                            {% else %}
+                                $0.00
+                            {% endif %}
+                        </div>
+                        <div class="metric-label">Average Order Value</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Recent Transactions -->
+            <div class="chart-card">
+                <h3 class="h5 mb-3">Recent Transactions</h3>
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Customer</th>
+                                <th>Product</th>
+                                <th>Amount</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for tx in analytics_data.recent_transactions %}
+                            <tr>
+                                <td>{{ tx.customer }}</td>
+                                <td><span class="badge bg-primary">{{ tx.product }}</span></td>
+                                <td><strong>${{ "%.2f"|format(tx.amount) }}</strong></td>
+                                <td class="text-muted">{{ tx.date }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

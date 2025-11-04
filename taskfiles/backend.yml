@@ -1,0 +1,191 @@
+version: "3"
+
+includes:
+  ui: ./ui.yml
+
+# Backend Development - FastAPI Python server
+# Usage: task backend:install, backend:run, backend:config-test, backend:docker-build
+
+tasks:
+  # Dependencies & Setup
+
+  install:
+    desc: Install backend dependencies
+    silent: true
+    cmds:
+      - task: ui:info
+        vars:
+          TEXT: "Installing backend dependencies..."
+      - poetry install
+      - task: ui:success
+        vars:
+          TEXT: "Backend dependencies installed"
+
+  install-dev:
+    desc: Install backend dependencies including dev extras
+    silent: true
+    cmds:
+      - task: ui:info
+        vars:
+          TEXT: "Installing backend dependencies (including dev tools)..."
+      - poetry install --with dev
+      - task: ui:success
+        vars:
+          TEXT: "Backend dev dependencies installed"
+
+  # Development Server
+  run:
+    desc: Start FastAPI development server (auto-loads local.env)
+    silent: true
+    cmds:
+      - task: ui:banner
+        vars:
+          TITLE: "{{.PROJECT}} Backend Server"
+      - echo "🚀 API Docs - http://localhost:8020/docs"
+      - echo ""
+      - poetry run uvicorn main:app --reload --reload-dir app --port 8020
+
+  run-prod:
+    desc: Start FastAPI production server (auto-loads prod.env)
+    silent: true
+    cmds:
+      - task: ui:info
+        vars:
+          TEXT: "Starting FastAPI production server..."
+      - task: ui:warning
+        vars:
+          TEXT: "Using production environment settings"
+      - ENV_FILE=prod.env poetry run uvicorn main:app --host 0.0.0.0 --port 8020
+      - task: ui:success
+        vars:
+          TEXT: "Production server started"
+
+  # Configuration & Testing
+
+  config-test:
+    desc: Test backend configuration loading
+    silent: true
+    cmds:
+      - task: ui:info
+        vars:
+          TEXT: "Testing backend configuration..."
+      - poetry run python dev.py test-config
+      - task: ui:success
+        vars:
+          TEXT: "Configuration test completed"
+
+  config-show:
+    desc: Show current backend configuration (masked sensitive data)
+    silent: true
+    cmds:
+      - task: ui:banner
+        vars:
+          TITLE: "Backend Configuration Status"
+      - task: ui:info
+        vars:
+          TEXT: "Check your local.env file for current configuration"
+      - task: ui:info
+        vars:
+          TEXT: "Use backend:config-test to validate configuration loading"
+
+  # Docker Operations
+
+  docker-build:
+    desc: Build Docker image for backend
+    silent: true
+    cmds:
+      - task: ui:info
+        vars:
+          TEXT: "Building Docker image..."
+      - docker build -t craftyourstartup .
+      - task: ui:success
+        vars:
+          TEXT: "Docker image built successfully"
+
+  docker-run:
+    desc: Run backend in Docker container
+    silent: true
+    cmds:
+      - task: ui:info
+        vars:
+          TEXT: "Starting backend Docker container..."
+      - docker run --name craftyourstartup-backend -p 8020:8020 -e PORT=8020 craftyourstartup
+      - task: ui:success
+        vars:
+          TEXT: "Backend container started"
+
+  docker-stop:
+    desc: Stop backend Docker container
+    silent: true
+    cmds:
+      - task: ui:info
+        vars:
+          TEXT: "Stopping backend Docker container..."
+      - docker stop craftyourstartup-backend || echo "⚠️ [WARNING] Container not running"
+      - docker rm craftyourstartup-backend || echo "⚠️ [WARNING] Container not found"
+      - task: ui:success
+        vars:
+          TEXT: "Backend container stopped"
+
+  # API & Documentation
+
+  api-docs:
+    desc: Open backend API documentation
+    silent: true
+    cmds:
+      - task: ui:info
+        vars:
+          TEXT: "Opening API documentation at http://localhost:8020/docs"
+      - open http://localhost:8020/docs 2>/dev/null || echo "ℹ️ [INFO] Backend not running or 'open' command not available"
+
+  # Database Utilities
+
+  shell:
+    desc: Start Python shell with backend context
+    silent: true
+    cmds:
+      - echo "[INFO] Starting Python shell with backend context..."
+      - poetry run python
+
+  # Development Utilities
+
+  health:
+    desc: Check backend service health
+    silent: true
+    cmds:
+      - echo "[INFO] Backend Health Check"
+      - echo "=========================="
+      - curl -s http://localhost:8020/health 2>/dev/null || echo "[WARN] Backend not running"
+      - echo ""
+
+  # Environment Management
+
+  env-template:
+    desc: Show required backend environment variables
+    silent: true
+    cmds:
+      - echo "[INFO] Required Backend Environment Variables"
+      - echo "============================================="
+      - echo ""
+      - echo "# Application Settings"
+      - echo "DEBUG=true"
+      - echo "ENVIRONMENT=development"
+      - echo "SECRET_KEY=your-secret-key-here"
+      - echo ""
+      - echo "# Database Configuration"
+      - echo "DATABASE_URL=postgresql://user:pass@localhost:5432/db"
+      - echo "DB_HOST=localhost"
+      - echo "DB_PORT=5432"
+      - echo "DB_NAME=craftyourstartup"
+      - echo "DB_USER=postgres"
+      - echo "DB_PASSWORD=your-password"
+      - echo ""
+      - echo "# OAuth Configuration (Optional)"
+      - echo "GOOGLE_CLIENT_ID=your-google-client-id"
+      - echo "GOOGLE_CLIENT_SECRET=your-google-client-secret"
+      - echo ""
+      - echo "# Email Configuration (Optional)"
+      - echo "SMTP_HOST=localhost"
+      - echo "SMTP_PORT=587"
+      - echo "SMTP_USER="
+      - echo "SMTP_PASSWORD="

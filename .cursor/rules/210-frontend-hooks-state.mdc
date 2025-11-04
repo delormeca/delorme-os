@@ -1,0 +1,276 @@
+---
+description: "React hooks, state management, form handling, and API integration patterns"
+globs: frontend/src/hooks/**,frontend/src/context/**
+alwaysApply: false
+---
+# Frontend Hooks & State Management
+
+## React Query for Server State
+
+### Query Configuration
+```typescript
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      retry: (failureCount, error) => {
+        if (error?.status === 404 || error?.status === 403) return false;
+        return failureCount < 3;
+      },
+    },
+  },
+});
+```
+
+### API Hook Patterns
+```typescript
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { ArticlesService } from '@/client';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
+
+export const useArticles = (publishedOnly: boolean = false) => {
+  const { handleApiError } = useErrorHandler();
+  
+  return useQuery({
+    queryKey: ['articles', { publishedOnly }],
+    queryFn: () => ArticlesService.listArticlesApiArticlesGet(publishedOnly),
+    onError: handleApiError,
+  });
+};
+
+export const useCreateArticle = () => {
+  const queryClient = useQueryClient();
+  const { handleApiError } = useErrorHandler();
+  
+  return useMutation({
+    mutationFn: ArticlesService.createArticleApiArticlesPost,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['articles'] });
+    },
+    onError: handleApiError,
+  });
+};
+```
+
+## Context API for Global State
+
+### Creating Context
+```typescript
+interface AppContextType {
+  theme: 'light' | 'dark';
+  toggleTheme: () => void;
+  sidebarOpen: boolean;
+  setSidebarOpen: (open: boolean) => void;
+}
+
+const AppContext = createContext<AppContextType | undefined>(undefined);
+
+export const useAppContext = () => {
+  const context = useContext(AppContext);
+  if (!context) {
+    throw new Error('useAppContext must be used within AppProvider');
+  }
+  return context;
+};
+
+export const AppProvider: React.FC<{children: React.ReactNode}> = ({ children }) => {
+  const [theme, setTheme] = useState<'light' | 'dark'>('dark');
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  
+  const toggleTheme = useCallback(() => {
+    setTheme(prev => prev === 'light' ? 'dark' : 'light');
+  }, []);
+  
+  return (
+    <AppContext.Provider value={{ theme, toggleTheme, sidebarOpen, setSidebarOpen }}>
+      {children}
+    </AppContext.Provider>
+  );
+};
+```
+
+## Form Handling with React Hook Form
+
+### Using Unified Form Hooks
+```typescript
+import { useStandardForm, formSchemas } from '@/hooks/forms';
+import { FormInput, FormSection } from '@/components/ui';
+import { CTAButton } from '@/components/ui';
+
+const ArticleForm: React.FC = () => {
+  const form = useStandardForm('article');
+  
+  const onSubmit = async (data: FormData) => {
+    try {
+      await createArticle(data);
+    } catch (error) {
+      handleApiError(error);
+    }
+  };
+  
+  return (
+    <Box component="form" onSubmit={form.handleSubmit(onSubmit)}>
+      <FormSection title="Article Details">
+        <FormInput
+          name="title"
+          label="Title"
+          control={form.control}
+          errors={form.formState.errors}
+          fullWidth
+        />
+        
+        <FormInput
+          name="content"
+          label="Content"
+          control={form.control}
+          errors={form.formState.errors}
+          multiline
+          rows={6}
+          fullWidth
+        />
+      </FormSection>
+      
+      <CTAButton type="submit" loading={form.formState.isSubmitting} fullWidth>
+        Submit
+      </CTAButton>
+    </Box>
+  );
+};
+```
+
+### Legacy Controller Pattern
+```typescript
+import { Controller } from 'react-hook-form';
+import { InputText } from '@/components/ui';
+
+<Controller
+  name="email"
+  control={control}
+  render={({ field }) => (
+    <InputText
+      {...field}
+      label="Email"
+      type="email"
+      error={!!errors.email}
+      helperText={errors.email?.message}
+      fullWidth
+    />
+  )}
+/>
+```
+
+## Custom Hooks Patterns
+
+### Data Fetching Hook
+```typescript
+export const useArticleData = (id: string) => {
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['article', id],
+    queryFn: () => ArticlesService.getArticle(id),
+    enabled: !!id,
+  });
+  
+  const { handleApiError } = useErrorHandler();
+  
+  useEffect(() => {
+    if (error) {
+      handleApiError(error);
+    }
+  }, [error, handleApiError]);
+  
+  return { data, isLoading };
+};
+```
+
+### Form Hook
+```typescript
+export const useArticleForm = (initialData?: Article) => {
+  const form = useForm({
+    defaultValues: initialData || { title: '', content: '' },
+    resolver: yupResolver(articleSchema),
+  });
+  
+  const createMutation = useCreateArticle();
+  const updateMutation = useUpdateArticle();
+  
+  const onSubmit = async (data: ArticleFormData) => {
+    if (initialData?.id) {
+      await updateMutation.mutateAsync({ id: initialData.id, data });
+    } else {
+      await createMutation.mutateAsync(data);
+    }
+  };
+  
+  return { form, onSubmit, isSubmitting: form.formState.isSubmitting };
+};
+```
+
+## Error Handling in Hooks
+
+```typescript
+import { useErrorHandler } from '@/hooks/useErrorHandler';
+
+export const useMyFeature = () => {
+  const { handleApiError } = useErrorHandler();
+  
+  return useQuery({
+    queryKey: ['feature'],
+    queryFn: async () => {
+      try {
+        return await FeatureService.getData();
+      } catch (error) {
+        handleApiError(error);
+        throw error;
+      }
+    },
+  });
+};
+```
+
+## State Composition
+
+### Combining Multiple States
+```typescript
+const Dashboard: React.FC = () => {
+  // Multiple data sources
+  const { data: user } = useCurrentUser();
+  const { data: articles } = useArticles();
+  const { data: stats } = useStats();
+  
+  // Derived state
+  const hasArticles = articles && articles.length > 0;
+  const isPremiumUser = user?.account_type === 'premium';
+  
+  return (
+    <DashboardLayout>
+      {hasArticles ? <ArticlesList /> : <EmptyState />}
+      {isPremiumUser && <PremiumFeatures />}
+    </DashboardLayout>
+  );
+};
+```
+
+## Accessibility in Hooks
+
+```typescript
+// Focus management
+export const useFocusTrap = (ref: RefObject<HTMLElement>) => {
+  useEffect(() => {
+    const element = ref.current;
+    if (!element) return;
+    
+    element.focus();
+    
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        // Handle escape
+      }
+    };
+    
+    element.addEventListener('keydown', handleKeyDown);
+    return () => element.removeEventListener('keydown', handleKeyDown);
+  }, [ref]);
+};
+```
+
+Follow these patterns for consistent state management and data fetching!

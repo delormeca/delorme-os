@@ -1,0 +1,208 @@
+version: "3"
+
+includes:
+  ui: ./ui.yml
+
+# Frontend Development - React TypeScript client
+# Usage: task frontend:install, frontend:run, frontend:build, frontend:generate-client
+
+tasks:
+  # Dependencies & Setup
+
+  install:
+    desc: Install frontend dependencies
+    silent: true
+    cmds:
+      - task: ui:info
+        vars:
+          TEXT: "Installing frontend dependencies..."
+      - cd frontend && npm install
+      - task: install-fix-rollup
+      - task: ui:success
+        vars:
+          TEXT: "Frontend dependencies installed"
+
+  install-fix-rollup:
+    desc: Fix Rollup optional dependencies (cross-platform compatibility)
+    silent: true
+    internal: true
+    cmds:
+      - |
+        cd frontend
+        # Check if we're on Linux and need the Rollup fix
+        if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+          echo "🐧 [INFO] Linux detected - checking Rollup native dependencies..."
+          
+          # Check if the native binary is missing
+          if ! npm list @rollup/rollup-linux-x64-gnu >/dev/null 2>&1; then
+            echo "🔧 [FIX] Installing missing Rollup native dependency for Linux..."
+            npm install @rollup/rollup-linux-x64-gnu --save-optional --silent
+            echo "✅ [SUCCESS] Rollup Linux compatibility fixed"
+          else
+            echo "✅ [OK] Rollup native dependency already present"
+          fi
+        elif [[ "$OSTYPE" == "msys" ]] || [[ "$OSTYPE" == "win32" ]]; then
+          echo "🪟 [INFO] Windows detected - checking Rollup native dependencies..."
+          
+          # Check if Windows native binary is missing
+          if ! npm list @rollup/rollup-win32-x64-msvc >/dev/null 2>&1; then
+            echo "🔧 [FIX] Installing missing Rollup native dependency for Windows..."
+            npm install @rollup/rollup-win32-x64-msvc --save-optional --silent
+            echo "✅ [SUCCESS] Rollup Windows compatibility fixed"
+          else
+            echo "✅ [OK] Rollup native dependency already present"
+          fi
+        else
+          echo "🍎 [INFO] macOS detected - no Rollup fixes needed"
+        fi
+
+  install-clean:
+    desc: Clean install frontend dependencies (fixes npm dependency issues)
+    silent: true
+    cmds:
+      - task: ui:info
+        vars:
+          TEXT: "Clean installing frontend dependencies..."
+      - |
+        cd frontend
+        echo "🧹 [INFO] Removing node_modules and package-lock.json..."
+        rm -rf node_modules package-lock.json
+        echo "📦 [INFO] Fresh npm install..."
+        npm install
+      - task: install-fix-rollup
+      - task: ui:success
+        vars:
+          TEXT: "Frontend dependencies clean installed"
+
+  # Development Server
+
+  run:
+    desc: Start React development server
+    silent: true
+    cmds:
+      - task: ui:banner
+        vars:
+          TITLE: "{{.PROJECT}} Frontend Server"
+      - echo "⚛️  Starting React development server..."
+      - echo ""
+      - cd frontend && npm run dev
+
+  # Build & Production
+
+  build:
+    desc: Build frontend for production
+    silent: true
+    cmds:
+      - task: ui:info
+        vars:
+          TEXT: "Building frontend for production..."
+      - cd frontend && npm run build
+      - task: ui:success
+        vars:
+          TEXT: "Frontend build completed"
+      - task: ui:info
+        vars:
+          TEXT: "Build output in frontend/dist/"
+
+  preview:
+    desc: Preview production build locally
+    silent: true
+    cmds:
+      - echo "📦 Starting production preview server..."
+      - echo ""
+      - cd frontend && npm run preview
+
+  # API Client Generation
+
+  generate-client:
+    desc: Generate TypeScript API client from backend OpenAPI spec
+    silent: true
+    cmds:
+      - task: ui:info
+        vars:
+          TEXT: "Generating TypeScript API client..."
+      - task: ui:info
+        vars:
+          TEXT: "Ensure backend is running (task backend:run)"
+      - cd frontend && npm run generate-client
+      - task: ui:success
+        vars:
+          TEXT: "TypeScript API client generated"
+      - task: ui:info
+        vars:
+          TEXT: "Updated client files in frontend/src/client/"
+
+  generate-check:
+    desc: Check if API client is up to date
+    silent: true
+    cmds:
+      - echo "[INFO] Checking API client status..."
+      - echo "[INFO] Compare frontend/src/client/ with backend API changes"
+      - echo "[INFO] Run 'task frontend:generate-client' if backend API changed"
+
+  # Environment & Configuration
+
+  env-template:
+    desc: Show frontend environment variables template
+    silent: true
+    cmds:
+      - echo "[INFO] Frontend Environment Variables"
+      - echo "====================================="
+      - echo ""
+      - echo "# API Configuration"
+      - echo "VITE_API_URL=http://localhost:8020"
+      - echo ""
+      - echo "# Environment"
+      - echo "VITE_ENVIRONMENT=development"
+      - echo ""
+      - echo "# Optional Features"
+      - echo "VITE_ENABLE_ANALYTICS=false"
+      - echo "VITE_ENABLE_DEBUG=true"
+      - echo ""
+      - echo "Note - Vite only exposes variables prefixed with VITE_"
+
+  env-check:
+    desc: Check frontend environment configuration
+    silent: true
+    cmds:
+      - echo "[INFO] Frontend Environment Check"
+      - echo "=================================="
+      - echo "[INFO] Check frontend/.env for Vite environment variables"
+      - echo "[INFO] All variables must be prefixed with VITE_"
+
+  # Troubleshooting & Platform Fixes
+
+  fix-rollup:
+    desc: Fix Rollup native dependency issues (Linux/Windows)
+    silent: true
+    cmds:
+      - task: ui:info
+        vars:
+          TEXT: "Fixing Rollup cross-platform compatibility..."
+      - task: install-fix-rollup
+      - task: ui:success
+        vars:
+          TEXT: "Rollup compatibility check completed"
+
+  troubleshoot:
+    desc: Troubleshoot common frontend development issues
+    silent: true
+    cmds:
+      - echo "[INFO] Frontend Troubleshooting Guide"
+      - echo "====================================="
+      - echo ""
+      - echo "🐧 Linux Rollup Error:"
+      - echo "   Error Cannot find module @rollup/rollup-linux-x64-gnu"
+      - echo "   Fix task frontend:fix-rollup"
+      - echo ""
+      - echo "🪟 Windows Rollup Error:"
+      - echo "   Error Cannot find module @rollup/rollup-win32-x64-msvc"
+      - echo "   Fix task frontend:fix-rollup"
+      - echo ""
+      - echo "📦 npm Dependency Issues:"
+      - echo "   Fix task frontend:install-clean"
+      - echo ""
+      - echo "🔧 Full Reset:"
+      - echo "   1. task frontend:install-clean"
+      - echo "   2. task frontend:fix-rollup"
+      - echo "   3. task frontend:run"

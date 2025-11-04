@@ -1,0 +1,174 @@
+version: "3"
+
+includes:
+  ui: ./ui.yml
+
+# Payment Integration - Stripe payment management
+# Usage: task payments:setup, payments:products-create, payments:test-integration, payments:status
+
+tasks:
+  # Payment Setup & Configuration
+
+  setup:
+    desc: Setup payment integration (auto-loads local.env)
+    silent: true
+    cmds:
+      - task: ui:info
+        vars:
+          TEXT: "Setting up payment integration..."
+      - poetry run python scripts/setup_payments.py
+      - echo ""
+      - echo "Next steps"
+      - echo "  1. Get Stripe API keys from https://stripe.com (test mode)"
+      - echo "  2. Update local.env with your Stripe keys"
+      - echo "  3. Run 'task payments:test-integration' to verify"
+      - echo "  4. Create products - task payments:products-create"
+
+  setup-prod:
+    desc: Setup payment integration (production environment)
+    silent: true
+    cmds:
+      - task: ui:info
+        vars:
+          TEXT: "Setting up payment integration for production..."
+      - task: ui:warning
+        vars:
+          TEXT: "This will use production Stripe environment"
+      - ENV_FILE=prod.env poetry run python scripts/setup_payments.py
+      - echo ""
+      - echo "Next steps"
+      - echo "  1. Verify production Stripe API keys in prod.env"
+      - echo "  2. Run 'task payments:test-integration-prod' to verify"
+      - echo "  3. Create products - task payments:products-create-prod"
+
+  # Stripe Products & Pricing
+
+  products-create:
+    desc: Create Stripe products and prices (development)
+    silent: true
+    cmds:
+      - task: ui:info
+        vars:
+          TEXT: "Creating Stripe products (development)..."
+      - poetry run python app/commands/setup_stripe_products.py
+      - task: ui:success
+        vars:
+          TEXT: "Development products created"
+
+  products-create-prod:
+    desc: Create Stripe products and prices (production)
+    silent: true
+    cmds:
+      - echo "[INFO] Creating Stripe products (production)..."
+      - echo "[WARN] This will create products in live Stripe environment"
+      - ENV_FILE=prod.env poetry run python app/commands/setup_stripe_products.py
+      - echo "[SUCCESS] Production products created"
+
+  products-list:
+    desc: List existing Stripe products (development)
+    silent: true
+    cmds:
+      - echo "[INFO] Listing Stripe products (development)..."
+      - echo "[INFO] Use Stripe CLI - stripe products list"
+      - echo "[INFO] Or check - https://dashboard.stripe.com/products"
+
+  products-list-prod:
+    desc: List existing Stripe products (production)
+    silent: true
+    cmds:
+      - echo "[INFO] Listing Stripe products (production)..."
+      - echo "[INFO] Use Stripe CLI - stripe products list --live"
+      - echo "[INFO] Or check - https://dashboard.stripe.com/products"
+
+  # Testing & Validation
+
+  test-integration:
+    desc: Test payment integration setup (development)
+    silent: true
+    cmds:
+      - task: ui:info
+        vars:
+          TEXT: "Testing payment integration..."
+      - poetry run python scripts/test_payment_setup.py
+      - task: ui:success
+        vars:
+          TEXT: "Payment integration test completed"
+
+  test-integration-prod:
+    desc: Test payment integration setup (production)
+    silent: true
+    cmds:
+      - echo "[INFO] Testing payment integration (production)..."
+      - echo "[WARN] This will test against live Stripe environment"
+      - ENV_FILE=prod.env poetry run python scripts/test_payment_setup.py
+      - echo "[SUCCESS] Production payment integration test completed"
+
+  # Environment & Configuration
+
+  config-show:
+    desc: Show current payment configuration status
+    silent: true
+    cmds:
+      - echo "[INFO] Payment Configuration Status"
+      - echo "=================================="
+      - echo "[INFO] Check local.env for Stripe keys"
+      - echo "[INFO] Verify webhook endpoints are configured"
+
+  config-template:
+    desc: Show required payment environment variables
+    silent: true
+    cmds:
+      - echo "[INFO] Required Payment Environment Variables"
+      - echo "============================================="
+      - echo ""
+      - echo "# Stripe Configuration (Development)"
+      - echo "STRIPE_SECRET_KEY=sk_test_..."
+      - echo "STRIPE_PUBLISHABLE_KEY=pk_test_..."
+      - echo "STRIPE_WEBHOOK_SECRET=whsec_..."
+      - echo ""
+      - echo "# Product IDs (created by 'task payments:products-create')"
+      - echo "STRIPE_PRICE_STARTER=price_test_..."
+      - echo "STRIPE_PRICE_PRO=price_test_..."
+      - echo "STRIPE_PRICE_PREMIUM_SUB=price_test_..."
+      - echo "STRIPE_PRICE_ENTERPRISE_SUB=price_test_..."
+      - echo ""
+      - echo "# Payment Flow URLs"
+      - echo "SUCCESS_URL=http://localhost:5173/payment/success"
+      - echo "CANCEL_URL=http://localhost:5173/payment/cancel"
+
+  # Utilities & Helpers
+
+  webhook-events:
+    desc: Show recommended Stripe webhook events
+    silent: true
+    cmds:
+      - echo "[INFO] Recommended Stripe Webhook Events"
+      - echo "========================================"
+      - echo ""
+      - echo "Essential Events:"
+      - echo "  • customer.subscription.created"
+      - echo "  • customer.subscription.updated"
+      - echo "  • customer.subscription.deleted"
+      - echo "  • invoice.payment_succeeded"
+      - echo "  • invoice.payment_failed"
+      - echo ""
+      - echo "Webhook URL - https://yourdomain.com/api/payments/webhook"
+
+  customer-portal:
+    desc: Check customer portal configuration
+    silent: true
+    cmds:
+      - echo "[INFO] Customer Portal Configuration"
+      - echo "===================================="
+      - echo "[INFO] Configure at - https://dashboard.stripe.com/settings/billing/portal"
+      - echo "[INFO] Enable customer access to billing history and invoices"
+
+  status:
+    desc: Show complete payment system status
+    silent: true
+    cmds:
+      - task: config-show
+      - echo ""
+      - task: products-list
+      - echo ""
+      - task: test-integration

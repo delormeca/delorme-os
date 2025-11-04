@@ -1,0 +1,296 @@
+---
+description: "React component architecture, unified component system, and layout patterns"
+globs: frontend/src/components/**,frontend/src/pages/**
+alwaysApply: false
+---
+# Frontend Component Architecture
+
+## Component Structure (Always Follow)
+```typescript
+interface ComponentProps {
+  title: string;
+  children?: React.ReactNode;
+  onAction?: (id: string) => void;
+}
+
+const Component: React.FC<ComponentProps> = ({ title, children, onAction }) => {
+  // 1. Hooks at the top
+  const { data, isLoading, error } = useQuery();
+  const { handleError } = useErrorHandler();
+  
+  // 2. Event handlers (memoized when needed)
+  const handleClick = useCallback((id: string) => {
+    onAction?.(id);
+  }, [onAction]);
+  
+  // 3. Early returns for error states
+  if (error) {
+    handleError(error);
+    return null;
+  }
+  
+  // 4. Main render logic
+  return (
+    <Container>
+      {isLoading ? <CircularProgress /> : children}
+    </Container>
+  );
+};
+
+export default Component;
+```
+
+## File Organization
+- **Components**: `PascalCase.tsx`
+- **Hooks**: `use[Name].ts`
+- **Utils**: `camelCase.ts`
+- **Types**: Inline interfaces
+
+## Unified Component System (ALWAYS Use)
+
+### Buttons
+```typescript
+import { StandardButton, CTAButton, StandardIconButton, BackButton } from "@/components/ui";
+
+<CTAButton startIcon={<Add />} onClick={handleCreate} loading={isLoading}>
+  Create Article
+</CTAButton>
+
+<StandardButton variant="outlined" startIcon={<Edit />} onClick={handleEdit}>
+  Edit
+</StandardButton>
+
+<StandardIconButton onClick={handleDelete} color="error">
+  <Delete />
+</StandardIconButton>
+
+<BackButton to="/dashboard" />
+```
+
+### Cards
+```typescript
+import { ModernCard, AuthCard, ErrorCard } from "@/components/ui";
+
+<ModernCard 
+  title="Stats"
+  icon={<Analytics />}
+  action={<StandardButton variant="text">View</StandardButton>}
+>
+  <Typography>Content</Typography>
+</ModernCard>
+
+<AuthCard>
+  <AuthPageLogo />
+  <Typography variant="h5">Welcome</Typography>
+</AuthCard>
+
+<ErrorCard 
+  title="Error"
+  message="Something went wrong"
+  action={<StandardButton onClick={handleRetry}>Try Again</StandardButton>}
+/>
+```
+
+### Forms
+```typescript
+import { FormInput, FormSection, InputText } from "@/components/ui";
+
+<FormInput
+  name="title"
+  label="Title"
+  control={form.control}
+  errors={form.formState.errors}
+  fullWidth
+/>
+
+<FormSection title="Basic Info">
+  <FormInput name="title" label="Title" control={control} errors={errors} />
+  <FormInput name="content" label="Content" control={control} errors={errors} multiline rows={4} />
+</FormSection>
+```
+
+### UI Patterns
+```typescript
+import { LoadingState, EmptyState, StatusBadge, PageHeader } from "@/components/ui";
+
+<LoadingState message="Loading..." size="large" fullHeight />
+
+<EmptyState
+  icon={<Inbox />}
+  title="No Articles"
+  description="Create your first article"
+  action={{ label: "Create", onClick: handleCreate }}
+/>
+
+<StatusBadge status="success" label="Published" />
+
+<PageHeader
+  title="My Articles"
+  subtitle="Manage content"
+  action={<StandardButton startIcon={<Add />}>New</StandardButton>}
+/>
+```
+
+### Logos
+```typescript
+import { Logo, HeaderLogo, FooterLogo, AuthPageLogo } from "@/components/ui";
+
+<HeaderLogo onClick={() => navigate('/')} />
+<FooterLogo />
+<AuthPageLogo />
+<Logo size="large" variant="horizontal" clickable />
+```
+
+## Layout Patterns
+
+### Layout Components
+```typescript
+import { MainLayout, DashboardLayout, PageLayout, CenteredPageLayout } from "@/components/ui";
+
+// Public pages
+<MainLayout>
+  <Header />
+  <main>{children}</main>
+  <Footer />
+</MainLayout>
+
+// Dashboard pages with sidebar
+<DashboardLayout>
+  <DashboardHeader />
+  <Sidebar />
+  <main>{children}</main>
+</DashboardLayout>
+
+// Standard page wrapper
+<PageLayout maxWidth="lg">
+  <PageHeader title="Title" />
+  {children}
+</PageLayout>
+
+// Centered auth/error pages
+<CenteredPageLayout>
+  <AuthCard>{children}</AuthCard>
+</CenteredPageLayout>
+```
+
+### Page Structure Pattern
+```typescript
+// Dashboard pages - ALWAYS follow
+const MyPage: React.FC = () => {
+  return (
+    <DashboardLayout>
+      <Box sx={{ maxWidth: 'lg', mx: 'auto' }}>
+        <PageHeader
+          title="Title"
+          subtitle="Description"
+          action={<StandardButton startIcon={<Add />}>New</StandardButton>}
+        />
+        
+        <Grid container spacing={3}>
+          <Grid size={{ xs: 12, md: 6 }}>
+            <ModernCard title="Section" icon={<Analytics />}>
+              Content
+            </ModernCard>
+          </Grid>
+        </Grid>
+      </Box>
+    </DashboardLayout>
+  );
+};
+
+// Auth pages pattern
+const AuthPage: React.FC = () => {
+  return (
+    <CenteredPageLayout>
+      <Container maxWidth="sm">
+        <AuthCard>
+          <AuthPageLogo />
+          <Typography variant="h5">Sign In</Typography>
+          <AuthFeatureChip icon={<Security />} label="Secure" color="primary" />
+          {/* Form */}
+        </AuthCard>
+      </Container>
+    </CenteredPageLayout>
+  );
+};
+```
+
+## Responsive Design
+
+```typescript
+import { useTheme, useMediaQuery } from '@mui/material';
+import Grid from '@mui/material/Grid2';
+
+const Component: React.FC = () => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  
+  return (
+    <Grid container spacing={{ xs: 2, md: 4 }}>
+      <Grid size={{ xs: 12, md: 6, lg: 4 }}>
+        <ModernCard>
+          <Box sx={{ 
+            display: { xs: 'block', md: 'flex' },
+            padding: { xs: 2, md: 3 } 
+          }}>
+            Content
+          </Box>
+        </ModernCard>
+      </Grid>
+    </Grid>
+  );
+};
+
+// Responsive Typography
+<Typography 
+  variant="h4" 
+  sx={{ fontSize: { xs: '1.5rem', md: '2rem' } }}
+>
+  Title
+</Typography>
+
+// Responsive Buttons
+<StandardButton
+  startIcon={<Add />}
+  sx={{ width: { xs: '100%', sm: 'auto' } }}
+>
+  Create
+</StandardButton>
+```
+
+## Container Widths
+
+```typescript
+<Container maxWidth="sm">  {/* Auth pages, forms */}
+<Container maxWidth="md">  {/* Article view, profile */}
+<Container maxWidth="lg">  {/* Dashboard, analytics */}
+<Container maxWidth="xl">  {/* Landing pages */}
+```
+
+## Navigation Patterns
+
+```typescript
+const handleNavigation = (href: string) => {
+  if (href.startsWith('/#')) {
+    const sectionId = href.substring(2);
+    const element = document.getElementById(sectionId);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth' });
+    }
+  } else {
+    navigate(href);
+  }
+};
+
+<Section id="features">
+  <FeaturesContent />
+</Section>
+```
+
+## Accessibility
+
+- Use semantic HTML elements
+- Include ARIA labels
+- Ensure keyboard navigation
+- Maintain color contrast
+- Test with screen readers

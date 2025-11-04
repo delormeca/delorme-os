@@ -1,0 +1,350 @@
+---
+description: Plan-based RBAC system with payment integration
+globs: app/permissions.py,app/core/access_control.py,app/services/plan_service.py,app/services/upgrade_service.py,frontend/src/components/PermissionGuard*,frontend/src/components/UpgradeDialog*
+alwaysApply: false
+---
+# Plan-Based RBAC & Access Control System
+
+## Overview
+
+The CraftYourStartup boilerplate implements a comprehensive **plan-based access control system** that ties user permissions directly to their payment tier (subscriptions or one-time purchases).
+
+### Plan Hierarchy
+```python
+# app/permissions.py
+class PlanType(enum.Enum):
+    FREE = "free"                    # Default - no purchases
+    STARTER = "starter"              # One-time $99 purchase
+    PRO = "pro"                      # One-time $199 purchase
+    PREMIUM = "premium"              # $29/month subscription
+    ENTERPRISE = "enterprise"        # $99/month subscription
+```
+
+**Plan Priority:**
+- **Subscriptions** > **One-time Purchases** > **Free**
+- **Enterprise** (highest) > Premium > Pro > Starter > Free (lowest)
+
+## Permission System (`app/permissions.py`)
+
+### Feature Permissions Definition
+```python
+class FeaturePermission(enum.Enum):
+    # Basic features (FREE)
+    BASIC_DASHBOARD = "basic_dashboard"
+    USER_PROFILE = "user_profile"
+    
+    # Starter features
+    BASIC_ARTICLES = "basic_articles"
+    ARTICLE_MANAGEMENT = "article_management"
+    BASIC_ANALYTICS = "basic_analytics"
+    EMAIL_TEMPLATES = "email_templates"
+    
+    # Pro features
+    ADVANCED_DASHBOARD = "advanced_dashboard"
+    MULTI_TENANT = "multi_tenant"
+    API_ACCESS = "api_access"
+    ADVANCED_ANALYTICS = "advanced_analytics"
+    PRIORITY_SUPPORT = "priority_support"
+    
+    # Premium features (subscription)
+    PREMIUM_INTEGRATIONS = "premium_integrations"
+    CUSTOM_COMPONENTS = "custom_components"
+    ADVANCED_REPORTING = "advanced_reporting"
+    TEAM_COLLABORATION = "team_collaboration"
+    
+    # Enterprise features (subscription)
+    WHITE_LABEL = "white_label"
+    CUSTOM_INTEGRATIONS = "custom_integrations"
+    DEDICATED_SUPPORT = "dedicated_support"
+    SLA_GUARANTEE = "sla_guarantee"
+    AUDIT_LOGS = "audit_logs"
+```
+
+### Plan-to-Features Mapping
+```python
+# app/permissions.py
+PLAN_FEATURES: dict[PlanType, List[FeaturePermission]] = {
+    PlanType.FREE: [
+        FeaturePermission.BASIC_DASHBOARD,
+        FeaturePermission.USER_PROFILE,
+    ],
+    
+    PlanType.STARTER: [
+        # All free features plus:
+        FeaturePermission.BASIC_ARTICLES,
+        FeaturePermission.ARTICLE_MANAGEMENT,
+        FeaturePermission.BASIC_ANALYTICS,
+        FeaturePermission.EMAIL_TEMPLATES,
+    ],
+    
+    # Pro, Premium, Enterprise - cumulative permissions
+    # Each higher tier includes all lower tier features
+}
+```
+
+## Access Control Implementation (`app/core/access_control.py`)
+
+### Plan Detection Logic
+```python
+async def get_user_current_plan(user: User, db: Session) -> PlanType:
+    """
+    Determine user's current plan based on purchases and active subscriptions.
+    
+    Business Logic:
+    1. Check for active subscriptions first (Enterprise > Premium)
+    2. If no active subscription, check one-time purchases (Pro > Starter)
+    3. Default to FREE if no purchases/subscriptions
+    """
+    subscription = user.subscription
+    
+    # Active subscriptions (highest priority)
+    if subscription and subscription.status in ["ACTIVE", "TRIALING"]:
+        if subscription.plan == "enterprise":
+            return PlanType.ENTERPRISE
+        elif subscription.plan == "premium":
+            return PlanType.PREMIUM
+    
+    # One-time purchases
+    successful_purchases = [p for p in user.purchases if p.is_successful]
+    
+    if successful_purchases:
+        if any(p.product_type == "pro" for p in successful_purchases):
+            return PlanType.PRO
+        elif any(p.product_type == "starter" for p in successful_purchases):
+            return PlanType.STARTER
+    
+    return PlanType.FREE
+```
+
+### Permission Checking
+```python
+async def check_feature_access(
+    user: User,
+    permission: FeaturePermission,
+    db: Session
+) -> bool:
+    """Check if user has access to a specific feature"""
+    current_plan = await get_user_current_plan(user, db)
+    allowed_features = PLAN_FEATURES.get(current_plan, [])
+    return permission in allowed_features
+```
+
+### FastAPI Dependency for Route Protection
+```python
+from app.core.access_control import require_permission, AccessDeniedError
+
+@router.post("/api/advanced-analytics")
+async def get_advanced_analytics(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_session),
+    _: None = Depends(require_permission(FeaturePermission.ADVANCED_ANALYTICS))
+):
+    """This endpoint requires ADVANCED_ANALYTICS permission (Pro plan or higher)"""
+    # Business logic here
+    pass
+```
+
+## Plan Service (`app/services/plan_service.py`)
+
+### Get User Plan Info
+```python
+class PlanService:
+    async def get_user_plan_info(self, user_id: str) -> PlanInfoResponse:
+        """Get complete plan information for user"""
+        user = await self.db.get(User, user_id)
+        current_plan = await get_user_current_plan(user, self.db)
+        available_features = PLAN_FEATURES.get(current_plan, [])
+        
+        return PlanInfoResponse(
+            current_plan=current_plan.value,
+            available_features=[f.value for f in available_features],
+            has_active_subscription=user.subscription is not None,
+            trial_active=user.subscription.status == "TRIALING" if user.subscription else False
+        )
+```
+
+## Upgrade Service (`app/services/upgrade_service.py`)
+
+### Upgrade Recommendations
+```python
+class UpgradeService:
+    async def get_upgrade_options(self, user_id: str) -> List[UpgradeOptionResponse]:
+        """Get available upgrade options for user"""
+        user = await self.db.get(User, user_id)
+        current_plan = await get_user_current_plan(user, self.db)
+        
+        # Return plans that are higher than current plan
+        # with pricing, features, and benefits
+        pass
+    
+    async def preview_upgrade(
+        self, 
+        user_id: str, 
+        target_plan: str
+    ) -> ProrationPreviewResponse:
+        """Preview upgrade cost with proration calculation"""
+        # Calculate proration for subscription upgrades
+        # Show cost difference for plan changes
+        pass
+```
+
+## Frontend Integration
+
+### Permission Guard Component
+```typescript
+// frontend/src/components/PermissionGuard.tsx
+import { useCheckFeatureAccess } from '@/hooks/api/usePlans';
+import { UpgradeDialog } from '@/components/UpgradeDialog';
+
+interface PermissionGuardProps {
+  feature: string;
+  children: React.ReactNode;
+  fallback?: React.ReactNode;
+  showUpgrade?: boolean;
+}
+
+export const PermissionGuard: React.FC<PermissionGuardProps> = ({
+  feature,
+  children,
+  fallback,
+  showUpgrade = true
+}) => {
+  const { data: hasAccess, isLoading } = useCheckFeatureAccess(feature);
+  const [upgradeDialogOpen, setUpgradeDialogOpen] = useState(false);
+  
+  if (isLoading) return <LoadingState />;
+  
+  if (!hasAccess) {
+    if (showUpgrade) {
+      return (
+        <>
+          {fallback || (
+            <Box sx={{ textAlign: 'center', p: 4 }}>
+              <Typography variant="h6" gutterBottom>
+                Upgrade Required
+              </Typography>
+              <StandardButton onClick={() => setUpgradeDialogOpen(true)}>
+                View Plans
+              </StandardButton>
+            </Box>
+          )}
+          <UpgradeDialog
+            open={upgradeDialogOpen}
+            onClose={() => setUpgradeDialogOpen(false)}
+            feature={feature}
+          />
+        </>
+      );
+    }
+    return fallback || null;
+  }
+  
+  return <>{children}</>;
+};
+```
+
+### Usage in Routes
+```typescript
+// Protect entire routes
+<Route
+  path="/dashboard/advanced-analytics"
+  element={
+    <PermissionGuard feature="advanced_analytics">
+      <AdvancedAnalytics />
+    </PermissionGuard>
+  }
+/>
+
+// Protect specific features
+<PermissionGuard feature="api_access">
+  <APIKeysSection />
+</PermissionGuard>
+```
+
+### Plan Status Display
+```typescript
+import { PlanStatus } from '@/components/PlanStatus';
+
+// Show current plan with upgrade option
+<PlanStatus 
+  showUpgradeButton 
+  compact={false}
+/>
+```
+
+## API Endpoints
+
+### Plan Information
+```python
+# GET /api/plans/current
+# Returns: current plan, features, subscription status
+
+# POST /api/plans/check-feature
+# Body: { "feature": "advanced_analytics" }
+# Returns: { "has_access": true/false, "current_plan": "pro" }
+```
+
+### Upgrade Flow
+```python
+# GET /api/upgrades/options
+# Returns: Available upgrade plans with pricing
+
+# POST /api/upgrades/preview
+# Body: { "target_plan": "premium" }
+# Returns: Proration preview, cost breakdown
+
+# POST /api/upgrades/execute
+# Body: { "target_plan": "premium" }
+# Returns: Checkout session for upgrade
+```
+
+## Payment-Plan Integration
+
+### Subscription Updates
+When a user subscribes or purchases:
+1. Webhook receives payment event
+2. `WebhookHandler` updates subscription/purchase records
+3. `update_user_plan()` recalculates user's current plan
+4. User's `current_plan` field updated in database
+5. Frontend automatically reflects new permissions
+
+### Plan Updates Flow
+```python
+# In webhook_handler.py
+async def _handle_subscription_created(self, subscription: Dict[str, Any]):
+    # 1. Create subscription record
+    db_subscription = Subscription(...)
+    self.db.add(db_subscription)
+    
+    # 2. Update user's plan
+    user = self.db.get(User, user_id)
+    new_plan = await update_user_plan(user, self.db)
+    
+    # 3. User now has access to new features
+    self.db.commit()
+```
+
+## Best Practices
+
+### Backend
+- **Always check permissions in controllers** using `require_permission()` dependency
+- **Update plan after payment events** in webhook handlers
+- **Cache plan calculations** for performance
+- **Log permission denials** for monitoring
+
+### Frontend
+- **Use PermissionGuard** for conditional rendering
+- **Show upgrade prompts** when users lack permissions
+- **Fetch plan info once** per session, cache in React Query
+- **Update UI reactively** when plan changes
+
+### Testing
+```python
+# Test permission checks
+def test_feature_access():
+    user = create_user_with_plan(PlanType.PRO)
+    assert check_feature_access(user, FeaturePermission.API_ACCESS) == True
+    assert check_feature_access(user, FeaturePermission.WHITE_LABEL) == False
+```
+
+This system provides flexible, payment-integrated access control that scales from free users to enterprise customers while maintaining security and providing excellent upgrade UX.

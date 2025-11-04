@@ -1,0 +1,214 @@
+---
+description: "Database patterns, migrations, query optimization, and testing"
+globs: app/db.py,app/models.py,migrations/**,tests/**
+alwaysApply: false
+---
+# Backend Database & Testing
+
+## Database Session Management
+
+```python
+# app/db.py
+from sqlmodel import create_engine
+from sqlmodel.ext.asyncio.session import AsyncSession, create_async_engine
+from sqlalchemy.orm import sessionmaker
+
+# Async engine for production
+async_engine = create_async_engine(
+    settings.database_url,
+    echo=settings.debug,
+    pool_pre_ping=True,
+    pool_recycle=300,
+)
+
+AsyncSessionLocal = sessionmaker(
+    async_engine,
+    class_=AsyncSession,
+    expire_on_commit=False,
+)
+
+async def get_async_db_session():
+    async with AsyncSessionLocal() as session:
+        yield session
+```
+
+## SQLModel Query Patterns
+
+### Basic Queries
+```python
+from sqlmodel import select
+
+# Simple query
+articles = await db.execute(select(Article).where(Article.user_id == user_id))
+articles = articles.scalars().all()
+
+# With relationships (eager loading)
+from sqlalchemy.orm import selectinload
+
+users = await db.execute(
+    select(User).options(selectinload(User.articles))
+)
+users = users.scalars().all()
+
+# Pagination
+articles = await db.execute(
+    select(Article)
+    .offset(skip)
+    .limit(limit)
+    .order_by(Article.created_at.desc())
+)
+```
+
+### Complex Queries
+```python
+# Join queries
+from sqlalchemy import func
+
+# Count articles per user
+result = await db.execute(
+    select(User.email, func.count(Article.id))
+    .join(Article, User.id == Article.user_id)
+    .group_by(User.email)
+)
+
+# Filter with multiple conditions
+articles = await db.execute(
+    select(Article).where(
+        Article.user_id == user_id,
+        Article.is_published == True,
+        Article.created_at >= start_date
+    )
+)
+```
+
+## Alembic Migrations
+
+### Creating Migrations
+```bash
+# Auto-generate migration
+task db:migrate-create -- "add email_verified to users"
+
+# Manual migration
+poetry run alembic revision -m "custom migration"
+```
+
+### Migration Patterns
+```python
+# upgrade()
+def upgrade() -> None:
+    op.add_column('users', sa.Column('email_verified', sa.Boolean(), server_default='false'))
+    
+    # Data migration
+    op.execute("UPDATE users SET email_verified = true WHERE verified = true")
+
+# downgrade()
+def downgrade() -> None:
+    op.drop_column('users', 'email_verified')
+```
+
+### Common Migration Operations
+```python
+# Add column
+op.add_column('table', sa.Column('column', sa.String()))
+
+# Add foreign key
+op.add_column('articles', sa.Column('category_id', sa.UUID()))
+op.create_foreign_key('fk_articles_category', 'articles', 'categories', ['category_id'], ['id'])
+
+# Create table
+op.create_table(
+    'categories',
+    sa.Column('id', sa.UUID(), primary_key=True),
+    sa.Column('name', sa.String(), nullable=False),
+)
+
+# Create index
+op.create_index('ix_articles_user_id', 'articles', ['user_id'])
+```
+
+## Performance Optimization
+
+### Eager Loading
+```python
+# Avoid N+1 queries
+statement = select(User).options(
+    selectinload(User.articles),
+    selectinload(User.subscription)
+)
+```
+
+### Pagination
+```python
+def get_paginated(db: Session, skip: int = 0, limit: int = 100):
+    statement = select(Model).offset(skip).limit(limit)
+    return db.exec(statement).all()
+```
+
+### Indexing
+```python
+class User(SQLModel, table=True):
+    email: str = Field(sa_column_kwargs={"unique": True}, index=True)
+    stripe_customer_id: Optional[str] = Field(index=True)
+```
+
+## Testing Patterns
+
+### Service Tests
+```python
+import pytest
+from sqlmodel import Session, create_engine, SQLModel
+
+@pytest.fixture
+def db_session():
+    engine = create_engine("sqlite:///:memory:")
+    SQLModel.metadata.create_all(engine)
+    with Session(engine) as session:
+        yield session
+
+@pytest.mark.asyncio
+async def test_create_article(db_session):
+    service = ArticleService(db_session)
+    result = await service.create_article(article_data, user_id)
+    assert result.title == "Test"
+```
+
+### Integration Tests
+```python
+from fastapi.testclient import TestClient
+from main import app
+
+client = TestClient(app)
+
+def test_create_article_endpoint():
+    response = client.post(
+        "/api/articles",
+        json={"title": "Test", "content": "Test content"},
+        headers={"Authorization": f"Bearer {token}"}
+    )
+    assert response.status_code == 201
+    assert response.json()["title"] == "Test"
+```
+
+## Security Best Practices
+
+### SQL Injection Prevention
+```python
+# ✅ GOOD - SQLModel prevents injection
+articles = db.exec(select(Article).where(Article.title == user_input))
+
+# ❌ BAD - Never use raw SQL with user input
+db.execute(f"SELECT * FROM articles WHERE title = '{user_input}'")
+```
+
+### Input Validation
+```python
+# Always validate in schemas
+class ArticleCreate(SQLModel):
+    title: str = Field(min_length=3, max_length=200)
+    
+    @validator('title')
+    def clean_title(cls, v):
+        return html.escape(v.strip())
+```
+
+Follow these patterns for reliable, performant database operations!
