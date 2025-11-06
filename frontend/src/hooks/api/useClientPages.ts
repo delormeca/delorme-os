@@ -6,20 +6,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { OpenAPI } from "@/client";
 import axios from "axios";
 
-// Types based on backend schemas
-export interface ClientPageRead {
-  id: string;
-  client_id: string;
-  url: string;
-  slug?: string;
-  status_code?: number;
-  is_failed: boolean;
-  failure_reason?: string;
-  retry_count: number;
-  last_checked_at?: string;
-  created_at: string;
-  updated_at: string;
-}
+// Import ClientPageRead from generated client (now has all 22 Phase 3 fields!)
+import type { ClientPageRead } from "@/client";
 
 export interface ClientPageList {
   pages: ClientPageRead[];

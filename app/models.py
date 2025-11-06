@@ -209,6 +209,8 @@ class ClientPage(UUIDModelBase, table=True):
     """
     Model representing a page/URL discovered during engine setup.
     Different from Project.pages which are pages being actively crawled.
+
+    Now extended to store all 22 SEO data points extracted from pages.
     """
     __tablename__ = "client_page"
 
@@ -223,8 +225,48 @@ class ClientPage(UUIDModelBase, table=True):
     created_at: datetime.datetime = Field(default_factory=get_utcnow)
     updated_at: datetime.datetime = Field(default_factory=get_utcnow)
 
+    # Phase 3: SEO Data Points (22 columns)
+    # Core SEO Data
+    page_title: Optional[str] = Field(default=None, sa_column=Column(sa.Text))
+    meta_title: Optional[str] = Field(default=None, sa_column=Column(sa.Text))
+    meta_description: Optional[str] = Field(default=None, sa_column=Column(sa.Text))
+    h1: Optional[str] = Field(default=None, sa_column=Column(sa.Text))
+    canonical_url: Optional[str] = Field(default=None, sa_column=Column(sa.Text))
+    hreflang: Optional[str] = Field(default=None, sa_column=Column(sa.Text))
+    meta_robots: Optional[str] = Field(default=None)
+    word_count: Optional[int] = Field(default=None, index=True)
+
+    # Content Analysis
+    body_content: Optional[str] = Field(default=None, sa_column=Column(sa.Text))
+    webpage_structure: Optional[dict] = Field(default=None, sa_column=Column(JSON))  # Nested heading hierarchy
+    schema_markup: Optional[dict] = Field(default=None, sa_column=Column(JSON))  # Structured data
+    salient_entities: Optional[dict] = Field(default=None, sa_column=Column(JSON))  # Entities with salience scores
+
+    # Links
+    internal_links: Optional[dict] = Field(default=None, sa_column=Column(JSON))  # Array of {url, anchor_text}
+    external_links: Optional[dict] = Field(default=None, sa_column=Column(JSON))  # Array of {url, anchor_text}
+    image_count: Optional[int] = Field(default=None)
+
+    # Embeddings (for future cosine similarity)
+    # Note: For pgvector support, you would use: VECTOR(3072) type
+    # For now, storing as JSON or reference to separate embeddings table
+    body_content_embedding: Optional[str] = Field(default=None, sa_column=Column(sa.Text))  # JSON or vector reference
+
+    # Screenshots
+    screenshot_url: Optional[str] = Field(default=None)  # Thumbnail screenshot URL
+    screenshot_full_url: Optional[str] = Field(default=None)  # Full page screenshot URL
+
+    # Metadata
+    last_crawled_at: Optional[datetime.datetime] = Field(default=None)
+    crawl_run_id: Optional[uuid.UUID] = Field(default=None, foreign_key="crawl_run.id", index=True)
+
     # Relationships
     client: "Client" = Relationship(back_populates="client_pages")
+    crawl_run: Optional["CrawlRun"] = Relationship(back_populates="pages")
+    data_points: List["DataPoint"] = Relationship(
+        back_populates="page",
+        sa_relationship_kwargs={"lazy": "selectin", "cascade": "all, delete-orphan"}
+    )
 
     __table_args__ = (
         UniqueConstraint("client_id", "url", name="unique_client_url"),
@@ -568,3 +610,66 @@ class ResearchChatMessage(UUIDModelBase, table=True):
 
     # Relationships
     research_request: "ResearchRequest" = Relationship(back_populates="chat_messages")
+
+
+# Phase 3: Data Table Models
+
+
+class CrawlRun(UUIDModelBase, table=True):
+    """
+    Model representing a crawl run for data extraction.
+    Tracks which pages were crawled and what data was extracted.
+    """
+    __tablename__ = "crawl_run"
+
+    client_id: uuid.UUID = Field(foreign_key="client.id", nullable=False, index=True)
+    run_type: str = Field(nullable=False)  # 'full', 'selective', 'manual'
+    status: str = Field(default="pending", nullable=False, index=True)  # 'in_progress', 'completed', 'failed', 'partial'
+
+    # Statistics
+    total_pages: int = Field(default=0, nullable=False)
+    successful_pages: int = Field(default=0, nullable=False)
+    failed_pages: int = Field(default=0, nullable=False)
+
+    # Data points extracted in this run
+    data_points_extracted: Optional[list] = Field(default=None, sa_column=Column(sa.ARRAY(sa.String)))  # Array of data point types
+
+    # Timing
+    started_at: Optional[datetime.datetime] = Field(default=None)
+    completed_at: Optional[datetime.datetime] = Field(default=None)
+
+    # Cost tracking
+    estimated_cost: Optional[float] = Field(default=None)  # In USD
+    actual_cost: Optional[float] = Field(default=None)  # In USD
+
+    created_at: datetime.datetime = Field(default_factory=get_utcnow, nullable=False)
+
+    # Relationships
+    pages: List["ClientPage"] = Relationship(
+        back_populates="crawl_run",
+        sa_relationship_kwargs={"lazy": "selectin"}
+    )
+
+
+class DataPoint(UUIDModelBase, table=True):
+    """
+    Model representing individual data points for tracking and querying.
+    Enables sub-ID system: pg_[uuid]_[data_type]
+    Example: pg_a1b2c3d4_embedding, pg_a1b2c3d4_title
+    """
+    __tablename__ = "data_point"
+
+    page_id: uuid.UUID = Field(foreign_key="client_page.id", nullable=False, index=True)
+    data_type: str = Field(nullable=False, index=True)  # 'title', 'meta_title', 'embedding', 'body_content', etc.
+    value: Optional[dict] = Field(default=None, sa_column=Column(JSON))  # Flexible storage for any data type
+    crawl_run_id: Optional[uuid.UUID] = Field(default=None, foreign_key="crawl_run.id", index=True)
+
+    created_at: datetime.datetime = Field(default_factory=get_utcnow, nullable=False)
+
+    # Relationships
+    page: "ClientPage" = Relationship(back_populates="data_points")
+
+    __table_args__ = (
+        sa.Index("ix_data_point_page_data_type", "page_id", "data_type"),
+        sa.Index("ix_data_point_data_type", "data_type"),
+    )

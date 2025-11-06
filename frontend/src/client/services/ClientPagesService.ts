@@ -187,4 +187,39 @@ export class ClientPagesService {
             },
         });
     }
+    /**
+     * Export Pages
+     * Export client pages in JSON or CSV format.
+     *
+     * Supports:
+     * - Export all pages or specific pages by ID
+     * - Column selection
+     * - JSON or CSV format
+     * @param clientId Client ID to export pages from
+     * @param format Export format (json or csv)
+     * @param pageIds Comma-separated page IDs to export (exports all if not specified)
+     * @param columns Comma-separated columns to include
+     * @returns any Successful Response
+     * @throws ApiError
+     */
+    public static exportPagesApiClientPagesExportGet(
+        clientId: string,
+        format: string = 'json',
+        pageIds?: string,
+        columns?: string,
+    ): CancelablePromise<any> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/client-pages/export',
+            query: {
+                'client_id': clientId,
+                'format': format,
+                'page_ids': pageIds,
+                'columns': columns,
+            },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
 }

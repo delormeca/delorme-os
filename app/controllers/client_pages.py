@@ -198,3 +198,106 @@ async def delete_all_client_pages(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to delete pages: {str(e)}"
         )
+
+
+@router.get("/client-pages/export")
+async def export_pages(
+    client_id: UUID = Query(..., description="Client ID to export pages from"),
+    format: str = Query("json", description="Export format (json or csv)"),
+    page_ids: str = Query(None, description="Comma-separated page IDs to export (exports all if not specified)"),
+    columns: str = Query(None, description="Comma-separated columns to include"),
+    db: AsyncSession = Depends(get_async_db_session),
+    current_user: CurrentUserResponse = Depends(get_current_user),
+):
+    """
+    Export client pages in JSON or CSV format.
+
+    Supports:
+    - Export all pages or specific pages by ID
+    - Column selection
+    - JSON or CSV format
+    """
+    from fastapi.responses import StreamingResponse
+    import io
+    import json
+    import csv
+
+    try:
+        page_service = ClientPageService(db)
+
+        # Parse page IDs if provided
+        selected_page_ids = None
+        if page_ids:
+            try:
+                selected_page_ids = [UUID(pid.strip()) for pid in page_ids.split(',')]
+            except Exception:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Invalid page IDs format"
+                )
+
+        # Get pages
+        if selected_page_ids:
+            # Export specific pages
+            pages_data = await page_service.get_pages_by_ids(selected_page_ids)
+        else:
+            # Export all pages for client
+            params = ClientPageSearchParams(
+                client_id=client_id,
+                page=1,
+                page_size=10000  # Large enough to get all pages
+            )
+            result = await page_service.list_pages(params)
+            pages_data = result.pages
+
+        # Convert to dict
+        pages_list = [page.model_dump() for page in pages_data]
+
+        # Filter columns if specified
+        if columns:
+            column_list = [c.strip() for c in columns.split(',')]
+            pages_list = [
+                {k: v for k, v in page.items() if k in column_list}
+                for page in pages_list
+            ]
+
+        # Export based on format
+        if format.lower() == 'csv':
+            # Create CSV
+            if not pages_list:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="No pages found to export"
+                )
+
+            output = io.StringIO()
+            writer = csv.DictWriter(output, fieldnames=pages_list[0].keys())
+            writer.writeheader()
+            writer.writerows(pages_list)
+
+            return StreamingResponse(
+                io.BytesIO(output.getvalue().encode('utf-8')),
+                media_type="text/csv",
+                headers={
+                    "Content-Disposition": f"attachment; filename=pages-export-{client_id}.csv"
+                }
+            )
+        else:
+            # Export as JSON
+            json_output = json.dumps(pages_list, indent=2, default=str)
+
+            return StreamingResponse(
+                io.BytesIO(json_output.encode('utf-8')),
+                media_type="application/json",
+                headers={
+                    "Content-Disposition": f"attachment; filename=pages-export-{client_id}.json"
+                }
+            )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to export pages: {str(e)}"
+        )

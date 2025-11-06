@@ -30,7 +30,7 @@ import {
 import { ProjectsList } from '@/components/Projects/ProjectsList';
 import { EngineSetupModal } from '@/components/Clients/EngineSetupModal';
 import { EngineSetupProgressDialog } from '@/components/Clients/EngineSetupProgressDialog';
-import { ClientPagesList } from '@/components/Clients/ClientPagesList';
+import { EnhancedClientPagesList } from '@/components/Clients/EnhancedClientPagesList';
 import { useClientPageCount } from '@/hooks/api/useClientPages';
 import { useConfirm } from 'material-ui-confirm';
 import { useQueryClient } from '@tanstack/react-query';
@@ -245,7 +245,7 @@ const ClientDetail: React.FC = () => {
               <Alert severity="success" sx={{ mb: 2 }}>
                 Engine setup completed! {pageCount?.total_pages || 0} pages discovered.
               </Alert>
-              <ClientPagesList clientId={client.id} />
+              <EnhancedClientPagesList clientId={client.id} />
             </Box>
           )}
         </Box>

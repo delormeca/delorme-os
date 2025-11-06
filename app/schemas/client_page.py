@@ -29,7 +29,9 @@ class ClientPageUpdate(BaseModel):
 
 
 class ClientPageRead(ClientPageBase):
-    """Schema for reading client page data."""
+    """Schema for reading client page data with all Phase 3 fields."""
+    model_config = {"from_attributes": True}
+
     id: uuid.UUID
     client_id: uuid.UUID
     status_code: Optional[int] = None
@@ -40,8 +42,38 @@ class ClientPageRead(ClientPageBase):
     created_at: datetime.datetime
     updated_at: datetime.datetime
 
-    class Config:
-        from_attributes = True
+    # Phase 3: SEO Data Points (22 fields)
+    # Core SEO Data
+    page_title: Optional[str] = Field(default=None, description="HTML title tag")
+    meta_title: Optional[str] = Field(default=None, description="SEO meta title")
+    meta_description: Optional[str] = Field(default=None, description="SEO meta description")
+    h1: Optional[str] = Field(default=None, description="Main H1 heading")
+    canonical_url: Optional[str] = Field(default=None, description="Canonical URL")
+    hreflang: Optional[str] = Field(default=None, description="Hreflang tags")
+    meta_robots: Optional[str] = Field(default=None, description="Meta robots directives")
+    word_count: Optional[int] = Field(default=None, description="Word count of body content")
+
+    # Content Analysis
+    body_content: Optional[str] = Field(default=None, description="Full page body text")
+    webpage_structure: Optional[dict] = Field(default=None, description="Heading hierarchy structure")
+    schema_markup: Optional[dict] = Field(default=None, description="Structured data/schema markup")
+    salient_entities: Optional[dict] = Field(default=None, description="Named entities with salience scores")
+
+    # Links
+    internal_links: Optional[dict] = Field(default=None, description="Internal links found on page")
+    external_links: Optional[dict] = Field(default=None, description="External links found on page")
+    image_count: Optional[int] = Field(default=None, description="Number of images on page")
+
+    # Embeddings
+    body_content_embedding: Optional[str] = Field(default=None, description="Vector embedding of body content")
+
+    # Screenshots
+    screenshot_url: Optional[str] = Field(default=None, description="Screenshot thumbnail URL")
+    screenshot_full_url: Optional[str] = Field(default=None, description="Full page screenshot URL")
+
+    # Metadata
+    last_crawled_at: Optional[datetime.datetime] = Field(default=None, description="Last crawl timestamp")
+    crawl_run_id: Optional[uuid.UUID] = Field(default=None, description="Associated crawl run ID")
 
 
 class ClientPageList(BaseModel):

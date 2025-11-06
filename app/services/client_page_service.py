@@ -373,3 +373,26 @@ class ClientPageService:
         await self.db.commit()
 
         return len(pages)
+
+    async def get_pages_by_ids(self, page_ids: List[uuid.UUID]) -> List[ClientPageRead]:
+        """
+        Get multiple pages by their IDs.
+
+        Args:
+            page_ids: List of page IDs
+
+        Returns:
+            List of pages
+
+        Raises:
+            NotFoundException: If any page ID is not found
+        """
+        result = await self.db.execute(
+            select(ClientPage).where(ClientPage.id.in_(page_ids))
+        )
+        pages = result.scalars().all()
+
+        if len(pages) != len(page_ids):
+            raise NotFoundException("One or more page IDs not found")
+
+        return [ClientPageRead.model_validate(page) for page in pages]
