@@ -140,6 +140,45 @@ class BaseConfig(BaseSettings):
         default="./outputs/research", description="Research output directory"
     )
 
+    # Phase 4: Data Extraction & Crawling Configuration
+    google_cloud_credentials_path: Optional[str] = Field(
+        default=None, description="Path to Google Cloud service account JSON key file"
+    )
+    redis_host: str = Field(
+        default="localhost", description="Redis host for caching and job queue"
+    )
+    redis_port: int = Field(
+        default=6379, description="Redis port"
+    )
+    redis_db: int = Field(
+        default=0, description="Redis database number"
+    )
+
+    # Crawling Configuration
+    crawl_rate_limit_delay: int = Field(
+        default=2, description="Delay between page crawls in seconds"
+    )
+    crawl_timeout_seconds: int = Field(
+        default=30, description="Timeout for page crawl requests"
+    )
+    crawl_max_workers: int = Field(
+        default=5, description="Maximum concurrent crawl workers"
+    )
+    crawl_retry_attempts: int = Field(
+        default=3, description="Number of retry attempts for failed pages"
+    )
+
+    # Embedding Configuration
+    embedding_model: str = Field(
+        default="text-embedding-3-large", description="OpenAI embedding model"
+    )
+    embedding_dimensions: int = Field(
+        default=3072, description="Embedding vector dimensions"
+    )
+    embedding_max_tokens: int = Field(
+        default=8000, description="Maximum tokens for embedding generation"
+    )
+
     @property
     def database_url(self) -> str:
         """Generate database URL from components."""
@@ -202,3 +241,16 @@ SERPAPI_API_KEY = config.serpapi_api_key
 RESEARCH_MAX_ITERATIONS = config.research_max_iterations
 RESEARCH_DEFAULT_RETRIEVER = config.research_default_retriever
 RESEARCH_OUTPUT_DIR = config.research_output_dir
+
+# Phase 4: Crawling & Data Extraction
+GOOGLE_CLOUD_CREDENTIALS_PATH = config.google_cloud_credentials_path
+REDIS_HOST = config.redis_host
+REDIS_PORT = config.redis_port
+REDIS_DB = config.redis_db
+CRAWL_RATE_LIMIT_DELAY = config.crawl_rate_limit_delay
+CRAWL_TIMEOUT_SECONDS = config.crawl_timeout_seconds
+CRAWL_MAX_WORKERS = config.crawl_max_workers
+CRAWL_RETRY_ATTEMPTS = config.crawl_retry_attempts
+EMBEDDING_MODEL = config.embedding_model
+EMBEDDING_DIMENSIONS = config.embedding_dimensions
+EMBEDDING_MAX_TOKENS = config.embedding_max_tokens

@@ -48,6 +48,15 @@ class SitemapParser:
                 response = await client.get(url)
                 response.raise_for_status()
                 return response.content
+        except httpx.HTTPStatusError as e:
+            # Detect bot protection / security checkpoints
+            if e.response.status_code in [403, 429]:
+                raise SitemapParseError(
+                    f"BOT_PROTECTION: The sitemap is protected by security measures "
+                    f"(Status {e.response.status_code}). This is common for sites using "
+                    f"Vercel, Cloudflare, or similar protection. Please use Manual URL Entry instead."
+                )
+            raise SitemapParseError(f"Failed to fetch sitemap from {url}: {str(e)}")
         except httpx.HTTPError as e:
             raise SitemapParseError(f"Failed to fetch sitemap from {url}: {str(e)}")
         except Exception as e:
@@ -78,22 +87,22 @@ class SitemapParser:
             # Check if it's a sitemap index (contains <sitemap> elements)
             sitemap_locs = root.xpath("//ns:sitemap/ns:loc/text()", namespaces=ns)
             if sitemap_locs:
-                # It's a sitemap index - return nested sitemap URLs
-                return sitemap_locs
+                # It's a sitemap index - return nested sitemap URLs (strip whitespace)
+                return [url.strip() for url in sitemap_locs]
 
             # Otherwise, extract URL locations
             url_locs = root.xpath("//ns:url/ns:loc/text()", namespaces=ns)
             if url_locs:
-                return url_locs
+                return [url.strip() for url in url_locs]
 
             # Try without namespace (some sitemaps don't use it)
             url_locs_no_ns = root.xpath("//url/loc/text()")
             if url_locs_no_ns:
-                return url_locs_no_ns
+                return [url.strip() for url in url_locs_no_ns]
 
             sitemap_locs_no_ns = root.xpath("//sitemap/loc/text()")
             if sitemap_locs_no_ns:
-                return sitemap_locs_no_ns
+                return [url.strip() for url in sitemap_locs_no_ns]
 
             # No URLs found
             raise SitemapParseError("No URLs found in sitemap")

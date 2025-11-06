@@ -642,6 +642,14 @@ class CrawlRun(UUIDModelBase, table=True):
     estimated_cost: Optional[float] = Field(default=None)  # In USD
     actual_cost: Optional[float] = Field(default=None)  # In USD
 
+    # Phase 4: Real-time progress tracking
+    current_page_url: Optional[str] = Field(default=None, sa_column=Column(sa.Text))
+    progress_percentage: int = Field(default=0, nullable=False)
+    current_status_message: Optional[str] = Field(default=None, sa_column=Column(sa.Text))
+    error_log: Optional[dict] = Field(default=None, sa_column=Column(JSON))  # {errors: [{url, error, timestamp}]}
+    performance_metrics: Optional[dict] = Field(default=None, sa_column=Column(JSON))  # {avg_time_per_page, pages_per_minute}
+    api_costs: Optional[dict] = Field(default=None, sa_column=Column(JSON))  # {openai_embeddings: {requests, tokens, cost_usd}, google_nlp: {...}}
+
     created_at: datetime.datetime = Field(default_factory=get_utcnow, nullable=False)
 
     # Relationships

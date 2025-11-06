@@ -221,12 +221,30 @@ export const EngineSetupProgressDialog: React.FC<EngineSetupProgressDialogProps>
 
           {/* Error Message */}
           {isFailed && progress.error_message && (
-            <Alert severity="error">
-              <Typography variant="body2" fontWeight={600} gutterBottom>
-                Setup Failed
-              </Typography>
-              <Typography variant="body2">{progress.error_message}</Typography>
-            </Alert>
+            <>
+              {progress.error_message.includes("BOT_PROTECTION:") ? (
+                // Special handling for bot protection errors
+                <Alert severity="warning" sx={{ bgcolor: "warning.lighter" }}>
+                  <Typography variant="body2" fontWeight={600} gutterBottom>
+                    Sitemap Protected by Security Measures
+                  </Typography>
+                  <Typography variant="body2" gutterBottom>
+                    {progress.error_message.replace("BOT_PROTECTION:", "").trim()}
+                  </Typography>
+                  <Typography variant="body2" sx={{ mt: 1 }}>
+                    <strong>Alternative:</strong> Please use the "Add Pages Manually" option to import URLs for this website.
+                  </Typography>
+                </Alert>
+              ) : (
+                // Standard error display
+                <Alert severity="error">
+                  <Typography variant="body2" fontWeight={600} gutterBottom>
+                    Setup Failed
+                  </Typography>
+                  <Typography variant="body2">{progress.error_message}</Typography>
+                </Alert>
+              )}
+            </>
           )}
 
           {/* Timing Information */}

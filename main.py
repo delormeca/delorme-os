@@ -32,6 +32,7 @@ from app.controllers.research import router as research_router
 from app.controllers.project_leads import router as project_leads_router
 from app.controllers.engine_setup import router as engine_setup_router
 from app.controllers.client_pages import router as client_pages_router
+from app.controllers.page_crawl import router as page_crawl_router
 from app.db import async_engine
 from app.config.base import config
 
@@ -101,6 +102,7 @@ app.include_router(research_router, prefix="/api", tags=["research"])
 app.include_router(project_leads_router, prefix="/api", tags=["project-leads"])
 app.include_router(engine_setup_router, prefix="/api", tags=["engine-setup"])
 app.include_router(client_pages_router, prefix="/api", tags=["client-pages"])
+app.include_router(page_crawl_router, tags=["page-crawl"])
 
 static_directory = "static/static"
 
