@@ -1,17 +1,14 @@
 # Render.com Deployment Configuration
 # This file defines all services for your staging/production environment
 
-services:
+databases:
   # PostgreSQL Database
-  - type: pserv
-    name: delorme-os-staging-db
-    env: docker
-    plan: starter # or free for testing
-    region: oregon # choose your preferred region
-    databases:
-      - name: delorme_os_db
-        databaseName: delorme_os
-        user: delorme_os
+  - name: delorme-os-staging-db
+    databaseName: delorme_os
+    user: delorme_os
+    plan: starter
+
+services:
 
   # Backend API Service
   - type: web
