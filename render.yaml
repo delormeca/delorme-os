@@ -6,7 +6,7 @@ databases:
   - name: delorme-os-staging-db
     databaseName: delorme_os
     user: delorme_os
-    plan: starter
+    plan: free  # or 'standard' for production ($7/month)
 
 services:
 
@@ -15,7 +15,7 @@ services:
     name: delorme-os-staging-backend
     env: python
     region: oregon
-    plan: starter # or free for testing
+    plan: free  # or 'starter' for production ($7/month)
     buildCommand: |
       pip install poetry
       poetry config virtualenvs.create false
