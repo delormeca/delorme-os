@@ -11,6 +11,17 @@ from fastapi.responses import JSONResponse
 logger = logging.getLogger(__name__)
 
 
+# Generic application exceptions
+class NotFoundException(Exception):
+    """Exception raised when a resource is not found."""
+    pass
+
+
+class ValidationException(Exception):
+    """Exception raised when validation fails."""
+    pass
+
+
 class PaymentBaseException(Exception):
     """Base payment exception class"""
 

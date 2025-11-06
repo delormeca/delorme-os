@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Get-Content .claudecommandswebsite-engine-phase-2.md -Head 10)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

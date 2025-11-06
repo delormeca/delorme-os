@@ -34,7 +34,8 @@
     "react-hook-form": "^7.51.5",
     "react-markdown": "^10.1.0",
     "react-router-dom": "^6.23.1",
-    "yup": "^1.4.0"
+    "yup": "^1.4.0",
+    "zod": "^4.1.12"
   },
   "devDependencies": {
     "@eslint/config-array": "^0.19.2",

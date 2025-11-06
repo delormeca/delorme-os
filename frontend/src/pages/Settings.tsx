@@ -18,9 +18,10 @@ import {
   Storage,
   Shield,
   Save,
+  Groups,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
-import { 
+import {
   DashboardLayout,
   PageHeader,
   ModernCard,
@@ -34,6 +35,7 @@ import {
 import { useStandardForm, formSchemas } from '@/hooks';
 import { useUpdateProfile } from '@/hooks/api/useUpdateProfile';
 import { useCurrentUser } from '@/hooks/api/useCurrentUser';
+import { ProjectLeadsManager } from '@/components/Settings/ProjectLeadsManager';
 
 interface SettingsFormData {
   full_name: string;
@@ -139,6 +141,16 @@ const Settings: React.FC = () => {
               </Box>
             </FormSection>
           </form>
+        </ModernCard>
+
+        {/* Project Leads Management */}
+        <ModernCard
+          title="Project Leads"
+          subtitle="Manage project leads and client assignments"
+          icon={<Groups />}
+          variant="glass"
+        >
+          <ProjectLeadsManager />
         </ModernCard>
 
         {/* Notification Preferences */}

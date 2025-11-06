@@ -4,7 +4,8 @@ from enum import Enum
 from typing import List, Optional
 
 from pydantic import ConfigDict
-from sqlalchemy import Column, JSON
+import sqlalchemy as sa
+from sqlalchemy import Column, JSON, UniqueConstraint
 from sqlalchemy.ext.asyncio import AsyncAttrs
 from sqlalchemy.orm import registry
 from sqlmodel import Field, Relationship, SQLModel
@@ -113,21 +114,148 @@ class Subscription(UUIDModelBase, table=True):
 # VibeCode Models
 
 
+class ProjectLead(UUIDModelBase, table=True):
+    """
+    Model representing a project lead who manages clients.
+    """
+    __tablename__ = "projectlead"
+
+    name: str = Field(nullable=False)
+    email: str = Field(unique=True, nullable=False, index=True)
+    created_at: datetime.datetime = Field(
+        default_factory=get_utcnow,
+        nullable=False,
+    )
+    updated_at: datetime.datetime = Field(
+        default_factory=get_utcnow,
+        nullable=False,
+    )
+
+    # Relationships
+    clients: List["Client"] = Relationship(
+        back_populates="project_lead", sa_relationship_kwargs={"lazy": "selectin"}
+    )
+
+
 class Client(UUIDModelBase, table=True):
     """
     Model representing a client/company in VibeCode.
     """
 
-    name: str
+    name: str = Field(unique=True, nullable=False, index=True)
+    description: Optional[str] = Field(default=None, sa_column=Column(sa.Text))
+    website_url: Optional[str] = None
+    sitemap_url: Optional[str] = None
     industry: Optional[str] = None
+    logo_url: Optional[str] = None
+    crawl_frequency: str = Field(default="Manual Only", nullable=False)
+    status: str = Field(default="Active", nullable=False, index=True)
+    page_count: int = Field(default=0, nullable=False)
+
+    # Foreign keys
     created_by: uuid.UUID = Field(foreign_key="user.id", nullable=False)
+    project_lead_id: Optional[uuid.UUID] = Field(
+        default=None,
+        foreign_key="projectlead.id",
+        nullable=True,
+        index=True,
+    )
+
+    # Timestamps
     created_at: datetime.datetime = Field(
         default_factory=get_utcnow,
         nullable=False,
     )
+    updated_at: datetime.datetime = Field(
+        default_factory=get_utcnow,
+        nullable=False,
+    )
 
+    # Engine Setup Fields (Phase 2)
+    engine_setup_completed: bool = Field(default=False, nullable=False, index=True)
+    last_setup_run_id: Optional[uuid.UUID] = Field(
+        default=None,
+        foreign_key="engine_setup_run.id",
+        nullable=True,
+    )
+
+    # Relationships
+    project_lead: Optional["ProjectLead"] = Relationship(back_populates="clients")
     projects: List["Project"] = Relationship(
         back_populates="client", sa_relationship_kwargs={"lazy": "selectin"}
+    )
+    client_pages: List["ClientPage"] = Relationship(
+        back_populates="client",
+        sa_relationship_kwargs={"lazy": "selectin", "cascade": "all, delete-orphan"}
+    )
+    engine_setup_runs: List["EngineSetupRun"] = Relationship(
+        back_populates="client",
+        sa_relationship_kwargs={
+            "lazy": "selectin",
+            "cascade": "all, delete-orphan",
+            "foreign_keys": "EngineSetupRun.client_id"
+        }
+    )
+    last_setup_run: Optional["EngineSetupRun"] = Relationship(
+        sa_relationship_kwargs={
+            "lazy": "selectin",
+            "foreign_keys": "Client.last_setup_run_id",
+            "post_update": True
+        }
+    )
+
+
+class ClientPage(UUIDModelBase, table=True):
+    """
+    Model representing a page/URL discovered during engine setup.
+    Different from Project.pages which are pages being actively crawled.
+    """
+    __tablename__ = "client_page"
+
+    client_id: uuid.UUID = Field(foreign_key="client.id", index=True)
+    url: str = Field(sa_column=Column(sa.Text, nullable=False))
+    slug: Optional[str] = Field(default=None, sa_column=Column(sa.Text))
+    status_code: Optional[int] = Field(default=None, index=True)
+    is_failed: bool = Field(default=False, index=True)
+    failure_reason: Optional[str] = Field(default=None, sa_column=Column(sa.Text))
+    retry_count: int = Field(default=0)
+    last_checked_at: Optional[datetime.datetime] = None
+    created_at: datetime.datetime = Field(default_factory=get_utcnow)
+    updated_at: datetime.datetime = Field(default_factory=get_utcnow)
+
+    # Relationships
+    client: "Client" = Relationship(back_populates="client_pages")
+
+    __table_args__ = (
+        UniqueConstraint("client_id", "url", name="unique_client_url"),
+    )
+
+
+class EngineSetupRun(UUIDModelBase, table=True):
+    """
+    Model representing an engine setup run (sitemap import or manual entry).
+    Tracks progress of page discovery process.
+    """
+    __tablename__ = "engine_setup_run"
+
+    client_id: uuid.UUID = Field(foreign_key="client.id", index=True)
+    setup_type: str  # 'sitemap' or 'manual'
+    total_pages: int = Field(default=0)
+    successful_pages: int = Field(default=0)
+    failed_pages: int = Field(default=0)
+    skipped_pages: int = Field(default=0)  # Duplicates
+    status: str = Field(default="pending", index=True)  # 'pending', 'in_progress', 'completed', 'failed'
+    current_url: Optional[str] = Field(default=None, sa_column=Column(sa.Text))
+    progress_percentage: int = Field(default=0)
+    error_message: Optional[str] = Field(default=None, sa_column=Column(sa.Text))
+    started_at: Optional[datetime.datetime] = None
+    completed_at: Optional[datetime.datetime] = None
+    created_at: datetime.datetime = Field(default_factory=get_utcnow)
+
+    # Relationships
+    client: "Client" = Relationship(
+        back_populates="engine_setup_runs",
+        sa_relationship_kwargs={"foreign_keys": "EngineSetupRun.client_id"}
     )
 
 

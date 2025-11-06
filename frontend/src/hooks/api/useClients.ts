@@ -5,10 +5,10 @@ import { ClientsService } from "@/client";
 import { useSnackBarContext } from "@/context/SnackBarContext";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-export const useClients = () => {
+export const useClients = (search?: string, projectLeadId?: string) => {
   return useQuery({
-    queryKey: ["clients"],
-    queryFn: () => ClientsService.getClientsApiClientsGet(),
+    queryKey: ["clients", search, projectLeadId],
+    queryFn: () => ClientsService.getClientsApiClientsGet(search, projectLeadId),
   });
 };
 
@@ -99,6 +99,37 @@ export const useDeleteClient = () => {
       });
       // Rethrow error so component can handle it
       throw error;
+    },
+  });
+};
+
+export const useBulkDeleteClients = () => {
+  const queryClient = useQueryClient();
+  const { createSnackBar } = useSnackBarContext();
+
+  return useMutation({
+    mutationFn: ({ clientIds, createBackup }: { clientIds: string[]; createBackup: boolean }) =>
+      ClientsService.bulkDeleteClientsApiClientsBulkDeletePost({
+        client_ids: clientIds,
+        create_backup: createBackup,
+      }),
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: ["clients"],
+      });
+      createSnackBar({
+        content: `Successfully deleted ${variables.clientIds.length} client${variables.clientIds.length !== 1 ? 's' : ''}`,
+        severity: "success",
+        autoHide: true,
+      });
+    },
+    onError: (error: any) => {
+      const message = error.body?.detail || error.message || "Failed to delete clients";
+      createSnackBar({
+        content: message,
+        severity: "error",
+        autoHide: true,
+      });
     },
   });
 };

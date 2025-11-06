@@ -64,7 +64,8 @@ export const SnackBarProvider: FC<{ children: ReactNode }> = ({ children }) => {
   );
 
   useEffect(() => {
-    if (snackBar && snackBar.autoHide) {
+    // Only auto-hide if explicitly set AND not an error
+    if (snackBar && snackBar.autoHide && snackBar.severity !== 'error') {
       timeout.current = window.setTimeout(() => {
         setIsOpen(false);
         setSnackBar(undefined);

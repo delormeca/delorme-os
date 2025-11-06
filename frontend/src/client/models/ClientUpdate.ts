@@ -4,6 +4,13 @@
 /* eslint-disable */
 export type ClientUpdate = {
     name?: (string | null);
+    description?: (string | null);
+    website_url?: (string | null);
+    sitemap_url?: (string | null);
     industry?: (string | null);
+    logo_url?: (string | null);
+    crawl_frequency?: (string | null);
+    status?: (string | null);
+    project_lead_id?: (string | null);
 };
 

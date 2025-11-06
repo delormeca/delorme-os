@@ -11,11 +11,11 @@ export default defineConfig({
   server: {
     proxy: {
       "/api": {
-        target: "http://0.0.0.0:8021",
+        target: "http://localhost:8020",
         changeOrigin: true,
       },
       "/admin": {
-        target: "http://0.0.0.0:8021",
+        target: "http://localhost:8020",
         changeOrigin: true,
       },
     },

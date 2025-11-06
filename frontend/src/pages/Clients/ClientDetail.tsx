@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Box,
   Typography,
@@ -6,6 +6,7 @@ import {
   alpha,
   useTheme,
   Divider,
+  Alert,
 } from '@mui/material';
 import {
   ArrowBack,
@@ -14,6 +15,8 @@ import {
   Edit,
   Delete,
   Add,
+  Settings,
+  Warning,
 } from '@mui/icons-material';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useClientDetail, useDeleteClient } from '@/hooks/api/useClients';
@@ -25,6 +28,10 @@ import {
   StandardButton,
 } from '@/components/ui';
 import { ProjectsList } from '@/components/Projects/ProjectsList';
+import { EngineSetupModal } from '@/components/Clients/EngineSetupModal';
+import { EngineSetupProgressDialog } from '@/components/Clients/EngineSetupProgressDialog';
+import { ClientPagesList } from '@/components/Clients/ClientPagesList';
+import { useClientPageCount } from '@/hooks/api/useClientPages';
 import { useConfirm } from 'material-ui-confirm';
 import { useQueryClient } from '@tanstack/react-query';
 
@@ -36,6 +43,22 @@ const ClientDetail: React.FC = () => {
   const queryClient = useQueryClient();
   const { data: client, isLoading, error } = useClientDetail(clientId || '');
   const { mutateAsync: deleteClient } = useDeleteClient();
+  const { data: pageCount } = useClientPageCount(clientId || '');
+
+  // Debug logging
+  React.useEffect(() => {
+    if (pageCount) {
+      console.log('Page count data:', pageCount);
+    }
+    if (client) {
+      console.log('Client data:', client);
+    }
+  }, [pageCount, client]);
+
+  // Engine setup state
+  const [showEngineSetup, setShowEngineSetup] = useState(false);
+  const [showProgress, setShowProgress] = useState(false);
+  const [currentRunId, setCurrentRunId] = useState<string | null>(null);
 
   const handleDelete = async () => {
     if (!client) return;
@@ -48,10 +71,23 @@ const ClientDetail: React.FC = () => {
     });
 
     if (result.confirmed) {
-      await deleteClient(client.id);
+      await deleteClient({ clientId: client.id, password: '' });
       queryClient.invalidateQueries({ queryKey: ['clients'] });
       navigate('/clients');
     }
+  };
+
+  const handleSetupStarted = (runId: string) => {
+    setCurrentRunId(runId);
+    setShowEngineSetup(false);
+    setShowProgress(true);
+  };
+
+  const handleProgressClose = () => {
+    setShowProgress(false);
+    setCurrentRunId(null);
+    // Refresh client data
+    queryClient.invalidateQueries({ queryKey: ['clients', clientId] });
   };
 
   if (isLoading) {
@@ -172,6 +208,48 @@ const ClientDetail: React.FC = () => {
           </Box>
         </ModernCard>
 
+        {/* Engine Setup Section */}
+        <Box sx={{ mb: 4 }}>
+          {!client.engine_setup_completed ? (
+            <ModernCard sx={{ textAlign: 'center', py: 6 }}>
+              <Warning sx={{ fontSize: 48, color: 'warning.main', mb: 2 }} />
+              <Typography variant="h6" sx={{ mb: 1 }}>
+                Website Engine Setup Required
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                Configure the Website Engine to discover and import pages from this client's website.
+              </Typography>
+              <StandardButton
+                variant="contained"
+                startIcon={<Settings />}
+                onClick={() => setShowEngineSetup(true)}
+              >
+                Setup Website Engine
+              </StandardButton>
+            </ModernCard>
+          ) : (
+            <Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography variant="h5" sx={{ fontWeight: 600 }}>
+                  Pages ({pageCount?.total_pages || 0})
+                </Typography>
+                <StandardButton
+                  variant="outlined"
+                  size="small"
+                  startIcon={<Settings />}
+                  onClick={() => setShowEngineSetup(true)}
+                >
+                  Re-run Setup
+                </StandardButton>
+              </Box>
+              <Alert severity="success" sx={{ mb: 2 }}>
+                Engine setup completed! {pageCount?.total_pages || 0} pages discovered.
+              </Alert>
+              <ClientPagesList clientId={client.id} />
+            </Box>
+          )}
+        </Box>
+
         {/* Projects Section */}
         <Box>
           <Box sx={{
@@ -194,6 +272,24 @@ const ClientDetail: React.FC = () => {
 
           <ProjectsList clientId={client.id} showCreateButton={false} />
         </Box>
+
+        {/* Engine Setup Modal */}
+        <EngineSetupModal
+          open={showEngineSetup}
+          onClose={() => setShowEngineSetup(false)}
+          clientId={client.id}
+          clientName={client.name}
+          defaultSitemapUrl={client.sitemap_url || undefined}
+          onSetupStarted={handleSetupStarted}
+        />
+
+        {/* Engine Setup Progress Dialog */}
+        <EngineSetupProgressDialog
+          open={showProgress}
+          onClose={handleProgressClose}
+          runId={currentRunId}
+          clientId={client.id}
+        />
       </Box>
     </DashboardLayout>
   );
