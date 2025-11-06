@@ -39,7 +39,7 @@ COPY poetry.lock ./
 
 # Disable virtual environments and install dependencies
 RUN poetry config virtualenvs.create false
-RUN poetry install
+RUN poetry install --without dev
 
 # Install Playwright browsers (Chromium only for efficiency)
 RUN playwright install --with-deps chromium
@@ -60,5 +60,9 @@ RUN cp -r dist/* /usr/src/app/static/
 # Set the working directory back to the main application directory
 WORKDIR /usr/src/app
 
+# Expose port (Render will use PORT env var)
+EXPOSE ${PORT:-8080}
+
 # Specify the command to run on container start
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080"]
+# Use sh -c to allow environment variable substitution
+CMD sh -c "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8080}"

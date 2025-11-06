@@ -13,15 +13,11 @@ services:
   # Backend API Service
   - type: web
     name: delorme-os-staging-backend
-    env: python
+    env: docker
     region: oregon
     plan: free  # or 'starter' for production ($7/month)
-    buildCommand: |
-      pip install poetry
-      poetry config virtualenvs.create false
-      poetry install --without dev
-      poetry run playwright install --with-deps chromium
-    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    dockerfilePath: ./Dockerfile
+    dockerContext: ./
     healthCheckPath: /api/health
     envVars:
       # Environment
