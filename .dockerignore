@@ -1,0 +1,107 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Python cache
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+tests/
+*.test
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Node modules and frontend build artifacts (not needed for backend Docker)
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+node_modules/
+
+# Environment files (secrets should come from Render env vars)
+*.env
+.env
+.env.*
+local.env
+prod.env
+staging.env
+
+# Documentation
+*.md
+docs/
+PHASE_*.md
+RENDER_*.md
+DEPLOYMENT_*.md
+VALIDATION_*.md
+
+# Logs
+*.log
+logs/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+postgres/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Development scripts
+dev.py
+check_*.py
+test_*.py
+validate_*.py
+verify_*.py
+fix_*.py
+
+# Docker files (not needed inside container)
+docker-compose.yml
+Dockerfile
+.dockerignore
+
+# Render deployment files
+render.yaml
+render-build.sh
+deploy-staging.ps1
+
+# Deep researcher (if not needed for main app)
+deep-researcher/
+
+# Misc
+*.txt
+!requirements.txt
+LICENSE.txt
+cookies.txt
+nul
+
+# Alembic (migrations will be copied but not extra files)
+alembic.ini
+
+# Task files
+Taskfile.yml
+taskfiles/
+
+# Build scripts
+build.sh
+!install-deps.sh
