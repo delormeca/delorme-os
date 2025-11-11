@@ -112,7 +112,7 @@ services:
     env: static
     buildCommand: |
       cd frontend
-      npm install --legacy-peer-deps
+      npm install --legacy-peer-deps --include=dev
       npm run build
     staticPublishPath: frontend/dist
     routes:
@@ -122,5 +122,3 @@ services:
     envVars:
       - key: VITE_API_URL
         value: https://delorme-os-staging-backend.onrender.com
-      - key: NODE_ENV
-        value: production
