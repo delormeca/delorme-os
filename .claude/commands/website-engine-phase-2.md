@@ -158,7 +158,7 @@ class PageBase(BaseModel):
 class PageCreate(PageBase):
     client_id: uuid.UUID
 
-class PageUpdate(BaseModel):
+cl                  ass PageUpdate(BaseModel):
     url: Optional[str] = None
     status_code: Optional[int] = None
     is_failed: Optional[bool] = None
