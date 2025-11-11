@@ -112,7 +112,7 @@ services:
     env: static
     buildCommand: |
       cd frontend
-      npm ci --legacy-peer-deps
+      npm install --legacy-peer-deps
       npm run build
     staticPublishPath: frontend/dist
     routes:
