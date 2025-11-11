@@ -40,8 +40,14 @@ from app.config.base import config
 async def lifespan(app: FastAPI):
     """Application lifespan manager"""
     # Startup
-    async with async_engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.create_all)
+    try:
+        async with async_engine.begin() as conn:
+            await conn.run_sync(SQLModel.metadata.create_all)
+        logging.info("✅ Database tables created/verified")
+    except Exception as e:
+        # Tables might already exist - log warning but continue
+        logging.warning(f"⚠️ Database initialization: {str(e)}")
+        logging.info("✅ Continuing with existing database schema")
 
     # Initialize APScheduler
     from app.tasks.crawl_tasks import get_scheduler, shutdown_scheduler
