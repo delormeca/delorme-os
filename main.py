@@ -125,7 +125,7 @@ if os.path.exists(public_directory):
     )
 
 
-@app.get("/health")
+@app.get("/api/health")
 async def health_check():
     """Health check endpoint for monitoring and testing"""
     return {"status": "healthy", "service": "CraftYourStartup API"}
