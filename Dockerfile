@@ -1,5 +1,6 @@
 # Use an official Python runtime as a parent image
 FROM python:3.11-slim
+# Updated: 2025-11-12 - Force rebuild with automated superuser creation
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
