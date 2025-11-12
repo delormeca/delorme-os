@@ -40,10 +40,10 @@ async def create_superuser(
 
         user = User(
             email=email,
-            hashed_password=hashed_password,
+            password_hash=hashed_password,
             full_name=full_name,
             is_superuser=True,
-            is_verified=True,
+            verified=True,
         )
 
         db.add(user)

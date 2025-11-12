@@ -45,7 +45,7 @@ async def create_superuser():
 
                 await conn.execute(
                     text("""
-                        INSERT INTO "user" (email, hashed_password, full_name, is_superuser, is_verified)
+                        INSERT INTO "user" (email, password_hash, full_name, is_superuser, verified)
                         VALUES ('tommy@delorme.ca', :password, 'Tommy Delorme', true, true)
                     """),
                     {"password": hashed_password}
