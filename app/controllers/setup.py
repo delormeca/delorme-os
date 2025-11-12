@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db import get_session
+from app.db import get_async_db_session
 from app.models import User
 from app.services.users_service import UserService, get_user_service
 
@@ -12,7 +12,7 @@ setup_router = APIRouter()
 
 @setup_router.post("/create-superuser")
 async def create_superuser(
-    db: AsyncSession = Depends(get_session),
+    db: AsyncSession = Depends(get_async_db_session),
     user_service: UserService = Depends(get_user_service),
 ) -> dict:
     """
