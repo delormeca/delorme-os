@@ -14,6 +14,7 @@ import {
   FileDownload,
   Delete,
   CheckCircle,
+  LocalOffer,
 } from '@mui/icons-material';
 
 interface BulkActionsBarProps {
@@ -23,6 +24,7 @@ interface BulkActionsBarProps {
   onDeselectAll: () => void;
   onExport?: () => void;
   onDelete?: () => void;
+  onManageTags?: () => void;
   allSelected?: boolean;
 }
 
@@ -33,6 +35,7 @@ export const BulkActionsBar: React.FC<BulkActionsBarProps> = ({
   onDeselectAll,
   onExport,
   onDelete,
+  onManageTags,
   allSelected = false,
 }) => {
   const theme = useTheme();
@@ -92,6 +95,27 @@ export const BulkActionsBar: React.FC<BulkActionsBarProps> = ({
 
         {/* Right side: Actions */}
         <Stack direction="row" spacing={1} alignItems="center">
+          {onManageTags && (
+            <Tooltip title="Manage tags for selected pages">
+              <Button
+                variant="outlined"
+                size="small"
+                startIcon={<LocalOffer />}
+                onClick={onManageTags}
+                sx={{
+                  borderColor: theme.palette.primary.main,
+                  color: theme.palette.primary.main,
+                  '&:hover': {
+                    borderColor: theme.palette.primary.dark,
+                    bgcolor: alpha(theme.palette.primary.main, 0.04),
+                  },
+                }}
+              >
+                Manage Tags
+              </Button>
+            </Tooltip>
+          )}
+
           {onExport && (
             <Tooltip title="Export selected pages">
               <Button

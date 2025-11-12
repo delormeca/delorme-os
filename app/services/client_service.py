@@ -1,6 +1,7 @@
 import io
 import json
 import logging
+import re
 import zipfile
 from datetime import datetime
 from typing import List, Optional
@@ -18,6 +19,33 @@ from app.utils.helpers import get_utcnow
 
 logger = logging.getLogger(__name__)
 # Updated client service with all new fields and features
+
+ALLOWED_TEAM_LEADS = ["Tommy Delorme", "Ismael Girard", "OP"]
+
+def generate_slug(name: str) -> str:
+    """Generate URL-friendly slug from name."""
+    slug = name.lower()
+    slug = re.sub(r'[^\w\s-]', '', slug)
+    slug = re.sub(r'[\s_]+', '-', slug)
+    slug = re.sub(r'-+', '-', slug)
+    slug = slug.strip('-')
+    return slug
+
+def validate_team_lead(team_lead: Optional[str]) -> None:
+    """Validate team_lead is one of allowed values."""
+    if team_lead is not None and team_lead not in ALLOWED_TEAM_LEADS:
+        from app.utils.exceptions import ValidationException
+        raise ValidationException(
+            f"team_lead must be one of: {', '.join(ALLOWED_TEAM_LEADS)}"
+        )
+
+def validate_slug_format(slug: str) -> None:
+    """Validate slug format."""
+    if not re.match(r'^[a-z0-9]+(?:-[a-z0-9]+)*$', slug):
+        from app.utils.exceptions import ValidationException
+        raise ValidationException(
+            "slug must be lowercase alphanumeric with hyphens only (format: lowercase-with-hyphens)"
+        )
 
 
 async def get_clients(
@@ -76,10 +104,54 @@ async def get_client_by_id(session: AsyncSession, client_id: UUID) -> ClientRead
     return ClientRead.model_validate(client)
 
 
+async def get_client_by_slug(session: AsyncSession, slug: str) -> ClientRead:
+    """
+    Get a client by slug (no ownership check - clients are shared).
+
+    Args:
+        session: Database session
+        slug: URL-friendly client identifier
+
+    Returns:
+        ClientRead object
+
+    Raises:
+        HTTPException: 404 if client not found
+    """
+    query = select(Client).options(selectinload(Client.project_lead)).where(Client.slug == slug)
+    result = await session.execute(query)
+    client = result.scalar_one_or_none()
+
+    if not client:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Client with slug '{slug}' not found",
+        )
+
+    return ClientRead.model_validate(client)
+
+
 async def create_client(session: AsyncSession, client_data: ClientCreate, user_id: UUID) -> ClientRead:
     """
     Create a new client with all fields.
     """
+    # Validate team_lead
+    validate_team_lead(client_data.team_lead)
+
+    # Generate slug if not provided
+    if not client_data.slug:
+        client_data.slug = generate_slug(client_data.name)
+    else:
+        validate_slug_format(client_data.slug)
+
+    # Check slug uniqueness
+    existing_slug = await session.execute(
+        select(Client).where(Client.slug == client_data.slug)
+    )
+    if existing_slug.scalar_one_or_none():
+        from app.utils.exceptions import ValidationException
+        raise ValidationException(f"slug '{client_data.slug}' already exists")
+
     # Check for duplicate name
     query = select(Client).where(Client.name == client_data.name)
     result = await session.execute(query)
@@ -102,10 +174,12 @@ async def create_client(session: AsyncSession, client_data: ClientCreate, user_i
 
     client = Client(
         name=client_data.name,
+        slug=client_data.slug,
         description=client_data.description,
         website_url=client_data.website_url,
         sitemap_url=client_data.sitemap_url,
         industry=client_data.industry,
+        team_lead=client_data.team_lead,
         logo_url=client_data.logo_url,
         crawl_frequency=client_data.crawl_frequency,
         status=client_data.status,
@@ -141,6 +215,25 @@ async def update_client(
             detail="Client not found",
         )
 
+    # Validate team_lead if provided
+    if client_data.team_lead is not None:
+        validate_team_lead(client_data.team_lead)
+
+    # Validate slug if provided
+    if client_data.slug is not None:
+        validate_slug_format(client_data.slug)
+
+        # Check slug uniqueness (exclude current client)
+        existing_slug = await session.execute(
+            select(Client).where(
+                Client.slug == client_data.slug,
+                Client.id != client_id
+            )
+        )
+        if existing_slug.scalar_one_or_none():
+            from app.utils.exceptions import ValidationException
+            raise ValidationException(f"slug '{client_data.slug}' already exists")
+
     # Check for duplicate name if name is being updated
     if client_data.name and client_data.name != client.name:
         query = select(Client).where(Client.name == client_data.name)
@@ -166,6 +259,8 @@ async def update_client(
     # Update fields
     if client_data.name is not None:
         client.name = client_data.name
+    if client_data.slug is not None:
+        client.slug = client_data.slug
     if client_data.description is not None:
         client.description = client_data.description
     if client_data.website_url is not None:
@@ -174,6 +269,8 @@ async def update_client(
         client.sitemap_url = client_data.sitemap_url
     if client_data.industry is not None:
         client.industry = client_data.industry
+    if client_data.team_lead is not None:
+        client.team_lead = client_data.team_lead
     if client_data.logo_url is not None:
         client.logo_url = client_data.logo_url
     if client_data.crawl_frequency is not None:
@@ -354,10 +451,12 @@ async def generate_backup(clients: List[Client]) -> bytes:
             client_data = {
                 "id": str(client.id),
                 "name": client.name,
+                "slug": client.slug,
                 "description": client.description,
                 "website_url": client.website_url,
                 "sitemap_url": client.sitemap_url,
                 "industry": client.industry,
+                "team_lead": client.team_lead,
                 "logo_url": client.logo_url,
                 "crawl_frequency": client.crawl_frequency,
                 "status": client.status,

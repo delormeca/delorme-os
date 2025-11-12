@@ -32,6 +32,7 @@ export {
   useEngineSetupRuns,
   useEngineSetupStats,
   useCancelEngineSetup,
+  useValidateSitemap,
 } from "./useEngineSetup";
 
 // Client Pages hooks
@@ -41,4 +42,12 @@ export {
   useClientPageCount,
   useDeleteAllClientPages,
   useDeleteClientPage,
-} from "./useClientPages"; 
+} from "./useClientPages";
+
+// Tag Management hooks
+export {
+  useUpdatePageTags,
+  useBulkUpdateTags,
+  useDeletePageTags,
+  useClientTags,
+} from "./useTags"; 

@@ -17,6 +17,7 @@ from app.services.crawl4ai_service import Crawl4AIService, PageCrawlResult, Craw
 from app.services.extractors.pipeline import ExtractionPipeline
 from app.services.embeddings_service import get_embeddings_service
 from app.services.google_nlp_service import get_google_nlp_service
+from app.services.page_extraction_service import PageExtractionService
 from app.config.base import config
 
 logger = logging.getLogger(__name__)
@@ -127,12 +128,23 @@ class PageCrawlService:
         crawler: Crawl4AIService,
     ) -> bool:
         """
-        Crawl a single page and extract all data points.
+        Crawl a single page and extract all data points using PageExtractionService.
+
+        Now uses the integrated extraction engine with Crawl4AI + HTML Parser
+        to extract all 24 data points including:
+        - Page title, meta description, H1
+        - Open Graph tags
+        - Twitter Cards
+        - Schema markup (JSON-LD)
+        - Heading structure
+        - Screenshots
+        - Links (internal/external)
+        - And more!
 
         Args:
             page: ClientPage to crawl
             crawl_run: Associated CrawlRun
-            crawler: Initialized Crawl4AI crawler instance
+            crawler: Initialized Crawl4AI crawler instance (unused, kept for compatibility)
 
         Returns:
             True if successful, False if failed
@@ -147,139 +159,134 @@ class PageCrawlService:
         )
 
         try:
-            # Crawl page with Crawl4AI
-            crawl_config = CrawlConfig(
-                timeout=config.crawl_timeout_seconds,
-                wait_for_network_idle=True,
-                wait_time=2.0,
-            )
+            # Use the new PageExtractionService for comprehensive data extraction
+            extraction_service = PageExtractionService(self.db)
 
-            crawl_result: PageCrawlResult = await crawler.crawl_page(
-                page.url, crawl_config
-            )
+            # Extract data (this uses Crawl4AI + HTML Parser for 24 data points)
+            extraction_result = await extraction_service.extract_page_data(page.url)
 
-            # Update page with crawl results
-            page.status_code = crawl_result.status_code
-            page.last_checked_at = datetime.utcnow()
+            # Check if extraction was successful
+            if not extraction_result.get('success', False):
+                error_message = extraction_result.get('error_message', 'Unknown extraction error')
+                logger.warning(f"Extraction failed for {page.url}: {error_message}")
 
-            if not crawl_result.success:
-                # Crawl failed
                 page.is_failed = True
-                page.failure_reason = crawl_result.error_message
+                page.failure_reason = error_message
                 page.retry_count += 1
+                page.last_checked_at = datetime.utcnow()
 
-                await self.log_error(
-                    crawl_run,
-                    url=page.url,
-                    error=crawl_result.error_message or "Unknown crawl error",
-                )
-
+                await self.log_error(crawl_run, url=page.url, error=error_message)
                 await self.db.commit()
                 return False
 
-            # Crawl succeeded - extract data
-            html = crawl_result.html
+            # Update page with extracted data (24 data points!)
+            page.status_code = extraction_result.get('status_code')
+            page.page_title = extraction_result.get('page_title')
+            page.meta_title = extraction_result.get('meta_title')
+            page.meta_description = extraction_result.get('meta_description')
+            page.h1 = extraction_result.get('h1')
+            page.canonical_url = extraction_result.get('canonical_url')
+            page.meta_robots = extraction_result.get('meta_robots')
+            page.word_count = extraction_result.get('word_count')
+            page.body_content = extraction_result.get('body_content')
 
-            if not html:
-                logger.warning(f"No HTML content for {page.url}")
-                page.is_failed = True
-                page.failure_reason = "No HTML content"
-                await self.db.commit()
-                return False
+            # Hreflang - convert to JSON string if needed
+            hreflang = extraction_result.get('hreflang')
+            if hreflang:
+                import json
+                page.hreflang = json.dumps(hreflang) if isinstance(hreflang, list) else hreflang
 
-            # Run extraction pipeline
-            extracted_data = self.extraction_pipeline.extract_all(html, page.url)
+            # Structure and markup
+            page.webpage_structure = extraction_result.get('webpage_structure')
+            page.schema_markup = extraction_result.get('schema_markup')
 
-            # Update page with extracted data
-            page.page_title = extracted_data.get("page_title")
-            page.meta_title = extracted_data.get("meta_title")
-            page.meta_description = extracted_data.get("meta_description")
-            page.h1 = extracted_data.get("h1")
-            page.canonical_url = extracted_data.get("canonical_url")
-            page.hreflang = extracted_data.get("hreflang")
-            page.meta_robots = extracted_data.get("meta_robots")
-            page.word_count = extracted_data.get("word_count")
-            page.body_content = extracted_data.get("body_content")
-            page.webpage_structure = extracted_data.get("webpage_structure")
-            page.internal_links = extracted_data.get("internal_links")
-            page.external_links = extracted_data.get("external_links")
-            page.image_count = extracted_data.get("image_count")
-            page.schema_markup = extracted_data.get("schema_markup")
-            page.slug = extracted_data.get("slug")
+            # Links
+            page.internal_links = extraction_result.get('internal_links')
+            page.external_links = extraction_result.get('external_links')
+            page.image_count = extraction_result.get('image_count')
 
-            # Generate embeddings from body content
-            if page.body_content:
-                logger.info(f"Generating embedding for {page.url}...")
-                embedding_result = await self.embeddings_service.generate_embedding(
-                    page.body_content, truncate=True
-                )
+            # Screenshots (stored as base64 reference for now)
+            screenshot = extraction_result.get('screenshot_url')
+            if screenshot:
+                page.screenshot_url = f"base64:{len(screenshot)} chars" if len(screenshot) > 1000 else screenshot
 
-                if embedding_result:
-                    embedding_vector, tokens_used, cost_usd = embedding_result
+            screenshot_full = extraction_result.get('screenshot_full_url')
+            if screenshot_full:
+                page.screenshot_full_url = f"base64:{len(screenshot_full)} chars" if len(screenshot_full) > 1000 else screenshot_full
 
-                    # Store embedding as JSON
-                    page.body_content_embedding = self.embeddings_service.embedding_to_json(
-                        embedding_vector
+            # Generate embeddings from body content (optional - requires OpenAI API key)
+            if page.body_content and self.embeddings_service:
+                try:
+                    logger.info(f"Generating embedding for {page.url}...")
+                    embedding_result = await self.embeddings_service.generate_embedding(
+                        page.body_content, truncate=True
                     )
 
-                    # Track API costs in crawl run
-                    if not crawl_run.api_costs:
-                        crawl_run.api_costs = {
-                            "openai_embeddings": {"requests": 0, "tokens": 0, "cost_usd": 0.0},
-                            "google_nlp": {"requests": 0, "cost_usd": 0.0},
-                        }
+                    if embedding_result:
+                        embedding_vector, tokens_used, cost_usd = embedding_result
 
-                    crawl_run.api_costs["openai_embeddings"]["requests"] += 1
-                    crawl_run.api_costs["openai_embeddings"]["tokens"] += tokens_used
-                    crawl_run.api_costs["openai_embeddings"]["cost_usd"] += cost_usd
+                        # Store embedding as JSON
+                        page.body_content_embedding = self.embeddings_service.embedding_to_json(
+                            embedding_vector
+                        )
 
-                    logger.info(
-                        f"✅ Embedding generated: {tokens_used} tokens, ${cost_usd:.6f}"
+                        # Track API costs in crawl run
+                        if not crawl_run.api_costs:
+                            crawl_run.api_costs = {
+                                "openai_embeddings": {"requests": 0, "tokens": 0, "cost_usd": 0.0},
+                                "google_nlp": {"requests": 0, "cost_usd": 0.0},
+                            }
+
+                        crawl_run.api_costs["openai_embeddings"]["requests"] += 1
+                        crawl_run.api_costs["openai_embeddings"]["tokens"] += tokens_used
+                        crawl_run.api_costs["openai_embeddings"]["cost_usd"] += cost_usd
+
+                        logger.info(
+                            f"✅ Embedding generated: {tokens_used} tokens, ${cost_usd:.6f}"
+                        )
+                except Exception as e:
+                    logger.warning(f"Failed to generate embedding for {page.url}: {e}")
+
+            # Extract entities using Google NLP (optional - requires Google NLP API key)
+            if page.body_content and self.google_nlp_service:
+                try:
+                    logger.info(f"Extracting entities for {page.url}...")
+                    entities_result = await self.google_nlp_service.analyze_entities(
+                        page.body_content
                     )
-                else:
-                    logger.warning(f"Failed to generate embedding for {page.url}")
-            else:
-                logger.debug(f"No body content to generate embedding for {page.url}")
 
-            # Extract entities using Google NLP
-            if page.body_content:
-                logger.info(f"Extracting entities for {page.url}...")
-                entities_result = await self.google_nlp_service.analyze_entities(
-                    page.body_content
-                )
+                    if entities_result:
+                        entities_list, cost_usd = entities_result
 
-                if entities_result:
-                    entities_list, cost_usd = entities_result
+                        # Store entities as JSON
+                        page.salient_entities = {"entities": entities_list}
 
-                    # Store entities as JSON
-                    page.salient_entities = {"entities": entities_list}
+                        # Track API costs in crawl run
+                        if not crawl_run.api_costs:
+                            crawl_run.api_costs = {
+                                "openai_embeddings": {"requests": 0, "tokens": 0, "cost_usd": 0.0},
+                                "google_nlp": {"requests": 0, "cost_usd": 0.0},
+                            }
 
-                    # Track API costs in crawl run
-                    if not crawl_run.api_costs:
-                        crawl_run.api_costs = {
-                            "openai_embeddings": {"requests": 0, "tokens": 0, "cost_usd": 0.0},
-                            "google_nlp": {"requests": 0, "cost_usd": 0.0},
-                        }
+                        crawl_run.api_costs["google_nlp"]["requests"] += 1
+                        crawl_run.api_costs["google_nlp"]["cost_usd"] += cost_usd
 
-                    crawl_run.api_costs["google_nlp"]["requests"] += 1
-                    crawl_run.api_costs["google_nlp"]["cost_usd"] += cost_usd
+                        logger.info(
+                            f"✅ Extracted {len(entities_list)} entities, ${cost_usd:.6f}"
+                        )
+                except Exception as e:
+                    logger.warning(f"Failed to extract entities for {page.url}: {e}")
 
-                    logger.info(
-                        f"✅ Extracted {len(entities_list)} entities, ${cost_usd:.6f}"
-                    )
-                else:
-                    logger.warning(f"Failed to extract entities for {page.url}")
-            else:
-                logger.debug(f"No body content to extract entities from for {page.url}")
-
+            # Mark page as successfully crawled
             page.is_failed = False
             page.failure_reason = None
             page.updated_at = datetime.utcnow()
             page.last_crawled_at = datetime.utcnow()
+            page.last_checked_at = datetime.utcnow()
 
             await self.db.commit()
 
-            logger.info(f"✅ Successfully crawled and extracted: {page.url}")
+            logger.info(f"✅ Successfully crawled and extracted 24 data points: {page.url}")
             return True
 
         except Exception as e:
@@ -288,6 +295,7 @@ class PageCrawlService:
             page.is_failed = True
             page.failure_reason = str(e)
             page.retry_count += 1
+            page.last_checked_at = datetime.utcnow()
 
             await self.log_error(crawl_run, url=page.url, error=str(e))
             await self.db.commit()

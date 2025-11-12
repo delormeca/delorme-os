@@ -59,6 +59,21 @@ export interface EngineSetupStatsResponse {
   engine_setup_completed: boolean;
 }
 
+export interface SitemapValidationRequest {
+  sitemap_url: string;
+}
+
+export interface SitemapValidationResponse {
+  valid: boolean;
+  status_code?: number;
+  url_count: number;
+  sitemap_type?: string;
+  error_type?: string;
+  error_message?: string;
+  suggestion?: string;
+  parse_time: number;
+}
+
 // Helper to get axios config with auth
 const getAxiosConfig = () => ({
   baseURL: OpenAPI.BASE,
@@ -220,6 +235,46 @@ export const useCancelEngineSetup = () => {
         content: error.response?.data?.detail || error.message || "Failed to cancel setup",
         severity: "error",
         autoHide: true,
+      });
+    },
+  });
+};
+
+/**
+ * Validate a sitemap URL before starting setup
+ */
+export const useValidateSitemap = () => {
+  const { createSnackBar } = useSnackBarContext();
+
+  return useMutation({
+    mutationFn: async (request: SitemapValidationRequest): Promise<SitemapValidationResponse> => {
+      const response = await axios.post(
+        `/api/engine-setup/validate-sitemap`,
+        request,
+        getAxiosConfig()
+      );
+      return response.data;
+    },
+    onSuccess: (data) => {
+      if (data.valid) {
+        createSnackBar({
+          content: `Sitemap validated successfully! Found ${data.url_count} URLs${data.sitemap_type ? ` (${data.sitemap_type})` : ''}.`,
+          severity: "success",
+          autoHide: true,
+        });
+      } else {
+        createSnackBar({
+          content: data.suggestion || data.error_message || "Sitemap validation failed",
+          severity: "error",
+          autoHide: false,
+        });
+      }
+    },
+    onError: (error: any) => {
+      createSnackBar({
+        content: error.response?.data?.detail || error.message || "Failed to validate sitemap",
+        severity: "error",
+        autoHide: false,
       });
     },
   });

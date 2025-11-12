@@ -88,3 +88,20 @@ class EngineSetupStatsResponse(BaseModel):
     total_pages_discovered: int
     last_run_at: Optional[datetime.datetime] = None
     engine_setup_completed: bool
+
+
+class SitemapValidationRequest(BaseModel):
+    """Schema for validating a sitemap URL."""
+    sitemap_url: str = Field(..., description="Sitemap URL to validate")
+
+
+class SitemapValidationResponse(BaseModel):
+    """Schema for sitemap validation response."""
+    valid: bool = Field(..., description="Whether sitemap is valid and accessible")
+    status_code: Optional[int] = Field(None, description="HTTP status code if fetched")
+    url_count: int = Field(0, description="Number of URLs found in sitemap")
+    sitemap_type: Optional[str] = Field(None, description="Type of sitemap (urlset, sitemap_index, rss)")
+    error_type: Optional[str] = Field(None, description="Error category if validation failed")
+    error_message: Optional[str] = Field(None, description="Detailed error message if validation failed")
+    suggestion: Optional[str] = Field(None, description="User-friendly suggestion for resolution")
+    parse_time: float = Field(0.0, description="Time taken to parse in seconds")

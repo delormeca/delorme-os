@@ -16,7 +16,7 @@ from app.schemas.engine_setup import (
     EngineSetupStartResponse,
     EngineSetupStatsResponse
 )
-from app.utils.sitemap_parser import SitemapParser, SitemapParseError
+from app.services.robust_sitemap_parser import RobustSitemapParserService, SitemapParseError, SitemapParseResult
 from app.utils.url_validator import URLValidator, URLValidationError
 from app.services.client_page_service import ClientPageService
 from app.core.exceptions import NotFoundException, ValidationException
@@ -35,7 +35,7 @@ class EngineSetupService:
             db: Database session
         """
         self.db = db
-        self.sitemap_parser = SitemapParser()
+        self.sitemap_parser = RobustSitemapParserService()
         self.url_validator = URLValidator()
         self.page_service = ClientPageService(db)
 
@@ -122,7 +122,16 @@ class EngineSetupService:
             logger.info(f"Starting sitemap parsing for run {run_id}: {sitemap_url}")
 
             # Parse sitemap
-            urls = await self.sitemap_parser.parse_sitemap(sitemap_url)
+            result = await self.sitemap_parser.parse_sitemap(sitemap_url)
+            if not result.success:
+                raise SitemapParseError(
+                    error_type=result.error_type,
+                    message=result.error_message,
+                    url=sitemap_url,
+                    http_status=None,
+                    suggestion=result.suggestion
+                )
+            urls = result.urls
             logger.info(f"Found {len(urls)} URLs in sitemap")
 
             setup_run.total_pages = len(urls)

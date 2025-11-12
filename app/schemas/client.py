@@ -10,10 +10,12 @@ from app.schemas.project_lead import ProjectLeadBasic
 # Schema for creating a new client
 class ClientCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=200)
+    slug: Optional[str] = Field(None, pattern=r"^[a-z0-9]+(?:-[a-z0-9]+)*$", description="URL-friendly slug (auto-generated from name if not provided)")
     description: Optional[str] = None
     website_url: Optional[str] = None
     sitemap_url: Optional[str] = None
     industry: Optional[str] = None
+    team_lead: Optional[str] = Field(None, description="Team lead name. Must be: Tommy Delorme, Ismael Girard, or OP")
     logo_url: Optional[str] = None
     crawl_frequency: str = Field(default="Manual Only")
     status: str = Field(default="Active")
@@ -23,10 +25,12 @@ class ClientCreate(BaseModel):
 # Schema for updating a client (all fields optional)
 class ClientUpdate(BaseModel):
     name: Optional[str] = Field(None, min_length=1, max_length=200)
+    slug: Optional[str] = Field(None, pattern=r"^[a-z0-9]+(?:-[a-z0-9]+)*$", description="URL-friendly slug")
     description: Optional[str] = None
     website_url: Optional[str] = None
     sitemap_url: Optional[str] = None
     industry: Optional[str] = None
+    team_lead: Optional[str] = Field(None, description="Team lead name. Must be: Tommy Delorme, Ismael Girard, or OP")
     logo_url: Optional[str] = None
     crawl_frequency: Optional[str] = None
     status: Optional[str] = None
@@ -37,10 +41,12 @@ class ClientUpdate(BaseModel):
 class ClientRead(BaseModel):
     id: UUID
     name: str
+    slug: str
     description: Optional[str] = None
     website_url: Optional[str] = None
     sitemap_url: Optional[str] = None
     industry: Optional[str] = None
+    team_lead: Optional[str] = None
     logo_url: Optional[str] = None
     crawl_frequency: str
     status: str

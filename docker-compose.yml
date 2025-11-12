@@ -16,6 +16,25 @@ services:
       timeout: 5s
       retries: 5
 
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8020:8020"
+    environment:
+      - PORT=8020
+      - DATABASE_URL=postgresql+asyncpg://delorme_os:delorme_os@postgres:5432/delorme_os
+      - ENVIRONMENT=development
+      - SECRET_KEY=your-secret-key-here-change-in-production
+      - FRONTEND_URL=http://localhost:5173
+      - BACKEND_URL=http://localhost:8020
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: sh -c "uvicorn main:app --host 0.0.0.0 --port 8020"
+    restart: unless-stopped
+
 networks:
   default:
     name: delorme-os-app-local-dev-network

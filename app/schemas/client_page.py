@@ -26,6 +26,29 @@ class ClientPageUpdate(BaseModel):
     failure_reason: Optional[str] = Field(None, description="Reason for failure")
     retry_count: Optional[int] = Field(None, ge=0, description="Number of retry attempts")
     last_checked_at: Optional[datetime.datetime] = Field(None, description="Last time page was checked")
+    tags: Optional[list[str]] = Field(None, description="Array of tags for filtering and categorization")
+
+    @field_validator("tags")
+    @classmethod
+    def validate_tags(cls, v):
+        """Validate tags array contains only non-empty strings."""
+        if v is None:
+            return v
+        if not isinstance(v, list):
+            raise ValueError("tags must be an array")
+        for tag in v:
+            if not isinstance(tag, str):
+                raise ValueError("Each tag must be a string")
+            if not tag.strip():
+                raise ValueError("Tags cannot be empty strings")
+        # Remove duplicates while preserving order
+        seen = set()
+        validated = []
+        for tag in v:
+            if tag not in seen:
+                seen.add(tag)
+                validated.append(tag)
+        return validated
 
 
 class ClientPageRead(ClientPageBase):
@@ -71,6 +94,9 @@ class ClientPageRead(ClientPageBase):
     screenshot_url: Optional[str] = Field(default=None, description="Screenshot thumbnail URL")
     screenshot_full_url: Optional[str] = Field(default=None, description="Full page screenshot URL")
 
+    # Tags
+    tags: Optional[list[str]] = Field(default=None, description="Array of tags for filtering and categorization")
+
     # Metadata
     last_crawled_at: Optional[datetime.datetime] = Field(default=None, description="Last crawl timestamp")
     crawl_run_id: Optional[uuid.UUID] = Field(default=None, description="Associated crawl run ID")
@@ -101,6 +127,7 @@ class ClientPageSearchParams(BaseModel):
     is_failed: Optional[bool] = None
     status_code: Optional[int] = None
     search: Optional[str] = Field(None, description="Search in URL or slug")
+    tags: Optional[list[str]] = Field(None, description="Filter by tags (pages containing ANY of these tags)")
     page: int = Field(1, ge=1, description="Page number")
     page_size: int = Field(50, ge=1, le=100, description="Items per page")
     sort_by: str = Field("created_at", description="Field to sort by")

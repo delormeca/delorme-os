@@ -44,6 +44,16 @@ async def get_clients(
     return await client_service.get_clients(db, search=search, project_lead_id=project_lead_id)
 
 
+@router.get("/clients/slug/{slug}", response_model=ClientRead)
+async def get_client_by_slug(
+    slug: str,
+    db: AsyncSession = Depends(get_async_db_session),
+    current_user: CurrentUserResponse = Depends(get_current_user),
+):
+    """Get a client by slug (URL-friendly identifier)."""
+    return await client_service.get_client_by_slug(db, slug)
+
+
 @router.get("/clients/{client_id}", response_model=ClientRead)
 async def get_client(
     client_id: UUID,

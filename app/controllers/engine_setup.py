@@ -1,6 +1,7 @@
 """
 Engine Setup API endpoints.
 """
+import logging
 from typing import List
 from uuid import UUID
 
@@ -15,12 +16,16 @@ from app.schemas.engine_setup import (
     EngineSetupProgressResponse,
     EngineSetupStartResponse,
     EngineSetupStatsResponse,
-    EngineSetupListResponse
+    EngineSetupListResponse,
+    SitemapValidationRequest,
+    SitemapValidationResponse
 )
 from app.services.engine_setup_service import EngineSetupService
 from app.services.users_service import get_current_user
 from app.tasks import engine_setup_tasks
 from app.core.exceptions import NotFoundException, ValidationException
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -188,4 +193,68 @@ async def cancel_setup_run(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to cancel setup: {str(e)}"
+        )
+
+
+@router.post("/engine-setup/validate-sitemap", response_model=SitemapValidationResponse)
+async def validate_sitemap(
+    validation_request: SitemapValidationRequest,
+    db: AsyncSession = Depends(get_async_db_session),
+    current_user: CurrentUserResponse = Depends(get_current_user),
+):
+    """
+    Validate a sitemap URL without creating a setup run.
+
+    This endpoint tests sitemap accessibility and parsing using the robust
+    sitemap parser service. It returns URL count and detailed error information
+    to help users diagnose issues before starting the full engine setup.
+    """
+    from app.services.robust_sitemap_parser import (
+        RobustSitemapParserService,
+        SitemapParserConfig,
+    )
+
+    # Configure parser with reasonable timeout for validation
+    config = SitemapParserConfig(
+        timeout=10,
+        max_retries=2,
+        log_progress=False,  # Don't spam logs during validation
+    )
+
+    parser = RobustSitemapParserService(config)
+
+    try:
+        # Parse sitemap (recursive to count all nested URLs)
+        result = await parser.parse_sitemap(
+            url=validation_request.sitemap_url,
+            recursive=True,
+        )
+
+        if result.success:
+            return SitemapValidationResponse(
+                valid=True,
+                url_count=result.total_count,
+                sitemap_type=result.sitemap_type,
+                parse_time=result.parse_time,
+            )
+        else:
+            return SitemapValidationResponse(
+                valid=False,
+                url_count=0,
+                error_type=result.error_type,
+                error_message=result.error_message,
+                suggestion=result.suggestion,
+                parse_time=result.parse_time,
+            )
+
+    except Exception as e:
+        # Catch any unexpected errors
+        logger.error(f"Unexpected error in validate_sitemap: {str(e)}")
+        return SitemapValidationResponse(
+            valid=False,
+            url_count=0,
+            error_type="UNEXPECTED_ERROR",
+            error_message=str(e),
+            suggestion="An unexpected error occurred. Please try again or contact support.",
+            parse_time=0.0,
         )

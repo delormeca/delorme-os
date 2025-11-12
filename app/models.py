@@ -27,20 +27,6 @@ class UUIDModelBase(SQLModel, AsyncAttrs):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
-class Article(UUIDModelBase, table=True):
-    id: Optional[int] = Field(default=None, primary_key=True)
-    title: str
-    content: str
-    author: str
-    published_at: Optional[datetime.datetime] = Field(
-        default_factory=get_utcnow,
-        nullable=True,
-    )
-    is_published: Optional[bool] = Field(default=False)
-    user_id: uuid.UUID = Field(foreign_key="user.id", nullable=False)
-    user: "User" = Relationship(back_populates="articles")
-
-
 class User(UUIDModelBase, table=True):
     email: str = Field(sa_column_kwargs={"unique": True})
     password_hash: Optional[str]
@@ -57,7 +43,6 @@ class User(UUIDModelBase, table=True):
     account_type: AccountType = AccountType.free
     current_plan: PlanType = PlanType.FREE
     stripe_customer_id: Optional[str] = Field(nullable=True, index=True)
-    articles: List[Article] = Relationship(back_populates="user", sa_relationship_kwargs={"lazy": "selectin"})
     is_superuser: bool = Field(default=False, nullable=False)
 
     purchases: List["Purchase"] = Relationship(back_populates="user", sa_relationship_kwargs={"lazy": "selectin"})
@@ -92,6 +77,24 @@ class SubscriptionStatus(str, Enum):
     UNPAID = "UNPAID"
     INCOMPLETE = "INCOMPLETE"
     INCOMPLETE_EXPIRED = "INCOMPLETE_EXPIRED"
+
+
+class DataPointCategory(str, Enum):
+    """Categories for grouping data points in the UI."""
+    ONPAGE = "onpage"
+    TECHNICAL = "technical"
+    CONTENT = "content"
+    LINKS = "links"
+    MEDIA = "media"
+
+
+class DataPointDataType(str, Enum):
+    """Data types for data point values."""
+    STRING = "string"
+    JSON = "json"
+    INTEGER = "integer"
+    VECTOR = "vector"
+    DATETIME = "datetime"
 
 
 class Subscription(UUIDModelBase, table=True):
@@ -143,10 +146,21 @@ class Client(UUIDModelBase, table=True):
     """
 
     name: str = Field(unique=True, nullable=False, index=True)
+    slug: str = Field(
+        unique=True,
+        nullable=False,
+        index=True,
+        description="URL-friendly unique identifier (format: lowercase-with-hyphens)"
+    )
     description: Optional[str] = Field(default=None, sa_column=Column(sa.Text))
     website_url: Optional[str] = None
     sitemap_url: Optional[str] = None
     industry: Optional[str] = None
+    team_lead: Optional[str] = Field(
+        default=None,
+        nullable=True,
+        description="Team lead responsible for this client. Must be one of: Tommy Delorme, Ismael Girard, OP"
+    )
     logo_url: Optional[str] = None
     crawl_frequency: str = Field(default="Manual Only", nullable=False)
     status: str = Field(default="Active", nullable=False, index=True)
@@ -181,9 +195,6 @@ class Client(UUIDModelBase, table=True):
 
     # Relationships
     project_lead: Optional["ProjectLead"] = Relationship(back_populates="clients")
-    projects: List["Project"] = Relationship(
-        back_populates="client", sa_relationship_kwargs={"lazy": "selectin"}
-    )
     client_pages: List["ClientPage"] = Relationship(
         back_populates="client",
         sa_relationship_kwargs={"lazy": "selectin", "cascade": "all, delete-orphan"}
@@ -256,6 +267,13 @@ class ClientPage(UUIDModelBase, table=True):
     screenshot_url: Optional[str] = Field(default=None)  # Thumbnail screenshot URL
     screenshot_full_url: Optional[str] = Field(default=None)  # Full page screenshot URL
 
+    # Tags for filtering and organization
+    tags: Optional[list] = Field(
+        default=None,
+        sa_column=Column(JSON, nullable=True),
+        description="Array of tag strings for categorization and filtering (e.g., ['blog', 'product-page', 'high-priority'])"
+    )
+
     # Metadata
     last_crawled_at: Optional[datetime.datetime] = Field(default=None)
     crawl_run_id: Optional[uuid.UUID] = Field(default=None, foreign_key="crawl_run.id", index=True)
@@ -299,199 +317,6 @@ class EngineSetupRun(UUIDModelBase, table=True):
         back_populates="engine_setup_runs",
         sa_relationship_kwargs={"foreign_keys": "EngineSetupRun.client_id"}
     )
-
-
-class Project(UUIDModelBase, table=True):
-    """
-    Model representing a website project in VibeCode.
-    """
-
-    client_id: uuid.UUID = Field(foreign_key="client.id", nullable=False)
-    name: str
-    url: str
-    description: Optional[str] = None
-    sitemap_url: Optional[str] = None
-    created_at: datetime.datetime = Field(
-        default_factory=get_utcnow,
-        nullable=False,
-    )
-
-    client: "Client" = Relationship(back_populates="projects")
-    pages: List["Page"] = Relationship(
-        back_populates="project", sa_relationship_kwargs={"lazy": "selectin"}
-    )
-    crawl_jobs: List["CrawlJob"] = Relationship(
-        back_populates="project", sa_relationship_kwargs={"lazy": "selectin"}
-    )
-    business_files: List["BusinessFile"] = Relationship(
-        back_populates="project", sa_relationship_kwargs={"lazy": "selectin"}
-    )
-    chat_messages: List["ChatMessage"] = Relationship(
-        back_populates="project", sa_relationship_kwargs={"lazy": "selectin"}
-    )
-
-
-class Page(UUIDModelBase, table=True):
-    """
-    Model representing a webpage in a project.
-    """
-
-    project_id: uuid.UUID = Field(foreign_key="project.id", nullable=False)
-    url: str
-    slug: str
-    status: str = Field(default="discovered")  # discovered, testing, crawling, crawled, failed, removed
-    extraction_method: Optional[str] = None  # crawl4ai, jina, firecrawl, playwright
-    update_frequency: Optional[str] = None
-    last_crawled_at: Optional[datetime.datetime] = None
-    next_crawl_at: Optional[datetime.datetime] = None
-    is_in_sitemap: bool = Field(default=True)  # Track if URL still exists in sitemap
-    removed_from_sitemap_at: Optional[datetime.datetime] = None  # When it was removed
-    created_at: datetime.datetime = Field(
-        default_factory=get_utcnow,
-        nullable=False,
-    )
-
-    project: "Project" = Relationship(back_populates="pages")
-    page_data: List["PageData"] = Relationship(
-        back_populates="page", sa_relationship_kwargs={"lazy": "selectin"}
-    )
-    keywords: List["Keyword"] = Relationship(
-        back_populates="page", sa_relationship_kwargs={"lazy": "selectin"}
-    )
-    entities: List["Entity"] = Relationship(
-        back_populates="page", sa_relationship_kwargs={"lazy": "selectin"}
-    )
-
-
-class PageData(UUIDModelBase, table=True):
-    """
-    Model representing extracted data from a webpage.
-    Supports versioning - each scrape creates new PageData records with incremented version.
-    """
-
-    page_id: uuid.UUID = Field(foreign_key="page.id", nullable=False)
-    data_type: str  # meta_title, meta_desc, h1, body, schema
-    content: dict = Field(sa_column=Column(JSON))
-    version: int = Field(default=1)  # Version number for tracking content changes
-    is_current: bool = Field(default=True)  # Only the latest version is marked as current
-    extraction_method: Optional[str] = None  # Method used for this specific extraction
-    extracted_at: datetime.datetime = Field(
-        default_factory=get_utcnow,
-        nullable=False,
-    )
-
-    page: "Page" = Relationship(back_populates="page_data")
-
-
-class Keyword(UUIDModelBase, table=True):
-    """
-    Model representing a keyword associated with a page.
-    """
-
-    page_id: uuid.UUID = Field(foreign_key="page.id", nullable=False)
-    keyword: str
-    added_by: uuid.UUID = Field(foreign_key="user.id", nullable=False)
-    created_at: datetime.datetime = Field(
-        default_factory=get_utcnow,
-        nullable=False,
-    )
-
-    page: "Page" = Relationship(back_populates="keywords")
-
-
-class Entity(UUIDModelBase, table=True):
-    """
-    Model representing a named entity extracted from a page.
-    """
-
-    page_id: uuid.UUID = Field(foreign_key="page.id", nullable=False)
-    entity_text: str
-    entity_type: str  # PERSON, LOCATION, ORGANIZATION, etc.
-    salience_score: float
-    extracted_at: datetime.datetime = Field(
-        default_factory=get_utcnow,
-        nullable=False,
-    )
-
-    page: "Page" = Relationship(back_populates="entities")
-
-
-class BusinessFile(UUIDModelBase, table=True):
-    """
-    Model representing a business file uploaded to a project.
-    """
-
-    project_id: uuid.UUID = Field(foreign_key="project.id", nullable=False)
-    file_name: str
-    file_type: str  # pdf, txt, csv, docx
-    storage_path: str
-    tags: dict = Field(sa_column=Column(JSON))
-    uploaded_by: uuid.UUID = Field(foreign_key="user.id", nullable=False)
-    uploaded_at: datetime.datetime = Field(
-        default_factory=get_utcnow,
-        nullable=False,
-    )
-
-    project: "Project" = Relationship(back_populates="business_files")
-
-
-class CrawlJob(UUIDModelBase, table=True):
-    """
-    Model representing a crawl job for extracting website content.
-    """
-
-    project_id: uuid.UUID = Field(foreign_key="project.id", nullable=False)
-
-    # Job phases
-    phase: str = Field(default="discovering")  # discovering, testing, extracting, completed, failed
-    status: str = Field(default="pending")  # pending, running, completed, failed
-
-    # Discovery results
-    urls_discovered: int = Field(default=0)
-    discovery_method: Optional[str] = None  # sitemap, crawl4ai, manual
-
-    # Testing results
-    test_results: Optional[dict] = Field(default=None, sa_column=Column(JSON))
-    winning_method: Optional[str] = None  # crawl4ai, jina, firecrawl, playwright
-
-    # Extraction results
-    pages_total: int = Field(default=0)
-    pages_crawled: int = Field(default=0)
-    pages_failed: int = Field(default=0)
-
-    # Timing
-    started_at: Optional[datetime.datetime] = None
-    completed_at: Optional[datetime.datetime] = None
-
-    # Errors
-    error_message: Optional[str] = None
-
-    created_at: datetime.datetime = Field(
-        default_factory=get_utcnow,
-        nullable=False,
-    )
-
-    # Relationship
-    project: "Project" = Relationship(back_populates="crawl_jobs")
-
-
-class ChatMessage(UUIDModelBase, table=True):
-    """
-    Model representing a chat message in a project.
-    """
-
-    project_id: uuid.UUID = Field(foreign_key="project.id", nullable=False)
-    user_id: uuid.UUID = Field(foreign_key="user.id", nullable=False)
-    message: str
-    response: str
-    sources: dict = Field(sa_column=Column(JSON))
-    created_at: datetime.datetime = Field(
-        default_factory=get_utcnow,
-        nullable=False,
-    )
-
-    project: "Project" = Relationship(back_populates="chat_messages")
-    user: "User" = Relationship()
 
 
 # Deep Researcher Models
@@ -680,4 +505,102 @@ class DataPoint(UUIDModelBase, table=True):
     __table_args__ = (
         sa.Index("ix_data_point_page_data_type", "page_id", "data_type"),
         sa.Index("ix_data_point_data_type", "data_type"),
+    )
+
+
+class DataPointDefinition(SQLModel, AsyncAttrs, table=True):
+    """
+    Master catalog of all extractable data points.
+    Defines metadata for UI rendering, validation, and Crawl4AI field mapping.
+
+    Uses custom string IDs (format: dp_{name}) instead of UUID for human readability
+    and easier reference in code/configuration.
+    """
+    __tablename__ = "data_point_definition"
+
+    # Primary Key - Custom string format: dp_meta_title, dp_h1, etc.
+    id: str = Field(
+        primary_key=True,
+        index=True,
+        nullable=False,
+        description="Custom ID format: dp_{snake_case_name}"
+    )
+
+    # Core Metadata
+    name: str = Field(
+        nullable=False,
+        max_length=100,
+        description="Human-readable display name (e.g., 'Meta Title')"
+    )
+
+    category: DataPointCategory = Field(
+        nullable=False,
+        index=True,
+        description="Category for UI grouping (onpage, technical, content, links, media)"
+    )
+
+    data_type: DataPointDataType = Field(
+        nullable=False,
+        index=True,
+        description="Data type for storage and validation (string, json, integer, vector, datetime)"
+    )
+
+    description: str = Field(
+        sa_column=Column(sa.Text, nullable=False),
+        description="Detailed explanation of what this data point represents"
+    )
+
+    # Crawl4AI Integration
+    crawl4ai_field: str = Field(
+        nullable=False,
+        sa_column_kwargs={"unique": True},
+        description="Exact field name from Crawl4AI extraction output"
+    )
+
+    # UI Configuration
+    display_order: int = Field(
+        default=0,
+        nullable=False,
+        index=True,
+        ge=0,
+        description="Sort order within category for UI display (0-based)"
+    )
+
+    is_active: bool = Field(
+        default=True,
+        nullable=False,
+        index=True,
+        description="Whether this data point is enabled for extraction"
+    )
+
+    icon: Optional[str] = Field(
+        default=None,
+        max_length=50,
+        description="Material-UI icon name for UI rendering"
+    )
+
+    color: Optional[str] = Field(
+        default=None,
+        max_length=7,
+        description="Hex color code for category-based theming (format: #RRGGBB)"
+    )
+
+    # Timestamps - Following Client model pattern
+    created_at: datetime.datetime = Field(
+        default_factory=get_utcnow,
+        nullable=False,
+    )
+
+    updated_at: datetime.datetime = Field(
+        default_factory=get_utcnow,
+        nullable=False,
+    )
+
+    # Relationships
+    # NOTE: Phase 4 - Add relationship to ClientEngineConfig when that model is created
+    # client_engine_configs: List["ClientEngineConfig"] = Relationship(...)
+
+    # Composite index for efficient category-ordered queries
+    __table_args__ = (
+        sa.Index("ix_data_point_definition_category_order", "category", "display_order"),
     )

@@ -6,8 +6,32 @@ render JavaScript, and extract content.
 """
 import asyncio
 import logging
+import os
+import sys
+import io
 from typing import Optional, Dict, Any
 from dataclasses import dataclass
+
+# Fix for Windows console encoding issues with Crawl4AI
+# MUST be before importing crawl4ai
+if sys.platform == 'win32':
+    # Reconfigure stdout/stderr to use UTF-8 encoding
+    # This prevents UnicodeEncodeError when rich/Crawl4AI outputs Unicode characters
+    try:
+        if hasattr(sys.stdout, 'buffer'):
+            sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+            sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
+    except (AttributeError, ValueError):
+        # Already wrapped or unable to wrap, continue
+        pass
+
+    os.environ['PYTHONIOENCODING'] = 'utf-8'
+    os.environ['CRAWL4AI_VERBOSE'] = 'false'
+
+# Disable Crawl4AI logger before import to prevent Unicode errors
+import logging as std_logging
+std_logging.getLogger('crawl4ai').setLevel(std_logging.CRITICAL)
+std_logging.getLogger('crawl4ai').disabled = True
 
 from crawl4ai import AsyncWebCrawler
 from crawl4ai.models import CrawlResult
@@ -76,12 +100,17 @@ class Crawl4AIService:
         """
         if self.crawler is None:
             logger.info("Initializing Crawl4AI AsyncWebCrawler...")
+
+            # Suppress Crawl4AI's internal rich console logger
+            import logging as std_logging
+            std_logging.getLogger('crawl4ai').setLevel(std_logging.CRITICAL)
+
             self.crawler = AsyncWebCrawler(
                 headless=True,
                 verbose=False,
             )
             await self.crawler.__aenter__()
-            logger.info("✅ Crawl4AI initialized successfully")
+            logger.info("Crawl4AI initialized successfully")
 
     async def cleanup(self) -> None:
         """

@@ -20,6 +20,7 @@ import {
   CheckCircle,
   Error,
   ImageOutlined,
+  LocalOffer,
 } from '@mui/icons-material';
 import {
   useReactTable,
@@ -37,6 +38,9 @@ import { BulkActionsBar } from './BulkActionsBar';
 import { PaginationControls } from './PaginationControls';
 import { SearchFilterBar } from './SearchFilterBar';
 import { ColumnSettingsModal } from './ColumnSettingsModal';
+import { PageFiltersBar, PageFilters } from './PageFiltersBar';
+import { TagManagementModal } from './TagManagementModal';
+import { useBulkUpdateTags, useClientTags } from '@/hooks/api';
 import {
   WebpageStructureCell,
   LinksCell,
@@ -59,6 +63,7 @@ const DEFAULT_VISIBLE_COLUMNS = [
   'select',
   'url',
   'slug',
+  'tags',
   'page_status',
   'page_screenshot',
   'page_title',
@@ -89,6 +94,15 @@ export const EnhancedDataTable: React.FC<EnhancedDataTableProps> = ({
   const [visibleColumns, setVisibleColumns] = useState<string[]>(DEFAULT_VISIBLE_COLUMNS);
   const [columnSettingsOpen, setColumnSettingsOpen] = useState(false);
   const [allSelected, setAllSelected] = useState(false);
+  const [pageFilters, setPageFilters] = useState<PageFilters>({
+    onPageFactors: [],
+    statusCodes: [],
+  });
+  const [tagModalOpen, setTagModalOpen] = useState(false);
+
+  // Tag management hooks
+  const { mutateAsync: bulkUpdateTags, isPending: isUpdatingTags } = useBulkUpdateTags();
+  const { data: clientTagsData } = useClientTags(clientId);
 
   // Format date helper
   const formatDate = (dateString: string | null | undefined) => {
@@ -101,6 +115,70 @@ export const EnhancedDataTable: React.FC<EnhancedDataTableProps> = ({
       minute: '2-digit',
     });
   };
+
+  // Client-side filtering logic
+  const filteredData = useMemo(() => {
+    // If no filters applied, return original data
+    if (pageFilters.onPageFactors.length === 0 && pageFilters.statusCodes.length === 0) {
+      return data;
+    }
+
+    return data.filter((page) => {
+      // Check on-page factors (OR logic within this category)
+      let onPageMatch = pageFilters.onPageFactors.length === 0; // Default to true if no filters
+      if (pageFilters.onPageFactors.length > 0) {
+        onPageMatch = pageFilters.onPageFactors.some((factor: string) => {
+          switch (factor) {
+            case 'has_title':
+              return !!page.page_title && page.page_title.trim().length > 0;
+            case 'missing_title':
+              return !page.page_title || page.page_title.trim().length === 0;
+            case 'has_meta':
+              return !!page.meta_description && page.meta_description.trim().length > 0;
+            case 'missing_meta':
+              return !page.meta_description || page.meta_description.trim().length === 0;
+            case 'has_h1':
+              return !!page.h1 && page.h1.trim().length > 0;
+            case 'missing_h1':
+              return !page.h1 || page.h1.trim().length === 0;
+            case 'has_images':
+              return !!page.image_count && page.image_count > 0;
+            case 'missing_images':
+              return !page.image_count || page.image_count === 0;
+            default:
+              return false;
+          }
+        });
+      }
+
+      // Check status codes (OR logic within this category)
+      let statusMatch = pageFilters.statusCodes.length === 0; // Default to true if no filters
+      if (pageFilters.statusCodes.length > 0) {
+        statusMatch = pageFilters.statusCodes.some((code: string) => {
+          const statusCode = page.status_code;
+          if (!statusCode) return code === 'other';
+
+          switch (code) {
+            case '200':
+              return statusCode === 200;
+            case '301-302':
+              return statusCode === 301 || statusCode === 302;
+            case '404':
+              return statusCode === 404;
+            case '500':
+              return statusCode >= 500;
+            case 'other':
+              return statusCode !== 200 && statusCode !== 301 && statusCode !== 302 && statusCode !== 404 && statusCode < 500;
+            default:
+              return false;
+          }
+        });
+      }
+
+      // AND logic between categories
+      return onPageMatch && statusMatch;
+    });
+  }, [data, pageFilters]);
 
   // Define all 22+ columns
   const columns = useMemo<ColumnDef<ClientPageRead>[]>(
@@ -158,7 +236,45 @@ export const EnhancedDataTable: React.FC<EnhancedDataTableProps> = ({
         cell: ({ row }) => row.original.slug || 'N/A',
         size: 200,
       },
-      // 4. Page Status column
+      // 4. Tags column
+      {
+        id: 'tags',
+        accessorKey: 'tags',
+        header: 'Tags',
+        cell: ({ row }) => {
+          const tags = row.original.tags;
+          if (!tags || tags.length === 0) {
+            return (
+              <Typography variant="caption" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                No tags
+              </Typography>
+            );
+          }
+          return (
+            <Stack direction="row" spacing={0.5} sx={{ flexWrap: 'wrap', gap: 0.5 }}>
+              {tags.slice(0, 3).map((tag, index) => (
+                <Chip
+                  key={index}
+                  label={tag}
+                  size="small"
+                  icon={<LocalOffer sx={{ fontSize: 14 }} />}
+                  variant="outlined"
+                  color="primary"
+                />
+              ))}
+              {tags.length > 3 && (
+                <Chip
+                  label={`+${tags.length - 3}`}
+                  size="small"
+                  variant="outlined"
+                />
+              )}
+            </Stack>
+          );
+        },
+        size: 250,
+      },
+      // 5. Page Status column
       {
         id: 'page_status',
         accessorKey: 'status_code',
@@ -389,7 +505,7 @@ export const EnhancedDataTable: React.FC<EnhancedDataTableProps> = ({
   );
 
   const table = useReactTable({
-    data,
+    data: filteredData,
     columns: displayColumns,
     state: {
       sorting,
@@ -451,6 +567,19 @@ export const EnhancedDataTable: React.FC<EnhancedDataTableProps> = ({
     }
   }, [onDelete, allSelected, data, selectedIds]);
 
+  const handleManageTags = useCallback(() => {
+    setTagModalOpen(true);
+  }, []);
+
+  const handleSaveTags = useCallback(async (tags: string[], mode: 'replace' | 'append') => {
+    const pageIds = allSelected ? data.map((row) => row.id) : selectedIds;
+    await bulkUpdateTags({
+      page_ids: pageIds,
+      tags,
+      mode,
+    });
+  }, [allSelected, data, selectedIds, bulkUpdateTags]);
+
   const handleSaveColumnSettings = useCallback((columns: string[]) => {
     setVisibleColumns(columns);
     // Save to localStorage
@@ -501,11 +630,22 @@ export const EnhancedDataTable: React.FC<EnhancedDataTableProps> = ({
         onClearFilters={() => {
           setGlobalFilter('');
           setColumnFilters([]);
+          setPageFilters({ onPageFactors: [], statusCodes: [] });
         }}
         onOpenColumnSettings={() => setColumnSettingsOpen(true)}
-        activeFiltersCount={columnFilters.length + (globalFilter ? 1 : 0)}
+        activeFiltersCount={columnFilters.length + (globalFilter ? 1 : 0) + pageFilters.onPageFactors.length + pageFilters.statusCodes.length}
         searchValue={globalFilter}
       />
+
+      {/* Page Filters Bar */}
+      <Box sx={{ mb: 2 }}>
+        <PageFiltersBar
+          filters={pageFilters}
+          onFiltersChange={setPageFilters}
+          totalPages={data.length}
+          filteredPages={filteredData.length}
+        />
+      </Box>
 
       {/* Bulk Actions Bar */}
       <BulkActionsBar
@@ -513,6 +653,7 @@ export const EnhancedDataTable: React.FC<EnhancedDataTableProps> = ({
         totalCount={totalCount || data.length}
         onSelectAll={handleSelectAll}
         onDeselectAll={handleDeselectAll}
+        onManageTags={handleManageTags}
         onExport={onExport ? handleExport : undefined}
         onDelete={onDelete ? handleDelete : undefined}
         allSelected={allSelected}
@@ -590,6 +731,17 @@ export const EnhancedDataTable: React.FC<EnhancedDataTableProps> = ({
         onClose={() => setColumnSettingsOpen(false)}
         visibleColumns={visibleColumns}
         onSave={handleSaveColumnSettings}
+      />
+
+      {/* Tag Management Modal */}
+      <TagManagementModal
+        open={tagModalOpen}
+        onClose={() => setTagModalOpen(false)}
+        selectedPageIds={allSelected ? data.map((row) => row.id) : selectedIds}
+        clientId={clientId}
+        allAvailableTags={clientTagsData?.tags || []}
+        onSave={handleSaveTags}
+        isLoading={isUpdatingTags}
       />
     </Box>
   );

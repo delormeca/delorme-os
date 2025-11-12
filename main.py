@@ -2,6 +2,7 @@ import asyncio
 import logging
 import os
 import sys
+import io
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware import Middleware
@@ -15,24 +16,27 @@ from starlette.middleware.authentication import AuthenticationMiddleware
 if sys.platform == 'win32':
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
+    # Fix for Windows console encoding issues with Crawl4AI/rich
+    # Reconfigure stdout/stderr to use UTF-8 encoding
+    # This prevents UnicodeEncodeError when rich/Crawl4AI outputs Unicode characters
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
+    os.environ['PYTHONIOENCODING'] = 'utf-8'
+
 from app.admin import create_admin
 from app.auth_backend import JWTAuthenticationBackend
 from app.controllers.auth import auth_router
-from app.controllers.article import article_router
 from app.controllers.payments import payments_router
 from app.controllers.plans import plans_router
-from app.controllers.analytics import analytics_router
 from app.controllers.integrations import integrations_router
 from app.controllers.upgrades import upgrades_router
 from app.controllers.clients import router as clients_router
-from app.controllers.projects import router as projects_router
-from app.controllers.pages import router as pages_router
-from app.controllers.crawling import router as crawling_router
 from app.controllers.research import router as research_router
 from app.controllers.project_leads import router as project_leads_router
 from app.controllers.engine_setup import router as engine_setup_router
 from app.controllers.client_pages import router as client_pages_router
 from app.controllers.page_crawl import router as page_crawl_router
+from app.controllers.tags import router as tags_router
 from app.db import async_engine
 from app.config.base import config
 
@@ -94,21 +98,17 @@ async def add_security_headers(request, call_next):
 admin = create_admin(app)
 
 app.include_router(auth_router, prefix="/api/auth", tags=["auth"])
-app.include_router(article_router, prefix="/api/articles", tags=["articles"])
 app.include_router(payments_router, prefix="/api/payments", tags=["payments"])
 app.include_router(plans_router)
-app.include_router(analytics_router)
 app.include_router(integrations_router)
 app.include_router(upgrades_router)
 app.include_router(clients_router, prefix="/api", tags=["clients"])
-app.include_router(projects_router, prefix="/api", tags=["projects"])
-app.include_router(pages_router, prefix="/api", tags=["pages"])
-app.include_router(crawling_router, prefix="/api/crawl", tags=["crawling"])
 app.include_router(research_router, prefix="/api", tags=["research"])
 app.include_router(project_leads_router, prefix="/api", tags=["project-leads"])
 app.include_router(engine_setup_router, prefix="/api", tags=["engine-setup"])
 app.include_router(client_pages_router, prefix="/api", tags=["client-pages"])
 app.include_router(page_crawl_router, tags=["page-crawl"])
+app.include_router(tags_router, prefix="/api", tags=["tags"])
 
 static_directory = "static/static"
 

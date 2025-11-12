@@ -12,10 +12,10 @@ export class DefaultService {
      * @returns any Successful Response
      * @throws ApiError
      */
-    public static healthCheckHealthGet(): CancelablePromise<any> {
+    public static healthCheckApiHealthGet(): CancelablePromise<any> {
         return __request(OpenAPI, {
             method: 'GET',
-            url: '/health',
+            url: '/api/health',
         });
     }
     /**

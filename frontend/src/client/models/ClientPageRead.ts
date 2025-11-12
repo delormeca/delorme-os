@@ -103,5 +103,9 @@ export type ClientPageRead = {
      * Associated crawl run ID
      */
     crawl_run_id?: (string | null);
+    /**
+     * Array of tag strings for categorization and filtering (e.g., ['blog', 'product-page', 'high-priority'])
+     */
+    tags?: (Array<string> | null);
 };
 

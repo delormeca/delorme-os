@@ -2,8 +2,10 @@
 Client Pages API endpoints.
 """
 from uuid import UUID
+from typing import List
+from pydantic import BaseModel
 
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, BackgroundTasks
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.db import get_async_db_session
@@ -16,10 +18,33 @@ from app.schemas.client_page import (
     ClientPageSearchParams
 )
 from app.services.client_page_service import ClientPageService
+from app.services.page_extraction_service import PageExtractionService
 from app.services.users_service import get_current_user
 from app.core.exceptions import NotFoundException, ValidationException
 
 router = APIRouter()
+
+
+# Request/Response schemas for extraction
+class ExtractPageRequest(BaseModel):
+    """Request to extract data from a single URL."""
+    client_id: UUID
+    url: str
+    crawl_run_id: UUID | None = None
+
+
+class ExtractBatchRequest(BaseModel):
+    """Request to extract data from multiple URLs."""
+    client_id: UUID
+    urls: List[str]
+    crawl_run_id: UUID | None = None
+
+
+class ExtractionResponse(BaseModel):
+    """Response from extraction request."""
+    message: str
+    page_id: UUID | None = None
+    extracted_count: int | None = None
 
 
 @router.post("/client-pages", response_model=ClientPageRead)
@@ -301,3 +326,75 @@ async def export_pages(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to export pages: {str(e)}"
         )
+
+
+@router.post("/client-pages/extract", response_model=ExtractionResponse)
+async def extract_page_data(
+    request: ExtractPageRequest,
+    db: AsyncSession = Depends(get_async_db_session),
+    current_user: CurrentUserResponse = Depends(get_current_user),
+):
+    """
+    Extract data from a single URL using Crawl4AI + HTML Parser.
+    Extracts all 24 data points and stores in ClientPage.
+    """
+    try:
+        extraction_service = PageExtractionService(db)
+
+        # Extract and store
+        page = await extraction_service.extract_and_store_page(
+            client_id=request.client_id,
+            url=request.url,
+            crawl_run_id=request.crawl_run_id
+        )
+
+        return ExtractionResponse(
+            message="Page extracted successfully",
+            page_id=page.id,
+            extracted_count=1
+        )
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to extract page data: {str(e)}"
+        )
+
+
+@router.post("/client-pages/extract-batch", response_model=ExtractionResponse)
+async def extract_batch_pages(
+    request: ExtractBatchRequest,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_async_db_session),
+    current_user: CurrentUserResponse = Depends(get_current_user),
+):
+    """
+    Extract data from multiple URLs in the background.
+    Returns immediately and processes URLs asynchronously.
+    """
+    from app.db import AsyncSessionLocal
+
+    async def process_batch():
+        """Background task to process batch extraction."""
+        async with AsyncSessionLocal() as db_session:
+            extraction_service = PageExtractionService(db_session)
+
+            for url in request.urls:
+                try:
+                    await extraction_service.extract_and_store_page(
+                        client_id=request.client_id,
+                        url=url,
+                        crawl_run_id=request.crawl_run_id
+                    )
+                except Exception as e:
+                    print(f"[ERROR] Failed to extract {url}: {str(e)}")
+                    continue
+
+    # Add to background tasks
+    background_tasks.add_task(process_batch)
+
+    return ExtractionResponse(
+        message=f"Batch extraction started for {len(request.urls)} URLs",
+        page_id=None,
+        extracted_count=len(request.urls)
+    )

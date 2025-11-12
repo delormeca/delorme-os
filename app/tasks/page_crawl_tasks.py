@@ -175,6 +175,14 @@ async def run_page_crawl_task(
                 )
 
         except Exception as e:
+            # Use print for debugging Windows encoding issues
+            print(f"\\n\\n=== CRAWL ERROR ===")
+            print(f"Error type: {type(e).__name__}")
+            print(f"Error message: {str(e)}")
+            import traceback
+            print(f"Traceback:\\n{traceback.format_exc()}")
+            print(f"===================\\n\\n")
+
             logger.error(
                 f"❌ Error running page crawl for client {client_id}: {e}",
                 exc_info=True,

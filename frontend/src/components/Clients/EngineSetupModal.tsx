@@ -20,7 +20,7 @@ import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { StandardButton } from "@/components/ui";
-import { useStartEngineSetup } from "@/hooks/api";
+import { useStartEngineSetup, useValidateSitemap } from "@/hooks/api";
 
 // Validation schema
 const engineSetupSchema = z.discriminatedUnion("setup_type", [
@@ -61,6 +61,7 @@ export const EngineSetupModal: React.FC<EngineSetupModalProps> = ({
   const [bulkUrls, setBulkUrls] = useState("");
 
   const { mutateAsync: startSetup, isPending } = useStartEngineSetup();
+  const { mutateAsync: validateSitemap, isPending: isValidating } = useValidateSitemap();
 
   const {
     control,
@@ -82,21 +83,28 @@ export const EngineSetupModal: React.FC<EngineSetupModalProps> = ({
   const handleSetupTypeChange = (type: "sitemap" | "manual") => {
     setSetupType(type);
     setValue("setup_type", type);
+    if (type === "sitemap") {
+      setValue("manual_urls", []);
+    }
   };
 
   const handleAddUrlField = () => {
-    setManualUrls([...manualUrls, ""]);
+    const newUrls = [...manualUrls, ""];
+    setManualUrls(newUrls);
+    setValue("manual_urls", newUrls, { shouldValidate: false });
   };
 
   const handleRemoveUrlField = (index: number) => {
     const newUrls = manualUrls.filter((_, i) => i !== index);
     setManualUrls(newUrls.length === 0 ? [""] : newUrls);
+    setValue("manual_urls", newUrls.length === 0 ? [] : newUrls, { shouldValidate: false });
   };
 
   const handleUrlChange = (index: number, value: string) => {
     const newUrls = [...manualUrls];
     newUrls[index] = value;
     setManualUrls(newUrls);
+    setValue("manual_urls", newUrls, { shouldValidate: false });
   };
 
   const onSubmit = async (data: EngineSetupFormInputs) => {
@@ -132,6 +140,18 @@ export const EngineSetupModal: React.FC<EngineSetupModalProps> = ({
     }
   };
 
+  const handleValidateSitemap = async () => {
+    const sitemapUrl = watch("sitemap_url");
+    if (!sitemapUrl || errors.sitemap_url) return;
+
+    try {
+      await validateSitemap({ sitemap_url: sitemapUrl });
+    } catch (error) {
+      // Error handled by mutation hook
+      console.error("Sitemap validation error:", error);
+    }
+  };
+
   const handleClose = () => {
     if (!isPending) {
       onClose();
@@ -155,6 +175,12 @@ export const EngineSetupModal: React.FC<EngineSetupModalProps> = ({
             <Alert severity="info">
               The Website Engine discovers all pages from your client's website to prepare them for crawling and content extraction.
             </Alert>
+
+            {setupType === "manual" && errors.manual_urls && !Array.isArray(errors.manual_urls) && (
+              <Alert severity="error" sx={{ mb: 2 }}>
+                {errors.manual_urls.message}
+              </Alert>
+            )}
 
             {/* Setup Type Selection */}
             <Box>
@@ -211,9 +237,21 @@ export const EngineSetupModal: React.FC<EngineSetupModalProps> = ({
                     />
                   )}
                 />
-                <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: "block" }}>
-                  Enter the full URL of the XML sitemap file
-                </Typography>
+                <Box sx={{ display: "flex", gap: 1, alignItems: "center", mt: 1 }}>
+                  <Typography variant="caption" color="text.secondary" sx={{ flex: 1 }}>
+                    Enter the full URL of the XML sitemap file
+                  </Typography>
+                  <StandardButton
+                    variant="outlined"
+                    size="small"
+                    onClick={handleValidateSitemap}
+                    disabled={!watch("sitemap_url") || !!errors.sitemap_url || isPending || isValidating}
+                    isLoading={isValidating}
+                    loadingText="Validating..."
+                  >
+                    Test Sitemap
+                  </StandardButton>
+                </Box>
               </Box>
             )}
 
@@ -274,7 +312,15 @@ export const EngineSetupModal: React.FC<EngineSetupModalProps> = ({
                   // Bulk mode
                   <TextField
                     value={bulkUrls}
-                    onChange={(e) => setBulkUrls(e.target.value)}
+                    onChange={(e) => {
+                      setBulkUrls(e.target.value);
+                      // Parse and sync to form state
+                      const parsedUrls = e.target.value
+                        .split("\n")
+                        .map(url => url.trim())
+                        .filter(url => url.length > 0);
+                      setValue("manual_urls", parsedUrls, { shouldValidate: false });
+                    }}
                     label="URLs (one per line)"
                     placeholder={`https://example.com/page-1\nhttps://example.com/page-2\nhttps://example.com/page-3`}
                     multiline
@@ -299,7 +345,7 @@ export const EngineSetupModal: React.FC<EngineSetupModalProps> = ({
             disabled={isPending}
             startIcon={isPending ? <CircularProgress size={16} /> : null}
           >
-            {isPending ? "Starting Setup..." : "Start Import"}
+            {isPending ? "Starting Setup..." : "Add Pages"}
           </StandardButton>
         </DialogActions>
       </form>
