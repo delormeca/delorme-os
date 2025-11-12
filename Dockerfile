@@ -1,38 +1,68 @@
 # Use an official Python runtime as a parent image
 FROM python:3.11-slim
 
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+
+# Install system dependencies required for Playwright and other packages
 RUN apt-get update && \
-    apt-get install -y nodejs npm
+    apt-get install -y --no-install-recommends \
+    wget \
+    gnupg \
+    ca-certificates \
+    fonts-liberation \
+    libasound2 \
+    libatk-bridge2.0-0 \
+    libatk1.0-0 \
+    libatspi2.0-0 \
+    libcups2 \
+    libdbus-1-3 \
+    libdrm2 \
+    libgbm1 \
+    libgtk-3-0 \
+    libnspr4 \
+    libnss3 \
+    libwayland-client0 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxfixes3 \
+    libxkbcommon0 \
+    libxrandr2 \
+    xdg-utils \
+    libu2f-udev \
+    libvulkan1 \
+    && rm -rf /var/lib/apt/lists/*
 
 # Install Poetry
-RUN pip install poetry
+RUN pip install --no-cache-dir poetry
 
 # Set the working directory in the container
 WORKDIR /usr/src/app
 
 # Copy the Poetry configuration files into the container
-COPY pyproject.toml ./
-COPY poetry.lock ./
+COPY pyproject.toml poetry.lock ./
 
-# Disable virtual environments and install dependencies
-RUN poetry config virtualenvs.create false
-RUN poetry install
+# Copy installation script
+COPY install-deps.sh ./
+
+# Make script executable and run it
+RUN chmod +x install-deps.sh && ./install-deps.sh
+
+# Install Playwright browsers (Chromium only for efficiency)
+# Using --with-deps but system deps are already installed above
+RUN playwright install chromium
 
 # Copy the rest of the application code
 COPY . .
 
-# Specify the directory containing the frontend code
-WORKDIR /usr/src/app/frontend
+# Create static directory for future use (optional)
+RUN mkdir -p /usr/src/app/static
 
-# Install Node.js, npm, and build the frontend
-RUN npm install
-RUN npm run build
-
-# Copy build artifacts to the static directory
-RUN cp -r dist/* /usr/src/app/static/
-
-# Set the working directory back to the main application directory
-WORKDIR /usr/src/app
+# Expose port (Render will use PORT env var)
+EXPOSE ${PORT:-8080}
 
 # Specify the command to run on container start
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080"]
+# Use sh -c to allow environment variable substitution
+CMD sh -c "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8080}"

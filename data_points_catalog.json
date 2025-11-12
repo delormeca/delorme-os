@@ -1,0 +1,543 @@
+{
+  "catalog_version": "1.0.0",
+  "crawl4ai_version": "0.7.x",
+  "total_data_points": 107,
+  "implemented_count": 22,
+  "additional_available": 85,
+  "last_updated": "2025-01-15",
+  "categories": {
+    "onpage": "On-Page SEO metadata, titles, descriptions, social tags",
+    "technical": "Technical SEO, headers, SSL, redirects, status codes",
+    "content": "Content analysis, word counts, structure, readability",
+    "links": "Internal/external links, anchor text, link analysis",
+    "media": "Images, videos, audio, alt text, media metadata",
+    "performance": "Page load metrics, network requests, resource sizes",
+    "accessibility": "WCAG compliance, alt text, ARIA labels",
+    "advanced": "Embeddings, knowledge graphs, chunking strategies"
+  },
+  "implementation_phases": {
+    "phase_1": {
+      "name": "Essential SEO & Social",
+      "priority": "HIGH",
+      "count": 22,
+      "description": "Critical data points for social sharing and basic SEO analysis",
+      "data_points": [
+        "dp_og_title", "dp_og_description", "dp_og_image", "dp_og_type", "dp_og_url", "dp_og_site_name",
+        "dp_twitter_card", "dp_twitter_title", "dp_twitter_description", "dp_twitter_image", "dp_twitter_site", "dp_twitter_creator",
+        "dp_lang", "dp_charset", "dp_meta_viewport", "dp_is_mobile_responsive",
+        "dp_ssl_valid_until", "dp_ssl_days_until_expiry", "dp_has_ssl_certificate",
+        "dp_success", "dp_error_message", "dp_redirected_url"
+      ]
+    },
+    "phase_2": {
+      "name": "Content & Structure",
+      "priority": "MEDIUM",
+      "count": 15,
+      "description": "Enhanced content analysis and structural data",
+      "data_points": [
+        "dp_tables", "dp_table_count", "dp_h2_count", "dp_h3_count", "dp_h4_count", "dp_h5_count", "dp_h6_count",
+        "dp_fit_markdown", "dp_raw_markdown", "dp_fit_html",
+        "dp_links_internal", "dp_links_external", "dp_broken_link_count", "dp_unique_domains_linked", "dp_links_total_intrinsic_score"
+      ]
+    },
+    "phase_3": {
+      "name": "Performance & Technical",
+      "priority": "MEDIUM",
+      "count": 20,
+      "description": "Performance metrics and advanced technical analysis",
+      "data_points": [
+        "dp_network_requests", "dp_network_request_count", "dp_network_failed_request_count", "dp_network_avg_response_time", "dp_network_total_transfer_size",
+        "dp_console_messages", "dp_console_error_count", "dp_console_warning_count",
+        "dp_response_headers", "dp_content_security_policy", "dp_strict_transport_security", "dp_x_frame_options",
+        "dp_html_size_bytes", "dp_cleaned_html_size_bytes", "dp_markdown_size_bytes"
+      ]
+    },
+    "phase_4": {
+      "name": "Advanced & Optional",
+      "priority": "LOW",
+      "count": 28,
+      "description": "Advanced features and optional extraction data",
+      "data_points": [
+        "dp_media_images", "dp_media_videos", "dp_media_audios", "dp_video_count", "dp_audio_count",
+        "dp_meta_keywords", "dp_meta_author", "dp_dublin_core_creator", "dp_dublin_core_date",
+        "dp_pdf", "dp_mhtml", "dp_downloaded_files", "dp_js_execution_result",
+        "dp_form_count", "dp_iframe_count", "dp_has_breadcrumb_schema", "dp_has_article_schema",
+        "dp_has_product_schema", "dp_has_faq_schema", "dp_meta_refresh"
+      ]
+    }
+  },
+  "already_implemented": [
+    {
+      "id": "dp_page_title",
+      "name": "Page Title",
+      "category": "onpage",
+      "data_type": "string",
+      "crawl4ai_field": "page_title",
+      "implemented": true
+    },
+    {
+      "id": "dp_meta_title",
+      "name": "Meta Title",
+      "category": "onpage",
+      "data_type": "string",
+      "crawl4ai_field": "meta_title",
+      "implemented": true
+    },
+    {
+      "id": "dp_meta_description",
+      "name": "Meta Description",
+      "category": "onpage",
+      "data_type": "string",
+      "crawl4ai_field": "meta_description",
+      "implemented": true
+    },
+    {
+      "id": "dp_h1",
+      "name": "H1 Heading",
+      "category": "onpage",
+      "data_type": "string",
+      "crawl4ai_field": "h1",
+      "implemented": true
+    },
+    {
+      "id": "dp_canonical_url",
+      "name": "Canonical URL",
+      "category": "onpage",
+      "data_type": "string",
+      "crawl4ai_field": "canonical_url",
+      "implemented": true
+    },
+    {
+      "id": "dp_hreflang",
+      "name": "Hreflang",
+      "category": "onpage",
+      "data_type": "string",
+      "crawl4ai_field": "hreflang",
+      "implemented": true
+    },
+    {
+      "id": "dp_meta_robots",
+      "name": "Meta Robots",
+      "category": "onpage",
+      "data_type": "string",
+      "crawl4ai_field": "meta_robots",
+      "implemented": true
+    },
+    {
+      "id": "dp_body_content",
+      "name": "Body Content",
+      "category": "content",
+      "data_type": "string",
+      "crawl4ai_field": "body_content",
+      "implemented": true
+    },
+    {
+      "id": "dp_word_count",
+      "name": "Word Count",
+      "category": "content",
+      "data_type": "integer",
+      "crawl4ai_field": "word_count",
+      "implemented": true
+    },
+    {
+      "id": "dp_webpage_structure",
+      "name": "Webpage Structure",
+      "category": "content",
+      "data_type": "json",
+      "crawl4ai_field": "webpage_structure",
+      "implemented": true
+    },
+    {
+      "id": "dp_schema_markup",
+      "name": "Schema Markup",
+      "category": "content",
+      "data_type": "json",
+      "crawl4ai_field": "schema_markup",
+      "implemented": true
+    },
+    {
+      "id": "dp_salient_entities",
+      "name": "Salient Entities",
+      "category": "content",
+      "data_type": "json",
+      "crawl4ai_field": "salient_entities",
+      "implemented": true
+    },
+    {
+      "id": "dp_body_content_embedding",
+      "name": "Content Embedding",
+      "category": "content",
+      "data_type": "vector",
+      "crawl4ai_field": "body_content_embedding",
+      "implemented": true
+    },
+    {
+      "id": "dp_internal_links",
+      "name": "Internal Links",
+      "category": "links",
+      "data_type": "json",
+      "crawl4ai_field": "internal_links",
+      "implemented": true
+    },
+    {
+      "id": "dp_external_links",
+      "name": "External Links",
+      "category": "links",
+      "data_type": "json",
+      "crawl4ai_field": "external_links",
+      "implemented": true
+    },
+    {
+      "id": "dp_image_count",
+      "name": "Image Count",
+      "category": "links",
+      "data_type": "integer",
+      "crawl4ai_field": "image_count",
+      "implemented": true
+    },
+    {
+      "id": "dp_screenshot_url",
+      "name": "Thumbnail Screenshot",
+      "category": "media",
+      "data_type": "string",
+      "crawl4ai_field": "screenshot_url",
+      "implemented": true
+    },
+    {
+      "id": "dp_screenshot_full_url",
+      "name": "Full Screenshot",
+      "category": "media",
+      "data_type": "string",
+      "crawl4ai_field": "screenshot_full_url",
+      "implemented": true
+    },
+    {
+      "id": "dp_status_code",
+      "name": "HTTP Status Code",
+      "category": "technical",
+      "data_type": "integer",
+      "crawl4ai_field": "status_code",
+      "implemented": true
+    },
+    {
+      "id": "dp_last_crawled_at",
+      "name": "Last Crawled",
+      "category": "technical",
+      "data_type": "datetime",
+      "crawl4ai_field": "last_crawled_at",
+      "implemented": true
+    },
+    {
+      "id": "dp_last_checked_at",
+      "name": "Last Checked",
+      "category": "technical",
+      "data_type": "datetime",
+      "crawl4ai_field": "last_checked_at",
+      "implemented": true
+    },
+    {
+      "id": "dp_url",
+      "name": "Page URL",
+      "category": "technical",
+      "data_type": "string",
+      "crawl4ai_field": "url",
+      "implemented": true
+    }
+  ],
+  "additional_data_points": [
+    {
+      "id": "dp_og_title",
+      "name": "Open Graph Title",
+      "category": "onpage",
+      "data_type": "string",
+      "description": "Title for social media sharing (Open Graph)",
+      "crawl4ai_field": "head_data.og:title",
+      "extraction_method": "requires_config",
+      "config_required": "SeedingConfig(extract_head=True)",
+      "example_value": "Amazing Article Title",
+      "priority": "high",
+      "phase": 1
+    },
+    {
+      "id": "dp_og_description",
+      "name": "Open Graph Description",
+      "category": "onpage",
+      "data_type": "string",
+      "description": "Description for social media sharing (Open Graph)",
+      "crawl4ai_field": "head_data.og:description",
+      "extraction_method": "requires_config",
+      "config_required": "SeedingConfig(extract_head=True)",
+      "example_value": "This is an amazing article about...",
+      "priority": "high",
+      "phase": 1
+    },
+    {
+      "id": "dp_og_image",
+      "name": "Open Graph Image",
+      "category": "onpage",
+      "data_type": "string",
+      "description": "Image URL for social media sharing (Open Graph)",
+      "crawl4ai_field": "head_data.og:image",
+      "extraction_method": "requires_config",
+      "config_required": "SeedingConfig(extract_head=True)",
+      "example_value": "https://example.com/image.jpg",
+      "priority": "high",
+      "phase": 1
+    },
+    {
+      "id": "dp_og_type",
+      "name": "Open Graph Type",
+      "category": "onpage",
+      "data_type": "string",
+      "description": "Content type for Open Graph (article, website, etc.)",
+      "crawl4ai_field": "head_data.og:type",
+      "extraction_method": "requires_config",
+      "config_required": "SeedingConfig(extract_head=True)",
+      "example_value": "article",
+      "priority": "medium",
+      "phase": 1
+    },
+    {
+      "id": "dp_og_url",
+      "name": "Open Graph URL",
+      "category": "onpage",
+      "data_type": "string",
+      "description": "Canonical URL for Open Graph",
+      "crawl4ai_field": "head_data.og:url",
+      "extraction_method": "requires_config",
+      "config_required": "SeedingConfig(extract_head=True)",
+      "example_value": "https://example.com/article",
+      "priority": "medium",
+      "phase": 1
+    },
+    {
+      "id": "dp_og_site_name",
+      "name": "Open Graph Site Name",
+      "category": "onpage",
+      "data_type": "string",
+      "description": "Website name for Open Graph",
+      "crawl4ai_field": "head_data.og:site_name",
+      "extraction_method": "requires_config",
+      "config_required": "SeedingConfig(extract_head=True)",
+      "example_value": "Example News",
+      "priority": "low",
+      "phase": 1
+    },
+    {
+      "id": "dp_twitter_card",
+      "name": "Twitter Card Type",
+      "category": "onpage",
+      "data_type": "string",
+      "description": "Twitter Card type (summary, summary_large_image, etc.)",
+      "crawl4ai_field": "head_data.twitter:card",
+      "extraction_method": "requires_config",
+      "config_required": "SeedingConfig(extract_head=True)",
+      "example_value": "summary_large_image",
+      "priority": "high",
+      "phase": 1
+    },
+    {
+      "id": "dp_twitter_title",
+      "name": "Twitter Card Title",
+      "category": "onpage",
+      "data_type": "string",
+      "description": "Title for Twitter Card sharing",
+      "crawl4ai_field": "head_data.twitter:title",
+      "extraction_method": "requires_config",
+      "config_required": "SeedingConfig(extract_head=True)",
+      "example_value": "Amazing Article Title",
+      "priority": "high",
+      "phase": 1
+    },
+    {
+      "id": "dp_twitter_description",
+      "name": "Twitter Card Description",
+      "category": "onpage",
+      "data_type": "string",
+      "description": "Description for Twitter Card sharing",
+      "crawl4ai_field": "head_data.twitter:description",
+      "extraction_method": "requires_config",
+      "config_required": "SeedingConfig(extract_head=True)",
+      "example_value": "This is an amazing article...",
+      "priority": "high",
+      "phase": 1
+    },
+    {
+      "id": "dp_twitter_image",
+      "name": "Twitter Card Image",
+      "category": "onpage",
+      "data_type": "string",
+      "description": "Image URL for Twitter Card sharing",
+      "crawl4ai_field": "head_data.twitter:image",
+      "extraction_method": "requires_config",
+      "config_required": "SeedingConfig(extract_head=True)",
+      "example_value": "https://example.com/twitter-image.jpg",
+      "priority": "high",
+      "phase": 1
+    },
+    {
+      "id": "dp_twitter_site",
+      "name": "Twitter Site Handle",
+      "category": "onpage",
+      "data_type": "string",
+      "description": "Twitter username for the website",
+      "crawl4ai_field": "head_data.twitter:site",
+      "extraction_method": "requires_config",
+      "config_required": "SeedingConfig(extract_head=True)",
+      "example_value": "@examplesite",
+      "priority": "low",
+      "phase": 1
+    },
+    {
+      "id": "dp_twitter_creator",
+      "name": "Twitter Creator Handle",
+      "category": "onpage",
+      "data_type": "string",
+      "description": "Twitter username for the content creator",
+      "crawl4ai_field": "head_data.twitter:creator",
+      "extraction_method": "requires_config",
+      "config_required": "SeedingConfig(extract_head=True)",
+      "example_value": "@johndoe",
+      "priority": "low",
+      "phase": 1
+    },
+    {
+      "id": "dp_lang",
+      "name": "Page Language",
+      "category": "content",
+      "data_type": "string",
+      "description": "Language code from HTML lang attribute",
+      "crawl4ai_field": "head_data.lang",
+      "extraction_method": "requires_config",
+      "config_required": "SeedingConfig(extract_head=True)",
+      "example_value": "en-US",
+      "priority": "high",
+      "phase": 1
+    },
+    {
+      "id": "dp_charset",
+      "name": "Character Encoding",
+      "category": "technical",
+      "data_type": "string",
+      "description": "Character encoding specified in page header",
+      "crawl4ai_field": "head_data.charset",
+      "extraction_method": "requires_config",
+      "config_required": "SeedingConfig(extract_head=True)",
+      "example_value": "UTF-8",
+      "priority": "medium",
+      "phase": 1
+    },
+    {
+      "id": "dp_meta_viewport",
+      "name": "Meta Viewport",
+      "category": "technical",
+      "data_type": "string",
+      "description": "Viewport configuration for mobile responsiveness",
+      "crawl4ai_field": "head_data.meta.viewport",
+      "extraction_method": "requires_config",
+      "config_required": "SeedingConfig(extract_head=True)",
+      "example_value": "width=device-width, initial-scale=1.0",
+      "priority": "medium",
+      "phase": 1
+    },
+    {
+      "id": "dp_is_mobile_responsive",
+      "name": "Is Mobile Responsive",
+      "category": "technical",
+      "data_type": "boolean",
+      "description": "Whether page has mobile viewport configuration",
+      "crawl4ai_field": "calculated from head_data.meta.viewport",
+      "extraction_method": "requires_config",
+      "config_required": "SeedingConfig(extract_head=True)",
+      "example_value": "true",
+      "priority": "high",
+      "phase": 1
+    },
+    {
+      "id": "dp_ssl_valid_until",
+      "name": "SSL Valid Until Date",
+      "category": "technical",
+      "data_type": "datetime",
+      "description": "SSL certificate expiration date",
+      "crawl4ai_field": "result.ssl_certificate.valid_until",
+      "extraction_method": "requires_config",
+      "config_required": "CrawlerRunConfig(fetch_ssl_certificate=True)",
+      "example_value": "2025-01-01T00:00:00Z",
+      "priority": "high",
+      "phase": 1
+    },
+    {
+      "id": "dp_ssl_days_until_expiry",
+      "name": "SSL Days Until Expiry",
+      "category": "technical",
+      "data_type": "integer",
+      "description": "Number of days until SSL certificate expires",
+      "crawl4ai_field": "calculated from result.ssl_certificate.valid_until",
+      "extraction_method": "requires_config",
+      "config_required": "CrawlerRunConfig(fetch_ssl_certificate=True)",
+      "example_value": "365",
+      "priority": "high",
+      "phase": 1
+    },
+    {
+      "id": "dp_has_ssl_certificate",
+      "name": "Has Valid SSL Certificate",
+      "category": "technical",
+      "data_type": "boolean",
+      "description": "Whether site has an SSL certificate",
+      "crawl4ai_field": "result.ssl_certificate is not None",
+      "extraction_method": "requires_config",
+      "config_required": "CrawlerRunConfig(fetch_ssl_certificate=True)",
+      "example_value": "true",
+      "priority": "high",
+      "phase": 1
+    },
+    {
+      "id": "dp_success",
+      "name": "Crawl Success Status",
+      "category": "technical",
+      "data_type": "boolean",
+      "description": "Whether the crawl completed successfully",
+      "crawl4ai_field": "result.success",
+      "extraction_method": "direct",
+      "config_required": null,
+      "example_value": "true",
+      "priority": "high",
+      "phase": 1
+    },
+    {
+      "id": "dp_error_message",
+      "name": "Error Message",
+      "category": "technical",
+      "data_type": "string",
+      "description": "Error description if crawl failed",
+      "crawl4ai_field": "result.error_message",
+      "extraction_method": "direct",
+      "config_required": null,
+      "example_value": "Connection timeout",
+      "priority": "high",
+      "phase": 1
+    },
+    {
+      "id": "dp_redirected_url",
+      "name": "Redirected URL",
+      "category": "technical",
+      "data_type": "string",
+      "description": "Final URL after redirects (first redirect only)",
+      "crawl4ai_field": "result.redirected_url",
+      "extraction_method": "direct",
+      "config_required": null,
+      "example_value": "https://example.com/new-location",
+      "priority": "high",
+      "phase": 1,
+      "notes": "Only captures first redirect in chain (known Crawl4AI limitation)"
+    }
+  ],
+  "notes": {
+    "version_compatibility": "This catalog is based on Crawl4AI v0.7.x. Verify field availability in your installed version.",
+    "performance_impact": "Enabling all extraction features (SSL, network capture, console messages) will slow crawl speed by 2-3x.",
+    "storage_requirements": "Fields like html, network_requests, and media objects can be very large. Store selectively or compress.",
+    "redirect_limitation": "dp_redirected_url only captures first redirect in chain. Consider custom tracking for full chain.",
+    "optional_fields": "Many fields return None unless specific config is enabled. Implement null checks in database schema."
+  }
+}

@@ -48,6 +48,9 @@ langchain-community = "^0.4.1"
 langchain-openai = "^1.0.1"
 tiktoken = "^0.12.0"
 langchain = "^1.0.3"
+google-cloud-language = "^2.18.0"
+openai = "^2.7.1"
+redis = "^7.0.1"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.0.0"

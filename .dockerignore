@@ -1,0 +1,22 @@
+# Environment files
+local.env
+prod.env
+.env
+
+# Logs
+*.log
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Frontend
+frontend/
+
+# Deep researcher
+deep-researcher/
+
+# Test files
+test_*.py
+cookies.txt
+*.json

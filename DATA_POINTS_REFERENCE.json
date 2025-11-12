@@ -1,0 +1,690 @@
+{
+  "metadata": {
+    "total_data_points": 44,
+    "extracted_count": 23,
+    "extraction_coverage": "52.3%",
+    "test_url": "https://lasallecollegevancouver.lcieducation.com/en/programs-and-courses/diploma-accounting-and-bookkeeping",
+    "last_updated": "2025-01-11",
+    "version": "1.0.0"
+  },
+  "data_points": [
+    {
+      "id": "dp_page_title",
+      "name": "Page Title",
+      "category": "ONPAGE",
+      "data_type": "STRING",
+      "crawl4ai_field": "page_title",
+      "description": "Title of the page from <title> tag or metadata",
+      "extraction_status": "EXTRACTED",
+      "extraction_method": "Crawl4AI metadata",
+      "example_value": "Accounting and Bookkeeping | Diploma | LaSalle College Vancouver",
+      "is_active": true,
+      "display_order": 1
+    },
+    {
+      "id": "dp_meta_title",
+      "name": "Meta Title",
+      "category": "ONPAGE",
+      "data_type": "STRING",
+      "crawl4ai_field": "meta_title",
+      "description": "SEO meta title tag content",
+      "extraction_status": "NOT_ON_PAGE",
+      "extraction_method": "HTML parser - <meta name='title'>",
+      "example_value": null,
+      "is_active": true,
+      "display_order": 2
+    },
+    {
+      "id": "dp_meta_description",
+      "name": "Meta Description",
+      "category": "ONPAGE",
+      "data_type": "STRING",
+      "crawl4ai_field": "meta_description",
+      "description": "SEO meta description tag content",
+      "extraction_status": "EXTRACTED",
+      "extraction_method": "Crawl4AI metadata + HTML parser",
+      "example_value": "Join our Accounting and Bookkeeping program and turn your passion into a profession...",
+      "is_active": true,
+      "display_order": 3
+    },
+    {
+      "id": "dp_h1",
+      "name": "H1 Heading",
+      "category": "ONPAGE",
+      "data_type": "STRING",
+      "crawl4ai_field": "h1",
+      "description": "First H1 heading on the page",
+      "extraction_status": "EXTRACTED",
+      "extraction_method": "HTML parser - first <h1> tag",
+      "example_value": "Accounting and Bookkeeping",
+      "is_active": true,
+      "display_order": 4
+    },
+    {
+      "id": "dp_canonical_url",
+      "name": "Canonical URL",
+      "category": "ONPAGE",
+      "data_type": "STRING",
+      "crawl4ai_field": "canonical_url",
+      "description": "Canonical URL from <link rel='canonical'>",
+      "extraction_status": "EXTRACTED",
+      "extraction_method": "HTML parser - <link rel='canonical'>",
+      "example_value": "https://lasallecollegevancouver.lcieducation.com/en/programs-and-courses/diploma-accounting-and-bookkeeping",
+      "is_active": true,
+      "display_order": 5
+    },
+    {
+      "id": "dp_hreflang",
+      "name": "Hreflang",
+      "category": "ONPAGE",
+      "data_type": "JSON",
+      "crawl4ai_field": "hreflang",
+      "description": "Alternate language versions from <link rel='alternate'>",
+      "extraction_status": "EXTRACTED",
+      "extraction_method": "HTML parser - <link rel='alternate' hreflang>",
+      "example_value": "[{'hreflang': 'en', 'href': 'https://lasallecollegevancouver.lcieducation.com/en/...'}]",
+      "is_active": true,
+      "display_order": 6
+    },
+    {
+      "id": "dp_meta_robots",
+      "name": "Meta Robots",
+      "category": "ONPAGE",
+      "data_type": "STRING",
+      "crawl4ai_field": "meta_robots",
+      "description": "Robots meta tag directives",
+      "extraction_status": "EXTRACTED",
+      "extraction_method": "HTML parser - <meta name='robots'>",
+      "example_value": "index, follow",
+      "is_active": true,
+      "display_order": 7
+    },
+    {
+      "id": "dp_og_title",
+      "name": "Open Graph Title",
+      "category": "ONPAGE",
+      "data_type": "STRING",
+      "crawl4ai_field": "head_data.og:title",
+      "description": "Open Graph title for social media sharing",
+      "extraction_status": "EXTRACTED",
+      "extraction_method": "HTML parser - <meta property='og:title'>",
+      "example_value": "Accounting and Bookkeeping | Diploma | LaSalle College Vancouver",
+      "is_active": true,
+      "display_order": 10
+    },
+    {
+      "id": "dp_og_description",
+      "name": "Open Graph Description",
+      "category": "ONPAGE",
+      "data_type": "STRING",
+      "crawl4ai_field": "head_data.og:description",
+      "description": "Open Graph description for social media",
+      "extraction_status": "EXTRACTED",
+      "extraction_method": "HTML parser - <meta property='og:description'>",
+      "example_value": "Join our Accounting and Bookkeeping program...",
+      "is_active": true,
+      "display_order": 11
+    },
+    {
+      "id": "dp_og_image",
+      "name": "Open Graph Image",
+      "category": "ONPAGE",
+      "data_type": "STRING",
+      "crawl4ai_field": "head_data.og:image",
+      "description": "Open Graph image URL for social media",
+      "extraction_status": "EXTRACTED",
+      "extraction_method": "HTML parser - <meta property='og:image'>",
+      "example_value": "https://dam.lcieducation.com/LCI-Education/Brand-management/Brand-management/LaSalle-College/...",
+      "is_active": true,
+      "display_order": 12
+    },
+    {
+      "id": "dp_og_type",
+      "name": "Open Graph Type",
+      "category": "ONPAGE",
+      "data_type": "STRING",
+      "crawl4ai_field": "head_data.og:type",
+      "description": "Open Graph content type (website, article, etc.)",
+      "extraction_status": "NOT_ON_PAGE",
+      "extraction_method": "HTML parser - <meta property='og:type'>",
+      "example_value": null,
+      "is_active": true,
+      "display_order": 13
+    },
+    {
+      "id": "dp_og_url",
+      "name": "Open Graph URL",
+      "category": "ONPAGE",
+      "data_type": "STRING",
+      "crawl4ai_field": "head_data.og:url",
+      "description": "Open Graph canonical URL",
+      "extraction_status": "NOT_ON_PAGE",
+      "extraction_method": "HTML parser - <meta property='og:url'>",
+      "example_value": null,
+      "is_active": true,
+      "display_order": 14
+    },
+    {
+      "id": "dp_og_site_name",
+      "name": "Open Graph Site Name",
+      "category": "ONPAGE",
+      "data_type": "STRING",
+      "crawl4ai_field": "head_data.og:site_name",
+      "description": "Open Graph site name",
+      "extraction_status": "NOT_ON_PAGE",
+      "extraction_method": "HTML parser - <meta property='og:site_name'>",
+      "example_value": null,
+      "is_active": true,
+      "display_order": 15
+    },
+    {
+      "id": "dp_twitter_card",
+      "name": "Twitter Card Type",
+      "category": "ONPAGE",
+      "data_type": "STRING",
+      "crawl4ai_field": "head_data.twitter:card",
+      "description": "Twitter Card type (summary, summary_large_image, etc.)",
+      "extraction_status": "EXTRACTED",
+      "extraction_method": "HTML parser - <meta name='twitter:card'>",
+      "example_value": "summary_large_image",
+      "is_active": true,
+      "display_order": 16
+    },
+    {
+      "id": "dp_twitter_title",
+      "name": "Twitter Card Title",
+      "category": "ONPAGE",
+      "data_type": "STRING",
+      "crawl4ai_field": "head_data.twitter:title",
+      "description": "Twitter Card title",
+      "extraction_status": "EXTRACTED",
+      "extraction_method": "HTML parser - <meta name='twitter:title'>",
+      "example_value": "Accounting and Bookkeeping | Diploma | LaSalle College Vancouver",
+      "is_active": true,
+      "display_order": 17
+    },
+    {
+      "id": "dp_twitter_description",
+      "name": "Twitter Card Description",
+      "category": "ONPAGE",
+      "data_type": "STRING",
+      "crawl4ai_field": "head_data.twitter:description",
+      "description": "Twitter Card description",
+      "extraction_status": "EXTRACTED",
+      "extraction_method": "HTML parser - <meta name='twitter:description'>",
+      "example_value": "Join our Accounting and Bookkeeping program...",
+      "is_active": true,
+      "display_order": 18
+    },
+    {
+      "id": "dp_twitter_image",
+      "name": "Twitter Card Image",
+      "category": "ONPAGE",
+      "data_type": "STRING",
+      "crawl4ai_field": "head_data.twitter:image",
+      "description": "Twitter Card image URL",
+      "extraction_status": "EXTRACTED",
+      "extraction_method": "HTML parser - <meta name='twitter:image'>",
+      "example_value": "https://dam.lcieducation.com/LCI-Education/Brand-management/...",
+      "is_active": true,
+      "display_order": 19
+    },
+    {
+      "id": "dp_twitter_site",
+      "name": "Twitter Site Handle",
+      "category": "ONPAGE",
+      "data_type": "STRING",
+      "crawl4ai_field": "head_data.twitter:site",
+      "description": "Twitter site handle (@username)",
+      "extraction_status": "NOT_ON_PAGE",
+      "extraction_method": "HTML parser - <meta name='twitter:site'>",
+      "example_value": null,
+      "is_active": true,
+      "display_order": 20
+    },
+    {
+      "id": "dp_twitter_creator",
+      "name": "Twitter Creator Handle",
+      "category": "ONPAGE",
+      "data_type": "STRING",
+      "crawl4ai_field": "head_data.twitter:creator",
+      "description": "Twitter creator handle (@username)",
+      "extraction_status": "NOT_ON_PAGE",
+      "extraction_method": "HTML parser - <meta name='twitter:creator'>",
+      "example_value": null,
+      "is_active": true,
+      "display_order": 21
+    },
+    {
+      "id": "dp_lang",
+      "name": "Language",
+      "category": "ONPAGE",
+      "data_type": "STRING",
+      "crawl4ai_field": "lang",
+      "description": "Page language from <html lang> attribute",
+      "extraction_status": "EXTRACTED",
+      "extraction_method": "HTML parser - <html lang>",
+      "example_value": "en",
+      "is_active": true,
+      "display_order": 22
+    },
+    {
+      "id": "dp_charset",
+      "name": "Character Encoding",
+      "category": "ONPAGE",
+      "data_type": "STRING",
+      "crawl4ai_field": "charset",
+      "description": "Character encoding from <meta charset>",
+      "extraction_status": "EXTRACTED",
+      "extraction_method": "HTML parser - <meta charset>",
+      "example_value": "utf-8",
+      "is_active": true,
+      "display_order": 23
+    },
+    {
+      "id": "dp_meta_viewport",
+      "name": "Viewport Meta Tag",
+      "category": "ONPAGE",
+      "data_type": "STRING",
+      "crawl4ai_field": "meta_viewport",
+      "description": "Viewport configuration for mobile devices",
+      "extraction_status": "EXTRACTED",
+      "extraction_method": "HTML parser - <meta name='viewport'>",
+      "example_value": "width=device-width, initial-scale=1",
+      "is_active": true,
+      "display_order": 24
+    },
+    {
+      "id": "dp_is_mobile_responsive",
+      "name": "Mobile Responsive",
+      "category": "ONPAGE",
+      "data_type": "STRING",
+      "crawl4ai_field": "is_mobile_responsive",
+      "description": "Whether page appears mobile-responsive",
+      "extraction_status": "EXTRACTED",
+      "extraction_method": "HTML parser - checks viewport + responsive CSS",
+      "example_value": "true",
+      "is_active": true,
+      "display_order": 25
+    },
+    {
+      "id": "dp_body_content",
+      "name": "Body Content",
+      "category": "CONTENT",
+      "data_type": "STRING",
+      "crawl4ai_field": "body_content",
+      "description": "Main text content of the page in markdown format",
+      "extraction_status": "EXTRACTED",
+      "extraction_method": "Crawl4AI markdown conversion",
+      "example_value": "Open House & Creative Workshops | Nov 15...(3,457 words)",
+      "is_active": true,
+      "display_order": 1
+    },
+    {
+      "id": "dp_word_count",
+      "name": "Word Count",
+      "category": "CONTENT",
+      "data_type": "INTEGER",
+      "crawl4ai_field": "word_count",
+      "description": "Total word count of page content",
+      "extraction_status": "EXTRACTED",
+      "extraction_method": "Calculated from markdown content",
+      "example_value": "3457",
+      "is_active": true,
+      "display_order": 2
+    },
+    {
+      "id": "dp_webpage_structure",
+      "name": "Webpage Structure",
+      "category": "CONTENT",
+      "data_type": "JSON",
+      "crawl4ai_field": "webpage_structure",
+      "description": "HTML structure analysis (heading counts, element counts)",
+      "extraction_status": "EXTRACTED",
+      "extraction_method": "HTML parser - analyzes HTML elements",
+      "example_value": "{'h1_count': 1, 'h2_count': 9, 'h3_count': 3, 'paragraph_count': 47, 'link_count': 142...}",
+      "is_active": true,
+      "display_order": 3
+    },
+    {
+      "id": "dp_schema_markup",
+      "name": "Schema Markup",
+      "category": "CONTENT",
+      "data_type": "JSON",
+      "crawl4ai_field": "schema_markup",
+      "description": "Structured data from JSON-LD or microdata",
+      "extraction_status": "NOT_ON_PAGE",
+      "extraction_method": "HTML parser - <script type='application/ld+json'>",
+      "example_value": null,
+      "is_active": true,
+      "display_order": 4
+    },
+    {
+      "id": "dp_salient_entities",
+      "name": "Salient Entities",
+      "category": "CONTENT",
+      "data_type": "JSON",
+      "crawl4ai_field": "salient_entities",
+      "description": "Key entities extracted from content (people, orgs, places)",
+      "extraction_status": "REQUIRES_CUSTOM_LOGIC",
+      "extraction_method": "Requires NLP (spaCy, OpenAI, etc.)",
+      "example_value": null,
+      "notes": "Not implemented - requires NLP/entity extraction integration",
+      "is_active": true,
+      "display_order": 5
+    },
+    {
+      "id": "dp_body_content_embedding",
+      "name": "Content Embedding",
+      "category": "CONTENT",
+      "data_type": "VECTOR",
+      "crawl4ai_field": "body_content_embedding",
+      "description": "Vector embedding of page content for semantic search",
+      "extraction_status": "REQUIRES_CUSTOM_LOGIC",
+      "extraction_method": "Requires embeddings API (OpenAI, Anthropic, etc.)",
+      "example_value": null,
+      "notes": "Not implemented - requires vector embeddings integration",
+      "is_active": true,
+      "display_order": 6
+    },
+    {
+      "id": "dp_internal_links",
+      "name": "Internal Links",
+      "category": "LINKS",
+      "data_type": "JSON",
+      "crawl4ai_field": "internal_links",
+      "description": "Array of internal links found on the page",
+      "extraction_status": "EXTRACTED",
+      "extraction_method": "Crawl4AI link extraction",
+      "example_value": "[{'href': 'https://lasallecollegevancouver.lcieducation.com/en/about-us', 'text': 'About Us'}...]",
+      "is_active": true,
+      "display_order": 1
+    },
+    {
+      "id": "dp_external_links",
+      "name": "External Links",
+      "category": "LINKS",
+      "data_type": "JSON",
+      "crawl4ai_field": "external_links",
+      "description": "Array of external links found on the page",
+      "extraction_status": "EXTRACTED",
+      "extraction_method": "Crawl4AI link extraction",
+      "example_value": "[{'href': 'https://lasalleinternational.com/...', 'text': 'Apply Now'}...]",
+      "is_active": true,
+      "display_order": 2
+    },
+    {
+      "id": "dp_image_count",
+      "name": "Image Count",
+      "category": "LINKS",
+      "data_type": "INTEGER",
+      "crawl4ai_field": "image_count",
+      "description": "Total number of images on the page",
+      "extraction_status": "EXTRACTED",
+      "extraction_method": "Crawl4AI media extraction",
+      "example_value": "29",
+      "is_active": true,
+      "display_order": 3
+    },
+    {
+      "id": "dp_screenshot_url",
+      "name": "Thumbnail Screenshot",
+      "category": "MEDIA",
+      "data_type": "STRING",
+      "crawl4ai_field": "screenshot_url",
+      "description": "URL or path to viewport screenshot",
+      "extraction_status": "EXTRACTED",
+      "extraction_method": "Crawl4AI screenshot capture (base64 PNG)",
+      "example_value": "Qk2+lXcBAAAAADYAAAA...(24.6 MB base64)",
+      "notes": "Base64 string - should be saved to file and store path",
+      "is_active": true,
+      "display_order": 1
+    },
+    {
+      "id": "dp_screenshot_full_url",
+      "name": "Full Screenshot",
+      "category": "MEDIA",
+      "data_type": "STRING",
+      "crawl4ai_field": "screenshot_full_url",
+      "description": "URL or path to full-page screenshot",
+      "extraction_status": "EXTRACTED",
+      "extraction_method": "Crawl4AI screenshot capture (base64 PNG)",
+      "example_value": "Qk2+lXcBAAAAADYAAAA...(24.6 MB base64)",
+      "notes": "Same as screenshot_url in Crawl4AI v0.7.6",
+      "is_active": true,
+      "display_order": 2
+    },
+    {
+      "id": "dp_url",
+      "name": "Page URL",
+      "category": "TECHNICAL",
+      "data_type": "STRING",
+      "crawl4ai_field": "url",
+      "description": "Full URL of the crawled page",
+      "extraction_status": "EXTRACTED",
+      "extraction_method": "Crawl4AI result.url",
+      "example_value": "https://lasallecollegevancouver.lcieducation.com/en/programs-and-courses/diploma-accounting-and-bookkeeping",
+      "is_active": true,
+      "display_order": 1
+    },
+    {
+      "id": "dp_status_code",
+      "name": "HTTP Status Code",
+      "category": "TECHNICAL",
+      "data_type": "INTEGER",
+      "crawl4ai_field": "status_code",
+      "description": "HTTP status code returned by server",
+      "extraction_status": "EXTRACTED",
+      "extraction_method": "Crawl4AI result.status_code",
+      "example_value": "307",
+      "is_active": true,
+      "display_order": 2
+    },
+    {
+      "id": "dp_success",
+      "name": "Crawl Success",
+      "category": "TECHNICAL",
+      "data_type": "STRING",
+      "crawl4ai_field": "success",
+      "description": "Whether the crawl was successful",
+      "extraction_status": "EXTRACTED",
+      "extraction_method": "Crawl4AI result.success",
+      "example_value": "true",
+      "is_active": true,
+      "display_order": 3
+    },
+    {
+      "id": "dp_error_message",
+      "name": "Error Message",
+      "category": "TECHNICAL",
+      "data_type": "STRING",
+      "crawl4ai_field": "error_message",
+      "description": "Error message if crawl failed",
+      "extraction_status": "EXTRACTED",
+      "extraction_method": "Crawl4AI result.error_message",
+      "example_value": null,
+      "notes": "NULL for successful crawls",
+      "is_active": true,
+      "display_order": 4
+    },
+    {
+      "id": "dp_last_crawled_at",
+      "name": "Last Crawled",
+      "category": "TECHNICAL",
+      "data_type": "DATETIME",
+      "crawl4ai_field": "last_crawled_at",
+      "description": "Timestamp when page was last crawled",
+      "extraction_status": "REQUIRES_CUSTOM_LOGIC",
+      "extraction_method": "Application-managed timestamp",
+      "example_value": null,
+      "notes": "Set by application when saving ClientPage record",
+      "is_active": true,
+      "display_order": 5
+    },
+    {
+      "id": "dp_last_checked_at",
+      "name": "Last Checked",
+      "category": "TECHNICAL",
+      "data_type": "DATETIME",
+      "crawl4ai_field": "last_checked_at",
+      "description": "Timestamp when page status was last checked",
+      "extraction_status": "REQUIRES_CUSTOM_LOGIC",
+      "extraction_method": "Application-managed timestamp",
+      "example_value": null,
+      "notes": "Set by application when re-checking page",
+      "is_active": true,
+      "display_order": 6
+    },
+    {
+      "id": "dp_redirected_url",
+      "name": "Redirected URL",
+      "category": "TECHNICAL",
+      "data_type": "STRING",
+      "crawl4ai_field": "result.redirected_url",
+      "description": "Final URL after following redirects",
+      "extraction_status": "REQUIRES_CUSTOM_LOGIC",
+      "extraction_method": "Requires redirect chain tracking",
+      "example_value": null,
+      "notes": "Not currently tracked by Crawl4AI",
+      "is_active": true,
+      "display_order": 7
+    },
+    {
+      "id": "dp_ssl_valid_until",
+      "name": "SSL Valid Until",
+      "category": "TECHNICAL",
+      "data_type": "DATETIME",
+      "crawl4ai_field": "ssl_certificate.valid_until",
+      "description": "SSL certificate expiration date",
+      "extraction_status": "NOT_WORKING",
+      "extraction_method": "Crawl4AI fetch_ssl_certificate=True",
+      "example_value": null,
+      "notes": "Config enabled but not returning data in v0.7.6",
+      "is_active": true,
+      "display_order": 8
+    },
+    {
+      "id": "dp_ssl_days_until_expiry",
+      "name": "SSL Days Until Expiry",
+      "category": "TECHNICAL",
+      "data_type": "INTEGER",
+      "crawl4ai_field": "ssl_certificate.days_until_expiry",
+      "description": "Days until SSL certificate expires",
+      "extraction_status": "NOT_WORKING",
+      "extraction_method": "Crawl4AI fetch_ssl_certificate=True",
+      "example_value": null,
+      "notes": "Config enabled but not returning data in v0.7.6",
+      "is_active": true,
+      "display_order": 9
+    },
+    {
+      "id": "dp_has_ssl_certificate",
+      "name": "Has SSL Certificate",
+      "category": "TECHNICAL",
+      "data_type": "STRING",
+      "crawl4ai_field": "has_ssl_certificate",
+      "description": "Whether page has valid SSL certificate",
+      "extraction_status": "NOT_WORKING",
+      "extraction_method": "Crawl4AI fetch_ssl_certificate=True",
+      "example_value": null,
+      "notes": "Config enabled but not returning data in v0.7.6",
+      "is_active": true,
+      "display_order": 10
+    }
+  ],
+  "extraction_summary": {
+    "by_status": {
+      "EXTRACTED": {
+        "count": 23,
+        "percentage": "52.3%",
+        "data_points": [
+          "dp_page_title", "dp_meta_description", "dp_h1", "dp_canonical_url",
+          "dp_hreflang", "dp_meta_robots", "dp_og_title", "dp_og_description",
+          "dp_og_image", "dp_twitter_card", "dp_twitter_title", "dp_twitter_description",
+          "dp_twitter_image", "dp_lang", "dp_charset", "dp_meta_viewport",
+          "dp_is_mobile_responsive", "dp_body_content", "dp_word_count",
+          "dp_webpage_structure", "dp_internal_links", "dp_external_links",
+          "dp_image_count", "dp_screenshot_url", "dp_screenshot_full_url",
+          "dp_url", "dp_status_code", "dp_success", "dp_error_message"
+        ]
+      },
+      "NOT_ON_PAGE": {
+        "count": 6,
+        "percentage": "13.6%",
+        "data_points": [
+          "dp_meta_title", "dp_og_type", "dp_og_url", "dp_og_site_name",
+          "dp_twitter_site", "dp_twitter_creator", "dp_schema_markup"
+        ]
+      },
+      "REQUIRES_CUSTOM_LOGIC": {
+        "count": 4,
+        "percentage": "9.1%",
+        "data_points": [
+          "dp_salient_entities", "dp_body_content_embedding",
+          "dp_last_crawled_at", "dp_last_checked_at", "dp_redirected_url"
+        ]
+      },
+      "NOT_WORKING": {
+        "count": 3,
+        "percentage": "6.8%",
+        "data_points": [
+          "dp_ssl_valid_until", "dp_ssl_days_until_expiry", "dp_has_ssl_certificate"
+        ]
+      }
+    },
+    "by_category": {
+      "ONPAGE": {
+        "total": 17,
+        "extracted": 13,
+        "percentage": "76.5%"
+      },
+      "CONTENT": {
+        "total": 6,
+        "extracted": 3,
+        "percentage": "50.0%"
+      },
+      "LINKS": {
+        "total": 3,
+        "extracted": 3,
+        "percentage": "100.0%"
+      },
+      "MEDIA": {
+        "total": 2,
+        "extracted": 2,
+        "percentage": "100.0%"
+      },
+      "TECHNICAL": {
+        "total": 16,
+        "extracted": 4,
+        "percentage": "25.0%"
+      }
+    }
+  },
+  "implementation_notes": {
+    "extraction_pipeline": [
+      "1. Crawl4AI fetches page and returns CrawlResult",
+      "2. HTML Parser (BeautifulSoup) extracts metadata from HTML",
+      "3. Fields are mapped to DataPointDefinition catalog",
+      "4. Extracted data is stored in database"
+    ],
+    "configuration": {
+      "crawl4ai_version": "0.7.6",
+      "browser_config": {
+        "headless": true,
+        "extra_args": ["--disable-gpu", "--disable-dev-shm-usage", "--no-sandbox"]
+      },
+      "crawler_config": {
+        "screenshot": true,
+        "screenshot_wait_for": 1.0,
+        "fetch_ssl_certificate": true,
+        "page_timeout": 60000
+      }
+    },
+    "files": {
+      "html_parser_service": "app/services/html_parser_service.py",
+      "test_script": "test_extraction_enhanced.py",
+      "model": "app/models.py (lines 82-591)",
+      "migration": "migrations/versions/99898f8234b9_add_data_point_definition_model.py"
+    }
+  }
+}

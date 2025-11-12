@@ -1,0 +1,11 @@
+{
+  "client_id": "dbb8d666-31a9-4105-b7bc-6651990e9f07",
+  "urls": [
+    "https://cleio.com/fr/projets/freeo2",
+    "https://cleio.com/fr/projets/dragonvision",
+    "https://cleio.com/fr/projets/optinadx",
+    "https://cleio.com/",
+    "https://cleio.com/en/about"
+  ],
+  "max_concurrent": 2
+}

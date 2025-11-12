@@ -4,6 +4,7 @@
 /* eslint-disable */
 import type { AddManualPageRequest } from '../models/AddManualPageRequest';
 import type { AddManualPageResponse } from '../models/AddManualPageResponse';
+import type { app__schemas__crawling__StartCrawlRequest } from '../models/app__schemas__crawling__StartCrawlRequest';
 import type { CancelCrawlJobRequest } from '../models/CancelCrawlJobRequest';
 import type { CancelCrawlJobResponse } from '../models/CancelCrawlJobResponse';
 import type { CrawlJobStatusResponse } from '../models/CrawlJobStatusResponse';
@@ -13,7 +14,6 @@ import type { RescanSitemapRequest } from '../models/RescanSitemapRequest';
 import type { RescanSitemapResponse } from '../models/RescanSitemapResponse';
 import type { ScrapeSelectedPagesRequest } from '../models/ScrapeSelectedPagesRequest';
 import type { ScrapeSelectedPagesResponse } from '../models/ScrapeSelectedPagesResponse';
-import type { StartCrawlRequest } from '../models/StartCrawlRequest';
 import type { StartCrawlResponse } from '../models/StartCrawlResponse';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import { OpenAPI } from '../core/OpenAPI';
@@ -40,7 +40,7 @@ export class CrawlingService {
      * @throws ApiError
      */
     public static startCrawlJobApiCrawlStartPost(
-        requestBody: StartCrawlRequest,
+        requestBody: app__schemas__crawling__StartCrawlRequest,
     ): CancelablePromise<StartCrawlResponse> {
         return __request(OpenAPI, {
             method: 'POST',

@@ -2,26 +2,18 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import type { Body_generate_backup_api_clients_backup_post } from '../models/Body_generate_backup_api_clients_backup_post';
+import type { ClientBulkDelete } from '../models/ClientBulkDelete';
 import type { ClientCreate } from '../models/ClientCreate';
 import type { ClientDelete } from '../models/ClientDelete';
 import type { ClientRead } from '../models/ClientRead';
+import type { ClientSitemapTest } from '../models/ClientSitemapTest';
+import type { ClientSitemapTestResult } from '../models/ClientSitemapTestResult';
 import type { ClientUpdate } from '../models/ClientUpdate';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import { OpenAPI } from '../core/OpenAPI';
 import { request as __request } from '../core/request';
 export class ClientsService {
-    /**
-     * Get Clients
-     * Get all clients for the current user.
-     * @returns ClientRead Successful Response
-     * @throws ApiError
-     */
-    public static getClientsApiClientsGet(): CancelablePromise<Array<ClientRead>> {
-        return __request(OpenAPI, {
-            method: 'GET',
-            url: '/api/clients',
-        });
-    }
     /**
      * Create Client
      * Create a new client.
@@ -37,6 +29,30 @@ export class ClientsService {
             url: '/api/clients',
             body: requestBody,
             mediaType: 'application/json',
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * Get Clients
+     * Get all clients (shared across platform). Supports search and filtering.
+     * @param search Search by name or website URL
+     * @param projectLeadId Filter by project lead
+     * @returns ClientRead Successful Response
+     * @throws ApiError
+     */
+    public static getClientsApiClientsGet(
+        search?: (string | null),
+        projectLeadId?: (string | null),
+    ): CancelablePromise<Array<ClientRead>> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/clients',
+            query: {
+                'search': search,
+                'project_lead_id': projectLeadId,
+            },
             errors: {
                 422: `Validation Error`,
             },
@@ -106,6 +122,67 @@ export class ClientsService {
             path: {
                 'client_id': clientId,
             },
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * Test Sitemap
+     * Test a sitemap URL to validate it and count URLs.
+     * @param requestBody
+     * @returns ClientSitemapTestResult Successful Response
+     * @throws ApiError
+     */
+    public static testSitemapApiClientsTestSitemapPost(
+        requestBody: ClientSitemapTest,
+    ): CancelablePromise<ClientSitemapTestResult> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/clients/test-sitemap',
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * Bulk Delete Clients
+     * Delete multiple clients. Optionally creates a backup .zip file.
+     * Returns the backup file if create_backup=True.
+     * @param requestBody
+     * @returns any Successful Response
+     * @throws ApiError
+     */
+    public static bulkDeleteClientsApiClientsBulkDeletePost(
+        requestBody: ClientBulkDelete,
+    ): CancelablePromise<any> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/clients/bulk-delete',
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * Generate Backup
+     * Generate a backup .zip file for specific clients.
+     * @param requestBody
+     * @returns any Successful Response
+     * @throws ApiError
+     */
+    public static generateBackupApiClientsBackupPost(
+        requestBody: Body_generate_backup_api_clients_backup_post,
+    ): CancelablePromise<any> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/clients/backup',
             body: requestBody,
             mediaType: 'application/json',
             errors: {

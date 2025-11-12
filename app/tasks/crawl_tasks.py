@@ -10,7 +10,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.date import DateTrigger
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.services.crawling_service import CrawlingService
+from app.services.page_crawl_service import PageCrawlService
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +53,7 @@ async def run_crawl_job_task(project_id: str) -> None:
 
     async with async_session_factory() as session:
         try:
-            crawling_service = CrawlingService(session)
+            crawling_service = PageCrawlService(session)
 
             # Convert project_id string to UUID
             project_uuid = uuid.UUID(project_id)

@@ -2,8 +2,7 @@
 Database configuration with automatic environment loading.
 """
 
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 
 from app.config.base import config
 
@@ -16,7 +15,7 @@ async_engine = create_async_engine(
     future=True,
     connect_args={"server_settings": {"jit": "off"}},
 )
-AsyncSessionLocal = sessionmaker(
+AsyncSessionLocal = async_sessionmaker(
     autocommit=False, autoflush=True, bind=async_engine, class_=AsyncSession
 )
 

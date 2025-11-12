@@ -6,8 +6,12 @@ from app.services.users_service import UserService
 
 
 class JWTAuthenticationBackend(AuthenticationBackend):
-    async def authenticate(self, request):
-        jwt_token = request.cookies.get(JWT_COOKIE_NAME)
+    async def authenticate(self, conn):
+        # Check if this is an HTTP request (not WebSocket)
+        if "http" not in conn.scope.get("type", ""):
+            return AuthCredentials(["unauthenticated"]), UnauthenticatedUser()
+
+        jwt_token = conn.cookies.get(JWT_COOKIE_NAME)
         if jwt_token is None:
             return AuthCredentials(["unauthenticated"]), UnauthenticatedUser()
 

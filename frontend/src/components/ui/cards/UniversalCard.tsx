@@ -28,6 +28,7 @@ interface ModernCardProps {
   variant?: 'default' | 'glass' | 'gradient' | 'elevated';
   hover?: boolean;
   withGradientBorder?: boolean;
+  onClick?: () => void;
   sx?: any;
 }
 
@@ -197,10 +198,12 @@ export const ModernCard: React.FC<ModernCardProps> = ({
   variant = 'glass',
   hover = false,
   withGradientBorder = false,
+  onClick,
   sx,
 }) => {
   return (
     <Card
+      onClick={onClick}
       sx={(theme) => ({
         ...getCardStyles(theme, variant, hover, withGradientBorder),
         borderRadius: `${theme.shape.borderRadius}px`,
