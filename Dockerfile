@@ -60,9 +60,11 @@ COPY . .
 # Create static directory for future use (optional)
 RUN mkdir -p /usr/src/app/static
 
+# Make startup script executable
+RUN chmod +x startup.sh
+
 # Expose port (Render will use PORT env var)
 EXPOSE ${PORT:-8080}
 
-# Specify the command to run on container start
-# Use sh -c to allow environment variable substitution
-CMD sh -c "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8080}"
+# Run startup script which handles migrations, superuser creation, and app start
+CMD ["./startup.sh"]
