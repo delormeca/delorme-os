@@ -94,7 +94,7 @@ export const CreateClientForm: React.FC = () => {
 
     setSitemapTest({ testing: true });
     try {
-      const result = await ClientsService.testSitemap({
+      const result = await ClientsService.testSitemapApiClientsTestSitemapPost({
         sitemap_url: sitemapUrl,
       });
       setSitemapTest({ testing: false, result });
