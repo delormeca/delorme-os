@@ -51,6 +51,7 @@ langchain = "^1.0.3"
 google-cloud-language = "^2.18.0"
 openai = "^2.7.1"
 redis = "^7.0.1"
+slowapi = "^0.1.9"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.0.0"
@@ -64,6 +65,10 @@ isort = "^6.0.1"
 flake8 = "^7.3.0"
 pylint = "^3.3.7"
 ruff = "^0.12.2"
+pytest-playwright = "^0.7.1"
+playwright = "^1.56.0"
+pytest-html = "^4.1.1"
+pytest-json-report = "^1.5.0"
 
 [tool.poetry.scripts]
 # Development commands (automatically load environment)

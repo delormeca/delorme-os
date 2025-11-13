@@ -196,6 +196,17 @@ class BaseConfig(BaseSettings):
         """Check if running in staging environment."""
         return self.env.lower() in ("staging", "stage")
 
+    def model_post_init(self, __context) -> None:
+        """
+        Validate critical production settings after initialization.
+        Called automatically by Pydantic after model is created.
+        """
+        if self.is_production() and self.secret_key == "example-key":
+            raise ValueError(
+                "CRITICAL SECURITY: SECRET_KEY must be set in production!\n"
+                "Generate a secure key with: python -c 'import secrets; print(secrets.token_urlsafe(32))'"
+            )
+
 
 # Create a singleton instance for easy importing
 config = BaseConfig()

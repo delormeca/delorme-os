@@ -7,14 +7,20 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware import Middleware
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from sqlmodel import SQLModel
 from starlette.middleware.authentication import AuthenticationMiddleware
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 
-# Fix for Python 3.13 on Windows - Playwright/Crawl4ai subprocess issue
+# CRITICAL: Set event loop policy at module import time (before uvicorn creates loops)
+# This MUST be the first thing that happens on Windows for Playwright/subprocess support
 if sys.platform == 'win32':
-    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+    asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
+    print("[STARTUP] Set WindowsProactorEventLoopPolicy for Playwright/APScheduler compatibility")
 
     # Fix for Windows console encoding issues with Crawl4AI/rich
     # Reconfigure stdout/stderr to use UTF-8 encoding
@@ -54,21 +60,39 @@ async def lifespan(app: FastAPI):
         logging.warning(f"⚠️ Database initialization: {str(e)}")
         logging.info("✅ Continuing with existing database schema")
 
-    # Initialize APScheduler
+    # Initialize APScheduler (for sitemap discovery)
     from app.tasks.crawl_tasks import get_scheduler, shutdown_scheduler
     scheduler = get_scheduler()
-    logging.info(f"✅ APScheduler started with {len(scheduler.get_jobs())} jobs")
+    logging.info(f"✅ APScheduler (crawl_tasks) started with {len(scheduler.get_jobs())} jobs")
+
+    # Initialize APScheduler for page crawl tasks (data extraction)
+    from app.tasks.page_crawl_tasks import get_page_crawl_scheduler, shutdown_page_crawl_scheduler
+    page_crawl_scheduler = get_page_crawl_scheduler()
+    logging.info(f"✅ APScheduler (page_crawl_tasks) started with {len(page_crawl_scheduler.get_jobs())} jobs")
 
     yield
 
-    # Shutdown
-    logging.info("🛑 Shutting down APScheduler...")
+    # Shutdown both schedulers
+    logging.info("🛑 Shutting down APSchedulers...")
     shutdown_scheduler()
-    logging.info("✅ APScheduler shutdown complete")
+    shutdown_page_crawl_scheduler()
+    logging.info("✅ APSchedulers shutdown complete")
 
 middleware = [Middleware(AuthenticationMiddleware, backend=JWTAuthenticationBackend())]
 
 app = FastAPI(debug=True, middleware=middleware, lifespan=lifespan)
+
+# Rate limiter configuration
+limiter = Limiter(key_func=get_remote_address, default_limits=["100/minute"])
+app.state.limiter = limiter
+
+# Rate limit error handler
+@app.exception_handler(RateLimitExceeded)
+async def rate_limit_handler(request, exc):
+    return JSONResponse(
+        status_code=429,
+        content={"error": "Rate limit exceeded. Please try again later."}
+    )
 
 # Add CORS middleware to handle preflight OPTIONS requests
 app.add_middleware(
@@ -85,6 +109,9 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allow_headers=["*"],
 )
+
+# Add rate limiting middleware
+app.add_middleware(SlowAPIMiddleware)
 
 @app.middleware("http")
 async def add_security_headers(request, call_next):
@@ -127,6 +154,14 @@ if os.path.exists(public_directory):
         "/assets", StaticFiles(directory=public_directory, html=True), name="static"
     )
 
+# Mount screenshots directory
+screenshots_directory = "static/screenshots"
+
+if os.path.exists(screenshots_directory):
+    app.mount(
+        "/screenshots", StaticFiles(directory=screenshots_directory), name="screenshots"
+    )
+
 
 @app.get("/api/health")
 async def health_check():
@@ -167,4 +202,5 @@ if __name__ == "__main__":
     import uvicorn
 
     uvicorn.run(app, host="localhost", port=8020)
+
 
