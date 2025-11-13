@@ -3,6 +3,7 @@ import logging
 import os
 import sys
 from contextlib import asynccontextmanager
+from datetime import datetime
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware import Middleware
 from fastapi.middleware.cors import CORSMiddleware
@@ -48,6 +49,48 @@ async def lifespan(app: FastAPI):
         # Tables might already exist - log warning but continue
         logging.warning(f"⚠️ Database initialization: {str(e)}")
         logging.info("✅ Continuing with existing database schema")
+
+    # Ensure superuser exists - run in proper async context
+    async def ensure_superuser():
+        try:
+            from app.db import AsyncSessionLocal
+            from app.models import User, AccountType, PlanType
+            from passlib.context import CryptContext
+            from sqlmodel import select
+            import uuid
+
+            async with AsyncSessionLocal() as db:
+                # Check if superuser exists
+                result = await db.execute(select(User).where(User.email == 'tommy@delorme.ca'))
+                user = result.scalar_one_or_none()
+
+                if not user:
+                    # Create superuser
+                    pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+                    hashed_password = pwd_context.hash('Hockey999!!!')
+
+                    user = User(
+                        id=uuid.uuid4(),
+                        email='tommy@delorme.ca',
+                        password_hash=hashed_password,
+                        full_name='Tommy Delorme',
+                        is_superuser=True,
+                        verified=True,
+                        account_type=AccountType.premium,
+                        current_plan=PlanType.ENTERPRISE,
+                        created_at=datetime.utcnow(),
+                        last_login=datetime.utcnow()
+                    )
+                    db.add(user)
+                    await db.commit()
+                    logging.info(f"✅ Superuser created: {user.email}")
+                else:
+                    logging.info(f"✅ Superuser exists: {user.email}")
+        except Exception as e:
+            logging.error(f"❌ Failed to ensure superuser exists: {str(e)}")
+
+    # Run the superuser creation
+    await ensure_superuser()
 
     # Initialize APScheduler
     from app.tasks.crawl_tasks import get_scheduler, shutdown_scheduler
