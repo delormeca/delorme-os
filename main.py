@@ -11,6 +11,7 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from sqlmodel import SQLModel
 from starlette.middleware.authentication import AuthenticationMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
@@ -46,6 +47,28 @@ from app.controllers.tags import router as tags_router
 from app.controllers.setup import setup_router
 from app.db import async_engine
 from app.config.base import config
+
+
+class RequestSizeLimitMiddleware(BaseHTTPMiddleware):
+    """Middleware to limit request payload size and prevent DoS attacks"""
+
+    def __init__(self, app, max_upload_size: int = 10 * 1024 * 1024):  # 10 MB default
+        super().__init__(app)
+        self.max_upload_size = max_upload_size
+
+    async def dispatch(self, request, call_next):
+        if request.method in ["POST", "PUT", "PATCH"]:
+            content_length = request.headers.get("content-length")
+            if content_length and int(content_length) > self.max_upload_size:
+                return JSONResponse(
+                    status_code=413,
+                    content={
+                        "error": f"Request too large. Maximum size: {self.max_upload_size / 1024 / 1024:.0f}MB"
+                    }
+                )
+        response = await call_next(request)
+        return response
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -107,11 +130,14 @@ app.add_middleware(
     ],
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-    allow_headers=["*"],
+    allow_headers=["Authorization", "Content-Type", "Accept", "Origin", "X-Requested-With"],
 )
 
 # Add rate limiting middleware
 app.add_middleware(SlowAPIMiddleware)
+
+# Add request size limit middleware (10 MB limit)
+app.add_middleware(RequestSizeLimitMiddleware, max_upload_size=10 * 1024 * 1024)
 
 @app.middleware("http")
 async def add_security_headers(request, call_next):

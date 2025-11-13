@@ -2,6 +2,8 @@ from typing import Union
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import JSONResponse, RedirectResponse
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 from app.config import JWT_COOKIE_NAME, REDIRECT_AFTER_LOGIN
 from app.schemas.auth import (CurrentUserResponse, ForgotPasswordRequest,
@@ -12,6 +14,7 @@ from app.services.oauth_service import OAuthService, get_oauth_service
 from app.services.users_service import UserService, get_user_service
 
 auth_router = APIRouter()
+limiter = Limiter(key_func=get_remote_address)
 
 
 @auth_router.get("/current", response_model=CurrentUserResponse)
@@ -29,8 +32,11 @@ async def current_user(
 
 
 @auth_router.post("/login", response_model=LoginResponse)
+@limiter.limit("5/minute")
 async def login(
-    form_data: LoginForm, user_service: UserService = Depends(get_user_service)
+    request: Request,
+    form_data: LoginForm,
+    user_service: UserService = Depends(get_user_service)
 ) -> JSONResponse:
     res = await user_service.login(form_data.email, form_data.password)
     response = JSONResponse(
@@ -48,7 +54,9 @@ async def logout() -> JSONResponse:
 
 
 @auth_router.post("/signup", response_model=LoginResponse)
+@limiter.limit("3/minute")
 async def signup(
+    request: Request,
     form_data: SignupForm,
     user_service: UserService = Depends(get_user_service),
 ) -> JSONResponse:
@@ -97,7 +105,9 @@ async def update_user_profile(
 
 
 @auth_router.post("/forgot-password", response_model=ForgotPasswordResponse)
+@limiter.limit("3/minute")
 async def forgot_password(
+    request: Request,
     request_data: ForgotPasswordRequest,
     user_service: UserService = Depends(get_user_service),
 ) -> ForgotPasswordResponse:
@@ -109,7 +119,9 @@ async def forgot_password(
 
 
 @auth_router.post("/reset-password", response_model=ForgotPasswordResponse)
+@limiter.limit("5/minute")
 async def reset_password(
+    request: Request,
     request_data: ResetPasswordRequest,
     user_service: UserService = Depends(get_user_service),
 ) -> ForgotPasswordResponse:
