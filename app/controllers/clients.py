@@ -54,14 +54,20 @@ async def get_client_by_slug(
     return await client_service.get_client_by_slug(db, slug)
 
 
-@router.get("/clients/{client_id}", response_model=ClientRead)
+@router.get("/clients/{client_identifier}", response_model=ClientRead)
 async def get_client(
-    client_id: UUID,
+    client_identifier: str,
     db: AsyncSession = Depends(get_async_db_session),
     current_user: CurrentUserResponse = Depends(get_current_user),
 ):
-    """Get a client by ID."""
-    return await client_service.get_client_by_id(db, client_id)
+    """Get a client by ID or slug."""
+    # Try to parse as UUID first
+    try:
+        client_uuid = UUID(client_identifier)
+        return await client_service.get_client_by_id(db, client_uuid)
+    except ValueError:
+        # If not a UUID, treat as slug
+        return await client_service.get_client_by_slug(db, client_identifier)
 
 
 @router.put("/clients/{client_id}", response_model=ClientRead)

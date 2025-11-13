@@ -12,6 +12,7 @@ from app.db import get_async_db_session
 from app.services.users_service import get_current_user
 from app.models import User, Client, CrawlRun
 from app.services.page_crawl_service import PageCrawlService
+from app.services import client_service
 from app.tasks.page_crawl_tasks import (
     schedule_page_crawl,
     cancel_page_crawl_job,
@@ -19,6 +20,17 @@ from app.tasks.page_crawl_tasks import (
 )
 
 router = APIRouter(prefix="/api/page-crawl", tags=["Page Crawl"])
+
+
+async def resolve_client_identifier(client_identifier: str, db: AsyncSession) -> uuid.UUID:
+    """Helper to resolve client identifier (UUID or slug) to UUID."""
+    try:
+        # Try parsing as UUID first
+        return uuid.UUID(client_identifier)
+    except ValueError:
+        # If not a UUID, treat as slug and get the client
+        client = await client_service.get_client_by_slug(db, client_identifier)
+        return client.id
 
 
 # ============================================================================
@@ -212,19 +224,22 @@ async def list_crawl_jobs(
     return job_list
 
 
-@router.get("/client/{client_id}/runs", response_model=List[dict])
+@router.get("/client/{client_identifier}/runs", response_model=List[dict])
 async def list_client_crawl_runs(
-    client_id: uuid.UUID,
+    client_identifier: str,
     limit: int = 10,
     db: AsyncSession = Depends(get_async_db_session),
     current_user: User = Depends(get_current_user),
 ):
     """
-    List recent crawl runs for a client.
+    List recent crawl runs for a client (accepts UUID or slug).
 
     Returns the most recent crawl runs, ordered by creation date.
     """
     from sqlalchemy import select
+
+    # Resolve client identifier to UUID
+    client_id = await resolve_client_identifier(client_identifier, db)
 
     # TODO: Add permission check - user must own the client
 

@@ -341,18 +341,38 @@ async def test_sitemap(sitemap_url: str) -> ClientSitemapTestResult:
         ClientSitemapTestResult with validation results
     """
     try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
+        # Use realistic browser headers to avoid bot detection
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.5",
+            "Accept-Encoding": "gzip, deflate, br",
+            "Connection": "keep-alive",
+            "Upgrade-Insecure-Requests": "1",
+        }
+
+        async with httpx.AsyncClient(timeout=15.0, follow_redirects=True, headers=headers) as client:
             response = await client.get(sitemap_url)
             response.raise_for_status()
 
             content = response.text
+
+            # Check for bot protection indicators
+            if any(indicator in content.lower() for indicator in ["cloudflare", "cf-ray", "vercel", "cf-chl", "cf-browser-verification"]):
+                # If we detect bot protection but got content, it might still be valid XML
+                if not (content.strip().startswith("<?xml") or content.strip().startswith("<")):
+                    return ClientSitemapTestResult(
+                        is_valid=False,
+                        url_count=0,
+                        error="The site is using bot protection (Cloudflare, Vercel, etc.). Try using Manual URL Entry instead.",
+                    )
 
             # Basic validation - check if it's XML
             if not content.strip().startswith("<?xml") and not content.strip().startswith("<"):
                 return ClientSitemapTestResult(
                     is_valid=False,
                     url_count=0,
-                    error="Invalid sitemap format - not XML",
+                    error="Invalid sitemap format - not XML. Check if the sitemap URL is correct. Try /sitemap.xml or /sitemap_index.xml",
                 )
 
             # Count URLs (simple count of <loc> tags)
@@ -360,26 +380,56 @@ async def test_sitemap(sitemap_url: str) -> ClientSitemapTestResult:
             url_pattern = r"<loc>(.*?)</loc>"
             urls = re.findall(url_pattern, content)
 
+            # Check if this is a sitemap index (contains <sitemap> tags instead of direct URLs)
+            sitemap_pattern = r"<sitemap>"
+            is_sitemap_index = bool(re.search(sitemap_pattern, content))
+
+            # Determine sitemap type
+            sitemap_type = "sitemapindex" if is_sitemap_index else "urlset"
+
             # Get sample URLs (first 5)
             sample_urls = urls[:5] if urls else []
+
+            # If no URLs found, provide helpful error
+            if len(urls) == 0:
+                return ClientSitemapTestResult(
+                    is_valid=False,
+                    url_count=0,
+                    error="No URLs found in sitemap. Check if the sitemap URL is correct. Try /sitemap.xml or /sitemap_index.xml",
+                )
 
             return ClientSitemapTestResult(
                 is_valid=True,
                 url_count=len(urls),
                 sample_urls=sample_urls,
+                message=f"Sitemap validated successfully! Found {len(urls)} URLs ({sitemap_type}).",
             )
 
     except httpx.HTTPStatusError as e:
-        return ClientSitemapTestResult(
-            is_valid=False,
-            url_count=0,
-            error=f"HTTP {e.response.status_code}: {e.response.reason_phrase}",
-        )
+        # Provide more helpful error messages
+        if e.response.status_code == 403:
+            return ClientSitemapTestResult(
+                is_valid=False,
+                url_count=0,
+                error="Access forbidden (403). The site may be blocking automated requests. Try using Manual URL Entry instead.",
+            )
+        elif e.response.status_code == 404:
+            return ClientSitemapTestResult(
+                is_valid=False,
+                url_count=0,
+                error="Sitemap not found (404). Check if the sitemap URL is correct. Try /sitemap.xml or /sitemap_index.xml",
+            )
+        else:
+            return ClientSitemapTestResult(
+                is_valid=False,
+                url_count=0,
+                error=f"HTTP {e.response.status_code}: {e.response.reason_phrase}. Check if the sitemap URL is correct.",
+            )
     except httpx.RequestError as e:
         return ClientSitemapTestResult(
             is_valid=False,
             url_count=0,
-            error=f"Connection error: {str(e)}",
+            error=f"Connection error: {str(e)}. Check if the sitemap URL is accessible.",
         )
     except Exception as e:
         return ClientSitemapTestResult(

@@ -82,4 +82,5 @@ class ClientSitemapTestResult(BaseModel):
     is_valid: bool
     url_count: int
     error: Optional[str] = None
+    message: Optional[str] = None
     sample_urls: list[str] = Field(default_factory=list)

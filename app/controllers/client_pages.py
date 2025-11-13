@@ -21,8 +21,20 @@ from app.services.client_page_service import ClientPageService
 from app.services.page_extraction_service import PageExtractionService
 from app.services.users_service import get_current_user
 from app.core.exceptions import NotFoundException, ValidationException
+from app.services import client_service
 
 router = APIRouter()
+
+
+async def resolve_client_identifier(client_identifier: str, db: AsyncSession) -> UUID:
+    """Helper to resolve client identifier (UUID or slug) to UUID."""
+    try:
+        # Try parsing as UUID first
+        return UUID(client_identifier)
+    except ValueError:
+        # If not a UUID, treat as slug and get the client
+        client = await client_service.get_client_by_slug(db, client_identifier)
+        return client.id
 
 
 # Request/Response schemas for extraction
@@ -174,14 +186,17 @@ async def delete_page(
         )
 
 
-@router.get("/client-pages/client/{client_id}/count", response_model=dict)
+@router.get("/client-pages/client/{client_identifier}/count", response_model=dict)
 async def get_client_page_count(
-    client_id: UUID,
+    client_identifier: str,
     db: AsyncSession = Depends(get_async_db_session),
     current_user: CurrentUserResponse = Depends(get_current_user),
 ):
-    """Get total and failed page counts for a client."""
+    """Get total and failed page counts for a client (accepts UUID or slug)."""
     try:
+        # Resolve client identifier to UUID
+        client_id = await resolve_client_identifier(client_identifier, db)
+
         page_service = ClientPageService(db)
 
         total_count = await page_service.get_client_page_count(client_id)
