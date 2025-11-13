@@ -1,0 +1,62 @@
+# Development files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+
+# Environment
+.env
+local.env
+prod.env
+staging.env
+*.env
+
+# Frontend (deployed separately)
+frontend/
+node_modules/
+
+# Testing
+.pytest_cache/
+tests/
+*.test.py
+
+# Documentation
+docs/
+*.md
+!README.md
+
+# Database
+postgres/
+*.sql
+*.db
+*.sqlite
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Git
+.git/
+.gitignore
+
+# Poetry
+poetry.lock
+pyproject.toml
+
+# Other projects
+deep-researcher/
+
+# Logs
+*.log
+logs/
+
+# Migrations (optional - uncomment if you want to exclude)
+# migrations/
