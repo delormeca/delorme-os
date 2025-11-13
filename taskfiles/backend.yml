@@ -43,7 +43,7 @@ tasks:
           TITLE: "{{.PROJECT}} Backend Server"
       - echo "🚀 API Docs - http://localhost:8020/docs"
       - echo ""
-      - poetry run uvicorn main:app --reload --reload-dir app --port 8020
+      - poetry run python start.py
 
   run-prod:
     desc: Start FastAPI production server (auto-loads prod.env)

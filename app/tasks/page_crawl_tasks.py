@@ -34,6 +34,12 @@ def get_page_crawl_scheduler() -> AsyncIOScheduler:
     global page_crawl_scheduler
 
     if page_crawl_scheduler is None:
+        # CRITICAL: On Windows, ensure APScheduler uses ProactorEventLoop for subprocess support
+        import sys
+        if sys.platform == 'win32':
+            asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
+            logger.info("✅ Set WindowsProactorEventLoopPolicy for APScheduler")
+
         page_crawl_scheduler = AsyncIOScheduler()
         page_crawl_scheduler.start()
         logger.info("✅ Page crawl scheduler started")
@@ -56,6 +62,27 @@ async def run_page_crawl_task(
         selected_page_ids: Optional list of specific page IDs to crawl (as strings)
         crawl_run_id: Optional existing CrawlRun ID (if already created)
     """
+    import sys
+
+    # CRITICAL: APScheduler jobs run in their own async context
+    # On Windows, we MUST ensure the running loop supports subprocesses (for Playwright)
+    if sys.platform == 'win32':
+        try:
+            # Get the currently running loop
+            loop = asyncio.get_running_loop()
+
+            # Check if it's a ProactorEventLoop
+            if not isinstance(loop, asyncio.ProactorEventLoop):
+                # If not, we're stuck - we can't replace a running loop
+                logger.error("❌ Current event loop is not ProactorEventLoop - Playwright will fail!")
+                logger.error(f"   Loop type: {type(loop).__name__}")
+                logger.error("   This should have been set in start.py before uvicorn started")
+            else:
+                logger.info("✅ Confirmed ProactorEventLoop is active in background task")
+        except RuntimeError:
+            # No event loop running - this shouldn't happen in APScheduler jobs
+            logger.warning("⚠️  No event loop running in background task")
+
     from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 
     logger.info(f"🚀 Starting {run_type} page crawl for client {client_id}")

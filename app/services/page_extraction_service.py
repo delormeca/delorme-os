@@ -6,11 +6,12 @@ from typing import Optional, Dict, Any
 import uuid
 from datetime import datetime
 
-from crawl4ai import AsyncWebCrawler, BrowserConfig, CrawlerRunConfig
+from crawl4ai import AsyncWebCrawler, BrowserConfig, CrawlerRunConfig, CacheMode
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.models import ClientPage
 from app.services.html_parser_service import HTMLParserService
+from app.services.adaptive_timeout import AdaptiveTimeout
 
 
 class PageExtractionService:
@@ -49,32 +50,56 @@ class PageExtractionService:
 
         return page
 
-    async def extract_page_data(self, url: str) -> Dict[str, Any]:
+    async def extract_page_data(
+        self,
+        url: str,
+        use_stealth: bool = False,
+        custom_timeout: Optional[int] = None,
+        retry_attempt: int = 0
+    ) -> Dict[str, Any]:
         """
         Extract all data points from a page using Crawl4AI + HTML Parser.
 
         Args:
             url: URL to extract data from
+            use_stealth: Enable stealth mode to avoid bot detection
+            custom_timeout: Override timeout (otherwise uses adaptive timeout)
+            retry_attempt: Current retry attempt number (0 = first try)
 
         Returns:
             Dictionary with all extracted fields
         """
-        # Configure browser
+        # Configure browser with optional stealth mode
+        extra_args = ["--disable-gpu", "--disable-dev-shm-usage", "--no-sandbox"]
+
+        if use_stealth:
+            # Add stealth arguments to avoid bot detection
+            extra_args.extend([
+                "--disable-blink-features=AutomationControlled",  # Hide automation
+                "--disable-features=IsolateOrigins,site-per-process",
+                "--disable-site-isolation-trials",
+            ])
+
         browser_config = BrowserConfig(
             headless=True,
             verbose=False,
-            extra_args=["--disable-gpu", "--disable-dev-shm-usage", "--no-sandbox"]
+            extra_args=extra_args
         )
 
-        # Configure crawler with JS support
+        # Get adaptive timeout and wait time
+        timeout_seconds = custom_timeout or AdaptiveTimeout.get_timeout(url, attempt=retry_attempt)
+        wait_time = AdaptiveTimeout.get_wait_time(url)
+
+        # Configure crawler with JS support and adaptive settings
         crawler_config = CrawlerRunConfig(
-            page_timeout=60000,
+            page_timeout=timeout_seconds * 1000,  # Convert to milliseconds
             wait_until="domcontentloaded",
             word_count_threshold=1,
-            delay_before_return_html=1.5,  # Wait for JS execution (schema markup, etc.)
+            delay_before_return_html=wait_time,  # Adaptive wait for JS execution
             screenshot=True,
             screenshot_wait_for=1.0,
             fetch_ssl_certificate=True,
+            cache_mode=CacheMode.BYPASS,  # CRITICAL: Avoid cached empty results for meta tags
             verbose=False,
         )
 
@@ -240,15 +265,29 @@ class PageExtractionService:
 
             page.image_count = extraction_result.get('image_count')
 
-            # Screenshots (base64 strings - in production, save to file and store path)
+            # Screenshots (base64 strings - store as data URLs for browser display)
             screenshot = extraction_result.get('screenshot_url')
             if screenshot:
-                # For now, store first 1000 chars as reference (in production, save to S3/storage)
-                page.screenshot_url = f"base64:{len(screenshot)} chars" if len(screenshot) > 1000 else screenshot
+                # Store screenshot as base64 data URL for browser display
+                if screenshot.startswith('data:image'):
+                    page.screenshot_url = screenshot
+                elif screenshot.startswith('iVBOR') or screenshot.startswith('/9j/'):
+                    # Raw base64 - add data URL prefix (PNG or JPEG)
+                    image_type = 'png' if screenshot.startswith('iVBOR') else 'jpeg'
+                    page.screenshot_url = f"data:image/{image_type};base64,{screenshot}"
+                else:
+                    page.screenshot_url = screenshot
 
             screenshot_full = extraction_result.get('screenshot_full_url')
             if screenshot_full:
-                page.screenshot_full_url = f"base64:{len(screenshot_full)} chars" if len(screenshot_full) > 1000 else screenshot_full
+                # Store full screenshot as base64 data URL
+                if screenshot_full.startswith('data:image'):
+                    page.screenshot_full_url = screenshot_full
+                elif screenshot_full.startswith('iVBOR') or screenshot_full.startswith('/9j/'):
+                    image_type = 'png' if screenshot_full.startswith('iVBOR') else 'jpeg'
+                    page.screenshot_full_url = f"data:image/{image_type};base64,{screenshot_full}"
+                else:
+                    page.screenshot_full_url = screenshot_full
 
         page.last_checked_at = datetime.utcnow()
         page.updated_at = datetime.utcnow()

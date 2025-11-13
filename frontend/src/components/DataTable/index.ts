@@ -5,3 +5,4 @@ export { ColumnSettingsModal } from './ColumnSettingsModal';
 export { PaginationControls } from './PaginationControls';
 export { BulkActionsBar } from './BulkActionsBar';
 export { SearchFilterBar } from './SearchFilterBar';
+export { ScreenshotModal } from './ScreenshotModal';

@@ -12,6 +12,11 @@ import io
 from typing import Optional, Dict, Any
 from dataclasses import dataclass
 
+# Fix for Windows asyncio event loop policy (Python 3.13 compatibility)
+# MUST be before any async operations or imports that use asyncio
+if sys.platform == 'win32':
+    asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
+
 # Fix for Windows console encoding issues with Crawl4AI
 # MUST be before importing crawl4ai
 if sys.platform == 'win32':

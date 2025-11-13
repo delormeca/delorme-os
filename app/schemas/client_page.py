@@ -79,12 +79,12 @@ class ClientPageRead(ClientPageBase):
     # Content Analysis
     body_content: Optional[str] = Field(default=None, description="Full page body text")
     webpage_structure: Optional[dict] = Field(default=None, description="Heading hierarchy structure")
-    schema_markup: Optional[dict] = Field(default=None, description="Structured data/schema markup")
+    schema_markup: Optional[list] = Field(default=None, description="Structured data/schema markup (array of JSON-LD objects)")
     salient_entities: Optional[dict] = Field(default=None, description="Named entities with salience scores")
 
     # Links
-    internal_links: Optional[dict] = Field(default=None, description="Internal links found on page")
-    external_links: Optional[dict] = Field(default=None, description="External links found on page")
+    internal_links: Optional[list] = Field(default=None, description="Internal links found on page")
+    external_links: Optional[list] = Field(default=None, description="External links found on page")
     image_count: Optional[int] = Field(default=None, description="Number of images on page")
 
     # Embeddings

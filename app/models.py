@@ -250,12 +250,12 @@ class ClientPage(UUIDModelBase, table=True):
     # Content Analysis
     body_content: Optional[str] = Field(default=None, sa_column=Column(sa.Text))
     webpage_structure: Optional[dict] = Field(default=None, sa_column=Column(JSON))  # Nested heading hierarchy
-    schema_markup: Optional[dict] = Field(default=None, sa_column=Column(JSON))  # Structured data
+    schema_markup: Optional[list] = Field(default=None, sa_column=Column(JSON))  # Structured data (array of JSON-LD objects)
     salient_entities: Optional[dict] = Field(default=None, sa_column=Column(JSON))  # Entities with salience scores
 
     # Links
-    internal_links: Optional[dict] = Field(default=None, sa_column=Column(JSON))  # Array of {url, anchor_text}
-    external_links: Optional[dict] = Field(default=None, sa_column=Column(JSON))  # Array of {url, anchor_text}
+    internal_links: Optional[list] = Field(default=None, sa_column=Column(JSON))  # Array of {url, anchor_text}
+    external_links: Optional[list] = Field(default=None, sa_column=Column(JSON))  # Array of {url, anchor_text}
     image_count: Optional[int] = Field(default=None)
 
     # Embeddings (for future cosine similarity)

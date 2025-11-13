@@ -40,6 +40,7 @@ import { SearchFilterBar } from './SearchFilterBar';
 import { ColumnSettingsModal } from './ColumnSettingsModal';
 import { PageFiltersBar, PageFilters } from './PageFiltersBar';
 import { TagManagementModal } from './TagManagementModal';
+import { ScreenshotModal } from './ScreenshotModal';
 import { useBulkUpdateTags, useClientTags } from '@/hooks/api';
 import {
   WebpageStructureCell,
@@ -67,7 +68,6 @@ const DEFAULT_VISIBLE_COLUMNS = [
   'page_status',
   'page_screenshot',
   'page_title',
-  'meta_title',
   'meta_description',
   'h1',
   'canonical',
@@ -99,6 +99,12 @@ export const EnhancedDataTable: React.FC<EnhancedDataTableProps> = ({
     statusCodes: [],
   });
   const [tagModalOpen, setTagModalOpen] = useState(false);
+  const [screenshotModalOpen, setScreenshotModalOpen] = useState(false);
+  const [selectedScreenshot, setSelectedScreenshot] = useState<{
+    url: string | null | undefined;
+    fullUrl?: string | null | undefined;
+    pageUrl: string;
+  } | null>(null);
 
   // Tag management hooks
   const { mutateAsync: bulkUpdateTags, isPending: isUpdatingTags } = useBulkUpdateTags();
@@ -302,17 +308,37 @@ export const EnhancedDataTable: React.FC<EnhancedDataTableProps> = ({
         header: 'Screenshot',
         cell: ({ row }) => {
           const screenshotUrl = row.original.screenshot_url;
+          const screenshotFullUrl = row.original.screenshot_full_url;
+          const pageUrl = row.original.url;
+
+          const handleClick = () => {
+            if (screenshotUrl) {
+              setSelectedScreenshot({
+                url: screenshotUrl,
+                fullUrl: screenshotFullUrl,
+                pageUrl: pageUrl,
+              });
+              setScreenshotModalOpen(true);
+            }
+          };
+
           return screenshotUrl ? (
             <Box
               component="img"
               src={screenshotUrl}
               alt="Page screenshot"
+              onClick={handleClick}
               sx={{
                 width: 100,
                 height: 60,
                 objectFit: 'cover',
                 borderRadius: 1,
                 cursor: 'pointer',
+                transition: 'transform 0.2s, box-shadow 0.2s',
+                '&:hover': {
+                  transform: 'scale(1.05)',
+                  boxShadow: theme.shadows[4],
+                },
               }}
             />
           ) : (
@@ -743,6 +769,20 @@ export const EnhancedDataTable: React.FC<EnhancedDataTableProps> = ({
         onSave={handleSaveTags}
         isLoading={isUpdatingTags}
       />
+
+      {/* Screenshot Modal */}
+      {selectedScreenshot && (
+        <ScreenshotModal
+          open={screenshotModalOpen}
+          onClose={() => {
+            setScreenshotModalOpen(false);
+            setSelectedScreenshot(null);
+          }}
+          screenshotUrl={selectedScreenshot.url}
+          screenshotFullUrl={selectedScreenshot.fullUrl}
+          pageUrl={selectedScreenshot.pageUrl}
+        />
+      )}
     </Box>
   );
 };

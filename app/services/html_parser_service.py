@@ -29,6 +29,11 @@ class HTMLParserService:
             Dictionary with all extracted fields
         """
         return {
+            # Core SEO metadata
+            'page_title': self.get_page_title(),
+            'meta_title': self.get_meta_title(),
+            'meta_description': self.get_meta_description(),
+
             # OnPage metadata
             'h1': self.get_h1(),
             'canonical_url': self.get_canonical_url(),
@@ -64,6 +69,48 @@ class HTMLParserService:
         }
 
     # OnPage Metadata Extraction
+
+    def get_page_title(self) -> Optional[str]:
+        """
+        Extract <title> tag content with OG fallback.
+
+        Returns:
+            Title text or None
+        """
+        # Primary: <title> tag
+        title_tag = self.soup.find('title')
+        if title_tag and title_tag.string:
+            return title_tag.string.strip()
+
+        # Fallback: Open Graph title
+        og_title = self.get_open_graph('title')
+        return og_title if og_title else None
+
+    def get_meta_title(self) -> Optional[str]:
+        """
+        Extract <meta name="title"> content.
+
+        Returns:
+            Meta title or None
+        """
+        meta_title = self.soup.find('meta', attrs={'name': 'title'})
+        return meta_title.get('content', '').strip() if meta_title else None
+
+    def get_meta_description(self) -> Optional[str]:
+        """
+        Extract <meta name="description"> content with OG fallback.
+
+        Returns:
+            Meta description or None
+        """
+        # Primary: <meta name="description">
+        meta_desc = self.soup.find('meta', attrs={'name': 'description'})
+        if meta_desc and meta_desc.get('content'):
+            return meta_desc['content'].strip()
+
+        # Fallback: Open Graph description
+        og_desc = self.get_open_graph('description')
+        return og_desc if og_desc else None
 
     def get_h1(self) -> Optional[str]:
         """Extract first H1 heading from page."""

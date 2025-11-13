@@ -270,7 +270,7 @@ const ClientDetail: React.FC = () => {
                     onClick={() => setShowCrawlDialog(true)}
                     disabled={!!activeCrawlRunId}
                   >
-                    Start Data Extraction
+                    {crawlRuns && crawlRuns.length > 0 ? 'Crawl Again' : 'Start Crawl'}
                   </StandardButton>
                   <StandardButton
                     variant="outlined"
