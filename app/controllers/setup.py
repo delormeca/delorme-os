@@ -10,7 +10,7 @@ from app.services.users_service import UserService, get_user_service
 setup_router = APIRouter()
 
 
-@setup_router.post("/create-superuser")
+@setup_router.get("/create-superuser")
 async def create_superuser(
     db: AsyncSession = Depends(get_async_db_session),
     user_service: UserService = Depends(get_user_service),
