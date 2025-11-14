@@ -177,7 +177,7 @@ const ClientDetail: React.FC = () => {
             <StandardButton
               variant="outlined"
               startIcon={<Edit />}
-              onClick={() => navigate(`/clients/${client.id}/edit`)}
+              onClick={() => navigate(`/clients/${client.slug}/edit`)}
               size="small"
             >
               Edit
@@ -313,7 +313,7 @@ const ClientDetail: React.FC = () => {
             <StandardButton
               variant="contained"
               startIcon={<Add />}
-              onClick={() => navigate(`/clients/${client.id}/projects/new`)}
+              onClick={() => navigate(`/clients/${client.slug}/projects/new`)}
             >
               Add Project
             </StandardButton>

@@ -184,7 +184,7 @@ export const ClientsList: React.FC = () => {
 
   const handleEdit = () => {
     if (selectedClient) {
-      navigate(`/clients/${selectedClient.id}`);
+      navigate(`/clients/${selectedClient.slug}`);
     }
     handleMenuClose();
   };
@@ -438,7 +438,7 @@ export const ClientsList: React.FC = () => {
                     if (manageMode) {
                       handleSelectOne(client.id);
                     } else {
-                      navigate(`/clients/${client.id}`);
+                      navigate(`/clients/${client.slug}`);
                     }
                   }}
                 >
@@ -558,7 +558,7 @@ export const ClientsList: React.FC = () => {
                         startIcon={<Edit />}
                         onClick={(e) => {
                           e.stopPropagation();
-                          navigate(`/clients/${client.id}`);
+                          navigate(`/clients/${client.slug}`);
                         }}
                         sx={{ flex: 1 }}
                       >
@@ -628,7 +628,7 @@ export const ClientsList: React.FC = () => {
                           if (manageMode) {
                             handleSelectOne(client.id);
                           } else {
-                            navigate(`/clients/${client.id}`);
+                            navigate(`/clients/${client.slug}`);
                           }
                         }}
                       >
@@ -694,7 +694,7 @@ export const ClientsList: React.FC = () => {
                                 variant="filled"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  navigate(`/clients/${client.id}`);
+                                  navigate(`/clients/${client.slug}`);
                                 }}
                               >
                                 <Edit sx={{ fontSize: "18px" }} />
