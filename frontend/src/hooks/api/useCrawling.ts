@@ -75,3 +75,11 @@ export const useRescanSitemap = () => {
     },
   });
 };
+
+export const useScrapeSelectedPages = () => {
+  return useMutation({
+    mutationFn: async () => {
+      throw new Error("Legacy crawling feature is no longer available.");
+    },
+  });
+};
