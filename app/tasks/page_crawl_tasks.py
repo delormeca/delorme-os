@@ -277,11 +277,15 @@ def schedule_page_crawl(
     crawl_run_id_str = str(crawl_run_id) if crawl_run_id else None
 
     # Schedule the job to run immediately
+    # CRITICAL FIX: Use crawl_run_id as job ID so frontend can cancel it
+    # This allows tracking both status (via crawl_run_id) and cancellation (same ID)
+    job_id = f"page_crawl_{crawl_run_id}" if crawl_run_id else f"page_crawl_{client_id}_{run_type}"
+
     job = scheduler_instance.add_job(
         run_page_crawl_task,
         trigger=DateTrigger(),
         args=[str(client_id), run_type, page_ids_str, crawl_run_id_str],
-        id=f"page_crawl_{client_id}_{run_type}",
+        id=job_id,
         replace_existing=True,
     )
 

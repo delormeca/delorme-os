@@ -126,17 +126,18 @@ async def start_crawl(
         await db.commit()
 
         # Schedule the crawl job with the crawl_run_id (this is sync, so do it after commit)
-        job_id = schedule_page_crawl(
+        apscheduler_job_id = schedule_page_crawl(
             client_id=request.client_id,
             run_type=request.run_type,
             selected_page_ids=request.selected_page_ids,
             crawl_run_id=crawl_run_id,
         )
 
-        # Return crawl_run_id as job_id so frontend can track status
+        # CRITICAL FIX: Return the actual APScheduler job ID for cancellation
+        # Frontend can extract crawl_run_id from job_id (format: page_crawl_{crawl_run_id})
         return JobResponse(
-            job_id=str(crawl_run_id),
-            message=f"Crawl job scheduled successfully. Crawl Run ID: {crawl_run_id}",
+            job_id=apscheduler_job_id,
+            message=f"Crawl job scheduled successfully. Job ID: {apscheduler_job_id}, Crawl Run ID: {crawl_run_id}",
         )
 
     except Exception as e:

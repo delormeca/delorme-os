@@ -126,7 +126,8 @@ const CrawlProgressTracker: React.FC<CrawlProgressTrackerProps> = ({
               <IconButton
                 size="small"
                 onClick={() => {
-                  const jobId = `page_crawl_${status.id}_${status.status}`;
+                  // CRITICAL FIX: Job ID format matches backend APScheduler job ID
+                  const jobId = `page_crawl_${status.id}`;
                   cancelMutation.mutate(jobId);
                 }}
                 disabled={cancelMutation.isPending}
