@@ -48,7 +48,7 @@ async def run_crawl_job_task(project_id: str) -> None:
     logger.info(f"🚀 Starting crawl job for project {project_id}")
 
     # Create async engine and session directly (not using FastAPI dependency)
-    engine = create_async_engine(config.database_url, echo=False)
+    engine = create_async_engine(config.get_database_url(), echo=False)
     async_session_factory = async_sessionmaker(engine, expire_on_commit=False)
 
     async with async_session_factory() as session:

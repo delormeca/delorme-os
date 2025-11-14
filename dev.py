@@ -41,7 +41,7 @@ def test_config():
         from app.config import config, payment_config
         print(f"Configuration loaded successfully")
         print(f"Environment: {config.env}")
-        print(f"Database URL configured: {bool(config.database_url)}")
+        print(f"Database URL configured: {bool(config.get_database_url())}")
         print(f"Payment domain: {payment_config.domain}")
         print(f"Secret key configured: {bool(config.secret_key)}")
         return True

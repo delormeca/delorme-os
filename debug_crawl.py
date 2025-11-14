@@ -29,7 +29,7 @@ async def main():
     print()
 
     # Connect to database to check crawl run state
-    engine = create_async_engine(config.database_url, echo=False)
+    engine = create_async_engine(config.get_database_url(), echo=False)
     async_session_factory = async_sessionmaker(engine, expire_on_commit=False)
 
     async with async_session_factory() as session:

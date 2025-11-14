@@ -29,7 +29,7 @@ async def run_sitemap_setup_task(run_id: str, sitemap_url: str) -> None:
     logger.info(f"🚀 Starting sitemap setup task for run {run_id}: {sitemap_url}")
 
     # Create async engine and session directly (not using FastAPI dependency)
-    engine = create_async_engine(config.database_url, echo=False)
+    engine = create_async_engine(config.get_database_url(), echo=False)
     async_session_factory = async_sessionmaker(engine, expire_on_commit=False)
 
     async with async_session_factory() as session:
@@ -64,7 +64,7 @@ async def run_manual_setup_task(run_id: str, manual_urls_str: str) -> None:
     logger.info(f"🚀 Starting manual setup task for run {run_id}")
 
     # Create async engine and session directly (not using FastAPI dependency)
-    engine = create_async_engine(config.database_url, echo=False)
+    engine = create_async_engine(config.get_database_url(), echo=False)
     async_session_factory = async_sessionmaker(engine, expire_on_commit=False)
 
     async with async_session_factory() as session:

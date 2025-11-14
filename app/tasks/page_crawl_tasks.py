@@ -88,7 +88,7 @@ async def run_page_crawl_task(
     logger.info(f"🚀 Starting {run_type} page crawl for client {client_id}")
 
     # Create async engine and session
-    engine = create_async_engine(config.database_url, echo=False)
+    engine = create_async_engine(config.get_database_url(), echo=False)
     async_session_factory = async_sessionmaker(engine, expire_on_commit=False)
 
     async with async_session_factory() as session:
