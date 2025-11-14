@@ -4,7 +4,6 @@ import { styled, alpha, useTheme } from "@mui/material/styles";
 import Box from "@mui/material/Box";
 import { Container, Stack, Divider } from "@mui/material";
 import { Speed, Shield, Support } from "@mui/icons-material";
-import FAQ from "@/components/Home/FAQ";
 import PricingCards from "@/components/Pricing/PricingCards";
 import { useCurrentUser } from "@/hooks/api/useCurrentUser";
 import { useUserPlan } from "@/hooks/api/usePlans";
@@ -138,12 +137,7 @@ const Pricing = () => {
             </StandardButton>
           </Link>
         </Box>
-
-        <Divider sx={{ my: 8 }} />
       </Container>
-
-      {/* FAQ Section */}
-      <FAQ noBg />
     </PricingWrapper>
   );
 };
