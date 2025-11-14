@@ -67,3 +67,11 @@ export const useAddManualPage = () => {
     },
   });
 };
+
+export const useRescanSitemap = () => {
+  return useMutation({
+    mutationFn: async () => {
+      throw new Error("Legacy crawling feature is no longer available.");
+    },
+  });
+};
