@@ -4,10 +4,18 @@
 /* eslint-disable */
 export type ClientUpdate = {
     name?: (string | null);
+    /**
+     * URL-friendly slug
+     */
+    slug?: (string | null);
     description?: (string | null);
     website_url?: (string | null);
     sitemap_url?: (string | null);
     industry?: (string | null);
+    /**
+     * Team lead name. Must be: Tommy Delorme, Ismael Girard, or OP
+     */
+    team_lead?: (string | null);
     logo_url?: (string | null);
     crawl_frequency?: (string | null);
     status?: (string | null);
