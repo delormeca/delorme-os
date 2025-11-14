@@ -37,10 +37,12 @@ export const useCreateClient = () => {
       });
     },
     onError: (error: any) => {
+      // Extract the detailed error message from FastAPI response
+      const errorMessage = error.body?.detail || error.message || "Failed to create client";
       createSnackBar({
-        content: error.message || "Failed to create client",
+        content: errorMessage,
         severity: "error",
-        autoHide: true,
+        autoHide: false, // Don't auto-hide errors so user can read them
       });
     },
   });
@@ -64,10 +66,11 @@ export const useUpdateClient = () => {
       });
     },
     onError: (error: any) => {
+      const errorMessage = error.body?.detail || error.message || "Failed to update client";
       createSnackBar({
-        content: error.message || "Failed to update client",
+        content: errorMessage,
         severity: "error",
-        autoHide: true,
+        autoHide: false,
       });
     },
   });

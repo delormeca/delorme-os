@@ -29,12 +29,32 @@ import type { ClientCreate } from "@/client";
 import { ClientsService } from "@/client";
 
 const createClientSchema = z.object({
-  name: z.string().min(1, 'Client name is required').max(200, 'Name must be less than 200 characters'),
+  name: z.string()
+    .min(1, 'Client name is required')
+    .max(200, 'Name must be less than 200 characters')
+    .refine((val) => val.trim().length > 0, {
+      message: 'Client name cannot be just spaces',
+    }),
   description: z.string().optional(),
-  website_url: z.string().url('Invalid URL').optional().or(z.literal('')),
-  sitemap_url: z.string().url('Invalid URL').optional().or(z.literal('')),
+  website_url: z.string()
+    .optional()
+    .refine((val) => !val || val === '' || /^https?:\/\/.+/.test(val), {
+      message: 'Website URL must start with http:// or https://',
+    })
+    .or(z.literal('')),
+  sitemap_url: z.string()
+    .optional()
+    .refine((val) => !val || val === '' || /^https?:\/\/.+/.test(val), {
+      message: 'Sitemap URL must start with http:// or https://',
+    })
+    .or(z.literal('')),
   industry: z.string().optional(),
-  logo_url: z.string().url('Invalid URL').optional().or(z.literal('')),
+  logo_url: z.string()
+    .optional()
+    .refine((val) => !val || val === '' || /^https?:\/\/.+/.test(val), {
+      message: 'Logo URL must start with http:// or https://',
+    })
+    .or(z.literal('')),
   crawl_frequency: z.string().default('Manual Only'),
   status: z.string().default('Active'),
   project_lead_id: z.string().optional(),

@@ -135,24 +135,35 @@ async def create_client(session: AsyncSession, client_data: ClientCreate, user_i
     """
     Create a new client with all fields.
     """
+    # Validate name is not empty (after stripping whitespace)
+    if not client_data.name or not client_data.name.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Client name cannot be empty. Please enter a valid client name.",
+        )
+
     # Validate team_lead
-    validate_team_lead(client_data.team_lead)
+    try:
+        validate_team_lead(client_data.team_lead)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid team lead. {str(e)}",
+        )
 
     # Generate slug if not provided
     if not client_data.slug:
         client_data.slug = generate_slug(client_data.name)
     else:
-        validate_slug_format(client_data.slug)
+        try:
+            validate_slug_format(client_data.slug)
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid slug format. {str(e)}",
+            )
 
-    # Check slug uniqueness
-    existing_slug = await session.execute(
-        select(Client).where(Client.slug == client_data.slug)
-    )
-    if existing_slug.scalar_one_or_none():
-        from app.utils.exceptions import ValidationException
-        raise ValidationException(f"slug '{client_data.slug}' already exists")
-
-    # Check for duplicate name
+    # Check for duplicate name first (most common issue)
     query = select(Client).where(Client.name == client_data.name)
     result = await session.execute(query)
     existing_client = result.scalar_one_or_none()
@@ -160,8 +171,30 @@ async def create_client(session: AsyncSession, client_data: ClientCreate, user_i
     if existing_client:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="A client with this name already exists",
+            detail=f"A client named '{client_data.name}' already exists. Please use a different name or update the existing client.",
         )
+
+    # Check slug uniqueness
+    existing_slug = await session.execute(
+        select(Client).where(Client.slug == client_data.slug)
+    )
+    if existing_slug.scalar_one_or_none():
+        suggested_slug = f"{client_data.slug}-2"
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"The URL slug '{client_data.slug}' is already taken. Try '{suggested_slug}' or modify the client name.",
+        )
+
+    # Check for duplicate website URL (optional but helpful)
+    if client_data.website_url:
+        existing_website = await session.execute(
+            select(Client).where(Client.website_url == client_data.website_url)
+        )
+        if existing_website.scalar_one_or_none():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"A client with website '{client_data.website_url}' already exists. Are you trying to create a duplicate?",
+            )
 
     # Verify project lead exists if provided
     if client_data.project_lead_id:
@@ -169,7 +202,7 @@ async def create_client(session: AsyncSession, client_data: ClientCreate, user_i
         if not lead:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Project lead not found",
+                detail="The selected project lead was not found. Please choose a valid project lead or leave it blank.",
             )
 
     client = Client(
