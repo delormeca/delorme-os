@@ -27,3 +27,43 @@ export const useCancelCrawl = () => {
     },
   });
 };
+
+export const useCrawlJobStatus = (jobId?: string) => {
+  return useQuery({
+    queryKey: ['crawl-job-status', jobId],
+    queryFn: async () => null,
+    enabled: false,
+  });
+};
+
+export const useProjectPages = (projectId?: string) => {
+  return useQuery({
+    queryKey: ['project-pages', projectId],
+    queryFn: async () => [],
+    enabled: false,
+  });
+};
+
+export const useProjectCrawlJobs = (projectId?: string) => {
+  return useQuery({
+    queryKey: ['project-crawl-jobs', projectId],
+    queryFn: async () => [],
+    enabled: false,
+  });
+};
+
+export const useProjectPagesWithStats = (projectId?: string) => {
+  return useQuery({
+    queryKey: ['project-pages-stats', projectId],
+    queryFn: async () => null,
+    enabled: false,
+  });
+};
+
+export const useAddManualPage = () => {
+  return useMutation({
+    mutationFn: async () => {
+      throw new Error("Legacy crawling feature is no longer available.");
+    },
+  });
+};
