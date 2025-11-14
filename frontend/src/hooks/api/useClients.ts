@@ -15,7 +15,7 @@ export const useClients = (search?: string, projectLeadId?: string) => {
 export const useClientDetail = (clientId: string) => {
   return useQuery({
     queryKey: ["clients", clientId],
-    queryFn: () => ClientsService.getClientApiClientsClientIdGet(clientId),
+    queryFn: () => ClientsService.getClientApiClientsClientIdentifierGet(clientId),
     enabled: !!clientId,
   });
 };
