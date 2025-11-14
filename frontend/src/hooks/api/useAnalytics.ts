@@ -24,3 +24,35 @@ export const useAnalyticsOverview = () => {
     enabled: false,
   });
 };
+
+export const useBasicAnalytics = () => {
+  return useQuery({
+    queryKey: ['basic-analytics'],
+    queryFn: async () => null,
+    enabled: false,
+  });
+};
+
+export const useAdvancedAnalytics = () => {
+  return useQuery({
+    queryKey: ['advanced-analytics'],
+    queryFn: async () => null,
+    enabled: false,
+  });
+};
+
+export const usePremiumReporting = () => {
+  return useQuery({
+    queryKey: ['premium-reporting'],
+    queryFn: async () => null,
+    enabled: false,
+  });
+};
+
+export const useTeamAnalytics = () => {
+  return useQuery({
+    queryKey: ['team-analytics'],
+    queryFn: async () => null,
+    enabled: false,
+  });
+};
