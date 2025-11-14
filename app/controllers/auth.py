@@ -42,7 +42,13 @@ async def login(
     response = JSONResponse(
         LoginResponse(access_token=res["access_token"]).model_dump()
     )
-    response.set_cookie(key=JWT_COOKIE_NAME, value=res["access_token"], httponly=True)
+    response.set_cookie(
+        key=JWT_COOKIE_NAME,
+        value=res["access_token"],
+        httponly=True,
+        secure=True,  # Required for HTTPS
+        samesite="none",  # Required for cross-origin cookies
+    )
     return response
 
 
@@ -68,7 +74,13 @@ async def signup(
     response = JSONResponse(
         LoginResponse(access_token=res["access_token"]).model_dump()
     )
-    response.set_cookie(key=JWT_COOKIE_NAME, value=res["access_token"], httponly=True)
+    response.set_cookie(
+        key=JWT_COOKIE_NAME,
+        value=res["access_token"],
+        httponly=True,
+        secure=True,  # Required for HTTPS
+        samesite="none",  # Required for cross-origin cookies
+    )
     return response
 
 
@@ -78,7 +90,13 @@ async def google_callback(
 ) -> JSONResponse:
     res = await user_service.login_oauth("GOOGLE_OAUTH2")
     response = RedirectResponse(url=REDIRECT_AFTER_LOGIN)
-    response.set_cookie(key=JWT_COOKIE_NAME, value=res["access_token"], httponly=True)
+    response.set_cookie(
+        key=JWT_COOKIE_NAME,
+        value=res["access_token"],
+        httponly=True,
+        secure=True,  # Required for HTTPS
+        samesite="none",  # Required for cross-origin cookies
+    )
     return response
 
 
@@ -100,7 +118,13 @@ async def update_user_profile(
     response = JSONResponse(
         LoginResponse(access_token=res["access_token"]).model_dump()
     )
-    response.set_cookie(key=JWT_COOKIE_NAME, value=res["access_token"], httponly=True)
+    response.set_cookie(
+        key=JWT_COOKIE_NAME,
+        value=res["access_token"],
+        httponly=True,
+        secure=True,  # Required for HTTPS
+        samesite="none",  # Required for cross-origin cookies
+    )
     return response
 
 
