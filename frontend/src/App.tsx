@@ -33,10 +33,6 @@ import {
 } from "@mui/material";
 import getMPTheme from "./theme/getTheme";
 import React from "react";
-import MyArticles from "./pages/Article/MyArticles";
-import CreateArticle from "./pages/Article/CreateArticle";
-import EditArticle from "./pages/Article/EditArticle";
-import ViewArticle from "./pages/Article/ViewArticle";
 import EditProfile from "./pages/Profile/EditProfile";
 import Dashboard from "./pages/Dashboard";
 import AppTheme from "./theme/AppTheme";
@@ -121,10 +117,6 @@ function App(props: { disableCustomTheme?: boolean }) {
                   
                   <Route element={<ProtectedRoute />}>
                     <Route path="dashboard" element={<Dashboard />} />
-                    <Route path="dashboard/my-articles" element={<MyArticles />} />
-                    <Route path="dashboard/my-articles/new" element={<CreateArticle />} />
-                    <Route path="dashboard/my-articles/:id/edit" element={<EditArticle />} />
-                    <Route path="dashboard/my-articles/:id/view" element={<ViewArticle />} />
                     <Route path="dashboard/profile" element={<EditProfile />} />
                     <Route path="dashboard/ui-guidelines" element={<UIGuidelines />} />
                     <Route path="dashboard/analytics" element={<Analytics />} />

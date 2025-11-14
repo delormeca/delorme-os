@@ -20,7 +20,6 @@ import {
 } from '@mui/material';
 import {
   Dashboard,
-  Article,
   Person,
   Settings,
   Home,
@@ -294,19 +293,12 @@ const getMenuItems = (userPlan?: string) => [
     available: true,
   },
   {
-    label: 'My Articles',
-    icon: <Article />,
-    path: '/dashboard/my-articles',
-    description: 'Manage content',
-    available: true,
-  },
-  { 
-    label: 'Analytics', 
-    icon: <Analytics />, 
+    label: 'Analytics',
+    icon: <Analytics />,
     path: '/dashboard/analytics',
     description: 'Performance insights',
     available: true,
-    badge: userPlan === 'free' ? 'Starter+' : 
+    badge: userPlan === 'free' ? 'Starter+' :
            userPlan === 'starter' ? 'Pro+' : undefined,
     badgeColor: 'info' as const,
   },
