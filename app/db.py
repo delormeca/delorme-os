@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sess
 from app.config.base import config
 
 # Use the automatic environment loading from config
-ASYNC_DATABASE_URL = config.database_url
+ASYNC_DATABASE_URL = config.get_database_url()
 
 # Creating asynchronous engine
 async_engine = create_async_engine(

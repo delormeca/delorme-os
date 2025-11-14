@@ -83,6 +83,10 @@ class BaseConfig(BaseSettings):
     )
 
     # Database Configuration
+    # Support both DATABASE_URL and individual components
+    database_url: Optional[str] = Field(
+        default=None, description="Full database connection URL (overrides individual db_* fields)"
+    )
     db_username: str = Field(
         default="craftyourstartup", description="Database username"
     )
@@ -179,9 +183,20 @@ class BaseConfig(BaseSettings):
         default=8000, description="Maximum tokens for embedding generation"
     )
 
-    @property
-    def database_url(self) -> str:
-        """Generate database URL from components."""
+    def get_database_url(self) -> str:
+        """
+        Get database URL.
+        If DATABASE_URL env var is set, use it (with asyncpg driver).
+        Otherwise, construct from individual components.
+        """
+        if self.database_url:
+            # Use provided DATABASE_URL, converting to asyncpg driver if needed
+            url = self.database_url
+            if url.startswith("postgresql://"):
+                url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
+            return url
+
+        # Construct from individual components
         return f"postgresql+asyncpg://{self.db_username}:{self.db_password}@{self.db_host}:{self.db_port}/{self.db_database}"
 
     def is_development(self) -> bool:
@@ -233,7 +248,7 @@ DB_HOST = config.db_host
 DB_PORT = config.db_port
 DB_DATABASE = config.db_database
 DB_SSLMODE = config.db_sslmode
-DATABASE_URL = config.database_url
+DATABASE_URL = config.get_database_url()
 
 # Email
 MAILCHIMP_API_KEY = config.mailchimp_api_key
