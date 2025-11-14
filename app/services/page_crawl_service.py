@@ -196,11 +196,16 @@ class PageCrawlService:
                 await self.update_progress(crawl_run, status_message=status_msg)
 
                 # Extract data with enhanced parameters
+                # CRITICAL FIX: Pass the crawler to reuse browser instance!
+                # crawler is a Crawl4AIService wrapper, extract the inner AsyncWebCrawler
+                reuse_crawler = crawler.crawler if crawler and hasattr(crawler, 'crawler') else None
+
                 extraction_result = await extraction_service.extract_page_data(
                     url=page.url,
                     use_stealth=use_stealth,
                     custom_timeout=custom_timeout,
-                    retry_attempt=attempt
+                    retry_attempt=attempt,
+                    reuse_crawler=reuse_crawler  # CRITICAL: Reuse browser for massive performance boost!
                 )
 
                 # Check if extraction was successful

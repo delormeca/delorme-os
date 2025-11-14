@@ -55,7 +55,8 @@ class PageExtractionService:
         url: str,
         use_stealth: bool = False,
         custom_timeout: Optional[int] = None,
-        retry_attempt: int = 0
+        retry_attempt: int = 0,
+        reuse_crawler: Optional[AsyncWebCrawler] = None
     ) -> Dict[str, Any]:
         """
         Extract all data points from a page using Crawl4AI + HTML Parser.
@@ -65,27 +66,11 @@ class PageExtractionService:
             use_stealth: Enable stealth mode to avoid bot detection
             custom_timeout: Override timeout (otherwise uses adaptive timeout)
             retry_attempt: Current retry attempt number (0 = first try)
+            reuse_crawler: Optional pre-initialized crawler to reuse (CRITICAL for performance!)
 
         Returns:
             Dictionary with all extracted fields
         """
-        # Configure browser with optional stealth mode
-        extra_args = ["--disable-gpu", "--disable-dev-shm-usage", "--no-sandbox"]
-
-        if use_stealth:
-            # Add stealth arguments to avoid bot detection
-            extra_args.extend([
-                "--disable-blink-features=AutomationControlled",  # Hide automation
-                "--disable-features=IsolateOrigins,site-per-process",
-                "--disable-site-isolation-trials",
-            ])
-
-        browser_config = BrowserConfig(
-            headless=True,
-            verbose=False,
-            extra_args=extra_args
-        )
-
         # Get adaptive timeout and wait time
         timeout_seconds = custom_timeout or AdaptiveTimeout.get_timeout(url, attempt=retry_attempt)
         wait_time = AdaptiveTimeout.get_wait_time(url)
@@ -104,56 +89,85 @@ class PageExtractionService:
         )
 
         try:
-            async with AsyncWebCrawler(config=browser_config) as crawler:
+            # CRITICAL FIX: Reuse existing crawler instead of creating new one for each page
+            if reuse_crawler:
+                # Use the provided crawler (MUCH faster - no browser launch overhead!)
                 # Disable logger to avoid Windows Unicode issues
                 import logging
                 logging.getLogger('crawl4ai').setLevel(logging.CRITICAL)
 
                 # Crawl the page
-                result = await crawler.arun(url=url, config=crawler_config)
+                result = await reuse_crawler.arun(url=url, config=crawler_config)
+            else:
+                # Fallback: Create new crawler only if none provided (slower, for standalone use)
+                # Configure browser with optional stealth mode
+                extra_args = ["--disable-gpu", "--disable-dev-shm-usage", "--no-sandbox"]
 
-                if not result.success:
-                    return {
-                        'success': False,
-                        'error_message': getattr(result, 'error_message', 'Unknown error'),
-                        'url': url,
-                    }
+                if use_stealth:
+                    # Add stealth arguments to avoid bot detection
+                    extra_args.extend([
+                        "--disable-blink-features=AutomationControlled",  # Hide automation
+                        "--disable-features=IsolateOrigins,site-per-process",
+                        "--disable-site-isolation-trials",
+                    ])
 
-                # Initialize extraction result
-                extracted = {
-                    'success': True,
-                    'url': result.url,
-                    'status_code': getattr(result, 'status_code', None),
+                browser_config = BrowserConfig(
+                    headless=True,
+                    verbose=False,
+                    extra_args=extra_args
+                )
+
+                async with AsyncWebCrawler(config=browser_config) as crawler:
+                    # Disable logger to avoid Windows Unicode issues
+                    import logging
+                    logging.getLogger('crawl4ai').setLevel(logging.CRITICAL)
+
+                    # Crawl the page
+                    result = await crawler.arun(url=url, config=crawler_config)
+
+            # Process result (same for both reused and new crawler)
+            if not result.success:
+                return {
+                    'success': False,
+                    'error_message': getattr(result, 'error_message', 'Unknown error'),
+                    'url': url,
                 }
 
-                # Extract basic content
-                if result.markdown:
-                    extracted['body_content'] = result.markdown
-                    extracted['word_count'] = len(result.markdown.split())
+            # Initialize extraction result
+            extracted = {
+                'success': True,
+                'url': result.url,
+                'status_code': getattr(result, 'status_code', None),
+            }
 
-                # Extract screenshots (base64)
-                if hasattr(result, 'screenshot') and result.screenshot:
-                    extracted['screenshot_url'] = result.screenshot
-                    extracted['screenshot_full_url'] = result.screenshot
+            # Extract basic content
+            if result.markdown:
+                extracted['body_content'] = result.markdown
+                extracted['word_count'] = len(result.markdown.split())
 
-                # Extract links and media from Crawl4AI
-                if hasattr(result, 'links') and result.links:
-                    extracted['internal_links'] = result.links.get('internal', [])
-                    extracted['external_links'] = result.links.get('external', [])
+            # Extract screenshots (base64)
+            if hasattr(result, 'screenshot') and result.screenshot:
+                extracted['screenshot_url'] = result.screenshot
+                extracted['screenshot_full_url'] = result.screenshot
 
-                if hasattr(result, 'media') and result.media:
-                    media = result.media
-                    extracted['image_count'] = len(media.get('images', []))
+            # Extract links and media from Crawl4AI
+            if hasattr(result, 'links') and result.links:
+                extracted['internal_links'] = result.links.get('internal', [])
+                extracted['external_links'] = result.links.get('external', [])
 
-                # Parse HTML for metadata
-                if result.html:
-                    parser = HTMLParserService(result.html)
-                    html_data = parser.extract_all()
+            if hasattr(result, 'media') and result.media:
+                media = result.media
+                extracted['image_count'] = len(media.get('images', []))
 
-                    # Merge HTML-parsed data
-                    extracted.update(html_data)
+            # Parse HTML for metadata
+            if result.html:
+                parser = HTMLParserService(result.html)
+                html_data = parser.extract_all()
 
-                return extracted
+                # Merge HTML-parsed data
+                extracted.update(html_data)
+
+            return extracted
 
         except Exception as e:
             return {
