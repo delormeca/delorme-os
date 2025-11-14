@@ -2,9 +2,9 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
-import type { app__controllers__page_crawl__StartCrawlRequest } from '../models/app__controllers__page_crawl__StartCrawlRequest';
 import type { CrawlStatusResponse } from '../models/CrawlStatusResponse';
 import type { JobResponse } from '../models/JobResponse';
+import type { StartCrawlRequest } from '../models/StartCrawlRequest';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import { OpenAPI } from '../core/OpenAPI';
 import { request as __request } from '../core/request';
@@ -26,7 +26,7 @@ export class PageCrawlService {
      * @throws ApiError
      */
     public static startCrawlApiPageCrawlStartPost(
-        requestBody: app__controllers__page_crawl__StartCrawlRequest,
+        requestBody: StartCrawlRequest,
     ): CancelablePromise<JobResponse> {
         return __request(OpenAPI, {
             method: 'POST',
@@ -55,7 +55,7 @@ export class PageCrawlService {
      * @throws ApiError
      */
     public static startCrawlApiPageCrawlStartPost1(
-        requestBody: app__controllers__page_crawl__StartCrawlRequest,
+        requestBody: StartCrawlRequest,
     ): CancelablePromise<JobResponse> {
         return __request(OpenAPI, {
             method: 'POST',
@@ -201,23 +201,23 @@ export class PageCrawlService {
     }
     /**
      * List Client Crawl Runs
-     * List recent crawl runs for a client.
+     * List recent crawl runs for a client (accepts UUID or slug).
      *
      * Returns the most recent crawl runs, ordered by creation date.
-     * @param clientId
+     * @param clientIdentifier
      * @param limit
      * @returns any Successful Response
      * @throws ApiError
      */
-    public static listClientCrawlRunsApiPageCrawlClientClientIdRunsGet(
-        clientId: string,
+    public static listClientCrawlRunsApiPageCrawlClientClientIdentifierRunsGet(
+        clientIdentifier: string,
         limit: number = 10,
     ): CancelablePromise<Array<Record<string, any>>> {
         return __request(OpenAPI, {
             method: 'GET',
-            url: '/api/page-crawl/client/{client_id}/runs',
+            url: '/api/page-crawl/client/{client_identifier}/runs',
             path: {
-                'client_id': clientId,
+                'client_identifier': clientIdentifier,
             },
             query: {
                 'limit': limit,
@@ -229,23 +229,23 @@ export class PageCrawlService {
     }
     /**
      * List Client Crawl Runs
-     * List recent crawl runs for a client.
+     * List recent crawl runs for a client (accepts UUID or slug).
      *
      * Returns the most recent crawl runs, ordered by creation date.
-     * @param clientId
+     * @param clientIdentifier
      * @param limit
      * @returns any Successful Response
      * @throws ApiError
      */
-    public static listClientCrawlRunsApiPageCrawlClientClientIdRunsGet1(
-        clientId: string,
+    public static listClientCrawlRunsApiPageCrawlClientClientIdentifierRunsGet1(
+        clientIdentifier: string,
         limit: number = 10,
     ): CancelablePromise<Array<Record<string, any>>> {
         return __request(OpenAPI, {
             method: 'GET',
-            url: '/api/page-crawl/client/{client_id}/runs',
+            url: '/api/page-crawl/client/{client_identifier}/runs',
             path: {
-                'client_id': clientId,
+                'client_identifier': clientIdentifier,
             },
             query: {
                 'limit': limit,

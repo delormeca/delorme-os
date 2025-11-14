@@ -149,6 +149,7 @@ async def run_page_crawl_task(
                 # Crawl each page
                 for index, page in enumerate(pages_to_crawl, start=1):
                     logger.info(f"📄 Crawling page {index}/{len(pages_to_crawl)}: {page.url}")
+                    print(f"CRAWL PROGRESS: {index}/{len(pages_to_crawl)} - {page.url}")  # Render logs
 
                     # Update progress percentage
                     progress = int((index / len(pages_to_crawl)) * 100)
@@ -158,6 +159,15 @@ async def run_page_crawl_task(
                         status_message=f"Crawling page {index}/{len(pages_to_crawl)}",
                         progress_percentage=progress,
                     )
+
+                    # Restart browser every 50 pages to prevent memory issues
+                    if index > 1 and index % 50 == 0:
+                        logger.info(f"🔄 Restarting browser after {index} pages to free memory...")
+                        print(f"BROWSER RESTART: After {index} pages")  # Render logs
+                        await crawler.cleanup()
+                        await asyncio.sleep(2)  # Let resources cleanup
+                        await crawler.initialize()
+                        logger.info("✅ Browser restarted successfully")
 
                     # Crawl and extract page
                     success = await page_crawl_service.crawl_and_extract_page(
@@ -202,27 +212,39 @@ async def run_page_crawl_task(
                 )
 
         except Exception as e:
-            # Use print for debugging Windows encoding issues
-            print(f"\\n\\n=== CRAWL ERROR ===")
-            print(f"Error type: {type(e).__name__}")
-            print(f"Error message: {str(e)}")
             import traceback
-            print(f"Traceback:\\n{traceback.format_exc()}")
-            print(f"===================\\n\\n")
 
+            # Capture full error details
+            error_type = type(e).__name__
+            error_msg = str(e)
+            error_traceback = traceback.format_exc()
+
+            # Log to console (visible in Render logs)
+            print(f"\n{'='*80}")
+            print(f"CRAWL ERROR for client {client_id}")
+            print(f"{'='*80}")
+            print(f"Error Type: {error_type}")
+            print(f"Error Message: {error_msg}")
+            print(f"Traceback:\n{error_traceback}")
+            print(f"{'='*80}\n")
+
+            # Log with logger
             logger.error(
-                f"❌ Error running page crawl for client {client_id}: {e}",
+                f"❌ Error running page crawl for client {client_id}: {error_type}: {error_msg}",
                 exc_info=True,
             )
 
-            # Try to mark crawl run as failed
+            # Try to mark crawl run as failed with full error details
             try:
                 if "crawl_run" in locals():
+                    full_error_message = f"{error_type}: {error_msg}\n\nTraceback:\n{error_traceback}"
                     await page_crawl_service.fail_crawl_run(
-                        crawl_run, f"Fatal error: {str(e)}"
+                        crawl_run, full_error_message[:1000]  # Limit to 1000 chars
                     )
+                    print(f"CRAWL RUN MARKED AS FAILED: {crawl_run.id}")
             except Exception as nested_error:
                 logger.error(f"Failed to mark crawl run as failed: {nested_error}")
+                print(f"ERROR MARKING FAILED: {nested_error}")
 
         finally:
             await engine.dispose()

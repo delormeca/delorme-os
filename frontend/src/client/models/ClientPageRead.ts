@@ -64,9 +64,9 @@ export type ClientPageRead = {
      */
     webpage_structure?: (Record<string, any> | null);
     /**
-     * Structured data/schema markup
+     * Structured data/schema markup (array of JSON-LD objects)
      */
-    schema_markup?: (Record<string, any> | null);
+    schema_markup?: null;
     /**
      * Named entities with salience scores
      */
@@ -74,11 +74,11 @@ export type ClientPageRead = {
     /**
      * Internal links found on page
      */
-    internal_links?: (Record<string, any> | null);
+    internal_links?: null;
     /**
      * External links found on page
      */
-    external_links?: (Record<string, any> | null);
+    external_links?: null;
     /**
      * Number of images on page
      */
@@ -96,6 +96,10 @@ export type ClientPageRead = {
      */
     screenshot_full_url?: (string | null);
     /**
+     * Array of tags for filtering and categorization
+     */
+    tags?: (Array<string> | null);
+    /**
      * Last crawl timestamp
      */
     last_crawled_at?: (string | null);
@@ -103,9 +107,5 @@ export type ClientPageRead = {
      * Associated crawl run ID
      */
     crawl_run_id?: (string | null);
-    /**
-     * Array of tag strings for categorization and filtering (e.g., ['blog', 'product-page', 'high-priority'])
-     */
-    tags?: (Array<string> | null);
 };
 

@@ -26,5 +26,9 @@ export type ClientPageUpdate = {
      * Last time page was checked
      */
     last_checked_at?: (string | null);
+    /**
+     * Array of tags for filtering and categorization
+     */
+    tags?: (Array<string> | null);
 };
 

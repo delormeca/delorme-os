@@ -59,20 +59,41 @@ export class ClientsService {
         });
     }
     /**
-     * Get Client
-     * Get a client by ID.
-     * @param clientId
+     * Get Client By Slug
+     * Get a client by slug (URL-friendly identifier).
+     * @param slug
      * @returns ClientRead Successful Response
      * @throws ApiError
      */
-    public static getClientApiClientsClientIdGet(
-        clientId: string,
+    public static getClientBySlugApiClientsSlugSlugGet(
+        slug: string,
     ): CancelablePromise<ClientRead> {
         return __request(OpenAPI, {
             method: 'GET',
-            url: '/api/clients/{client_id}',
+            url: '/api/clients/slug/{slug}',
             path: {
-                'client_id': clientId,
+                'slug': slug,
+            },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * Get Client
+     * Get a client by ID or slug.
+     * @param clientIdentifier
+     * @returns ClientRead Successful Response
+     * @throws ApiError
+     */
+    public static getClientApiClientsClientIdentifierGet(
+        clientIdentifier: string,
+    ): CancelablePromise<ClientRead> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/clients/{client_identifier}',
+            path: {
+                'client_identifier': clientIdentifier,
             },
             errors: {
                 422: `Validation Error`,

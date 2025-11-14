@@ -160,3 +160,8 @@ cython_debug/
 *.env
 .DS_Store
 **/.DS_Store
+
+# Screenshot files
+static/screenshots/*.png
+static/screenshots/*.jpg
+static/screenshots/*.jpeg

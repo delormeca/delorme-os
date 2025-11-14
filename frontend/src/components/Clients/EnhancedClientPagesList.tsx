@@ -154,6 +154,11 @@ export const EnhancedClientPagesList: React.FC<EnhancedClientPagesListProps> = (
       isLoading={isLoading}
       onExport={handleExport}
       onDelete={handleDelete}
+      // Server-side pagination props
+      page={page}
+      pageSize={pageSize}
+      onPageChange={handlePageChange}
+      onPageSizeChange={handlePageSizeChange}
     />
   );
 };

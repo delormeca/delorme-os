@@ -57,6 +57,11 @@ interface EnhancedDataTableProps {
   isLoading?: boolean;
   onExport?: (selectedIds: string[]) => void;
   onDelete?: (selectedIds: string[]) => void;
+  // Server-side pagination props (optional - if not provided, uses client-side pagination)
+  page?: number;
+  pageSize?: number;
+  onPageChange?: (page: number) => void;
+  onPageSizeChange?: (pageSize: number) => void;
 }
 
 // Default visible columns
@@ -85,6 +90,10 @@ export const EnhancedDataTable: React.FC<EnhancedDataTableProps> = ({
   isLoading = false,
   onExport,
   onDelete,
+  page,
+  pageSize,
+  onPageChange,
+  onPageSizeChange,
 }) => {
   const theme = useTheme();
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -530,6 +539,9 @@ export const EnhancedDataTable: React.FC<EnhancedDataTableProps> = ({
     [columns, visibleColumns]
   );
 
+  // Determine if we're using server-side pagination
+  const isServerSidePagination = !!(onPageChange && onPageSizeChange);
+
   const table = useReactTable({
     data: filteredData,
     columns: displayColumns,
@@ -547,12 +559,18 @@ export const EnhancedDataTable: React.FC<EnhancedDataTableProps> = ({
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
+    // Only use client-side pagination if server-side handlers are not provided
+    ...(isServerSidePagination ? {} : { getPaginationRowModel: getPaginationRowModel() }),
     initialState: {
       pagination: {
-        pageSize: 50,
+        pageSize: pageSize || 50,
       },
     },
+    // For server-side pagination, set manual pagination and row count
+    ...(isServerSidePagination ? {
+      manualPagination: true,
+      pageCount: totalCount ? Math.ceil(totalCount / (pageSize || 50)) : -1,
+    } : {}),
   });
 
   // Get selected row IDs
@@ -749,7 +767,14 @@ export const EnhancedDataTable: React.FC<EnhancedDataTableProps> = ({
       </TableContainer>
 
       {/* Pagination Controls */}
-      <PaginationControls table={table} totalCount={totalCount} />
+      <PaginationControls
+        table={table}
+        totalCount={totalCount}
+        currentPage={page}
+        currentPageSize={pageSize}
+        onPageChange={onPageChange}
+        onPageSizeChange={onPageSizeChange}
+      />
 
       {/* Column Settings Modal */}
       <ColumnSettingsModal

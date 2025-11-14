@@ -6,6 +6,9 @@ import type { ClientPageCreate } from '../models/ClientPageCreate';
 import type { ClientPageList } from '../models/ClientPageList';
 import type { ClientPageRead } from '../models/ClientPageRead';
 import type { ClientPageUpdate } from '../models/ClientPageUpdate';
+import type { ExtractBatchRequest } from '../models/ExtractBatchRequest';
+import type { ExtractionResponse } from '../models/ExtractionResponse';
+import type { ExtractPageRequest } from '../models/ExtractPageRequest';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import { OpenAPI } from '../core/OpenAPI';
 import { request as __request } from '../core/request';
@@ -147,19 +150,19 @@ export class ClientPagesService {
     }
     /**
      * Get Client Page Count
-     * Get total and failed page counts for a client.
-     * @param clientId
+     * Get total and failed page counts for a client (accepts UUID or slug).
+     * @param clientIdentifier
      * @returns any Successful Response
      * @throws ApiError
      */
-    public static getClientPageCountApiClientPagesClientClientIdCountGet(
-        clientId: string,
+    public static getClientPageCountApiClientPagesClientClientIdentifierCountGet(
+        clientIdentifier: string,
     ): CancelablePromise<Record<string, any>> {
         return __request(OpenAPI, {
             method: 'GET',
-            url: '/api/client-pages/client/{client_id}/count',
+            url: '/api/client-pages/client/{client_identifier}/count',
             path: {
-                'client_id': clientId,
+                'client_identifier': clientIdentifier,
             },
             errors: {
                 422: `Validation Error`,
@@ -217,6 +220,48 @@ export class ClientPagesService {
                 'page_ids': pageIds,
                 'columns': columns,
             },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * Extract Page Data
+     * Extract data from a single URL using Crawl4AI + HTML Parser.
+     * Extracts all 24 data points and stores in ClientPage.
+     * @param requestBody
+     * @returns ExtractionResponse Successful Response
+     * @throws ApiError
+     */
+    public static extractPageDataApiClientPagesExtractPost(
+        requestBody: ExtractPageRequest,
+    ): CancelablePromise<ExtractionResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/client-pages/extract',
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * Extract Batch Pages
+     * Extract data from multiple URLs in the background.
+     * Returns immediately and processes URLs asynchronously.
+     * @param requestBody
+     * @returns ExtractionResponse Successful Response
+     * @throws ApiError
+     */
+    public static extractBatchPagesApiClientPagesExtractBatchPost(
+        requestBody: ExtractBatchRequest,
+    ): CancelablePromise<ExtractionResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/client-pages/extract-batch',
+            body: requestBody,
+            mediaType: 'application/json',
             errors: {
                 422: `Validation Error`,
             },

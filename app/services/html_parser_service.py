@@ -31,7 +31,7 @@ class HTMLParserService:
         return {
             # Core SEO metadata
             'page_title': self.get_page_title(),
-            'meta_title': self.get_meta_title(),
+            # meta_title removed - redundant with page_title
             'meta_description': self.get_meta_description(),
 
             # OnPage metadata
@@ -206,22 +206,7 @@ class HTMLParserService:
         Returns:
             Dictionary with structure metrics
         """
-        structure = {
-            'h1_count': len(self.soup.find_all('h1')),
-            'h2_count': len(self.soup.find_all('h2')),
-            'h3_count': len(self.soup.find_all('h3')),
-            'h4_count': len(self.soup.find_all('h4')),
-            'h5_count': len(self.soup.find_all('h5')),
-            'h6_count': len(self.soup.find_all('h6')),
-            'paragraph_count': len(self.soup.find_all('p')),
-            'image_count': len(self.soup.find_all('img')),
-            'link_count': len(self.soup.find_all('a')),
-            'form_count': len(self.soup.find_all('form')),
-            'table_count': len(self.soup.find_all('table')),
-            'list_count': len(self.soup.find_all(['ul', 'ol'])),
-        }
-
-        # Add heading hierarchy
+        # Collect all headings for hierarchy
         headings = []
         for level in range(1, 7):
             for heading in self.soup.find_all(f'h{level}'):
@@ -232,7 +217,18 @@ class HTMLParserService:
                         'text': text[:100]  # Limit to 100 chars
                     })
 
-        structure['heading_hierarchy'] = headings[:20]  # Limit to first 20
+        structure = {
+            # Total counts (not individual h1_count, h2_count etc)
+            'heading_count': len(headings),  # Total number of all headings
+            'paragraph_count': len(self.soup.find_all('p')),
+            'image_count': len(self.soup.find_all('img')),
+            'link_count': len(self.soup.find_all('a')),
+            'form_count': len(self.soup.find_all('form')),
+            'table_count': len(self.soup.find_all('table')),
+            'list_count': len(self.soup.find_all(['ul', 'ol'])),
+            # Detailed heading hierarchy
+            'heading_hierarchy': headings[:20],  # Limit to first 20
+        }
 
         return structure
 

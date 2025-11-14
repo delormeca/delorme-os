@@ -6,6 +6,7 @@ export type ClientSitemapTestResult = {
     is_valid: boolean;
     url_count: number;
     error?: (string | null);
+    message?: (string | null);
     sample_urls?: Array<string>;
 };
 

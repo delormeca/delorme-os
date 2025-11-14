@@ -8,6 +8,8 @@ import type { EngineSetupRequest } from '../models/EngineSetupRequest';
 import type { EngineSetupRunRead } from '../models/EngineSetupRunRead';
 import type { EngineSetupStartResponse } from '../models/EngineSetupStartResponse';
 import type { EngineSetupStatsResponse } from '../models/EngineSetupStatsResponse';
+import type { SitemapValidationRequest } from '../models/SitemapValidationRequest';
+import type { SitemapValidationResponse } from '../models/SitemapValidationResponse';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import { OpenAPI } from '../core/OpenAPI';
 import { request as __request } from '../core/request';
@@ -143,6 +145,30 @@ export class EngineSetupService {
             path: {
                 'run_id': runId,
             },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * Validate Sitemap
+     * Validate a sitemap URL without creating a setup run.
+     *
+     * This endpoint tests sitemap accessibility and parsing using the robust
+     * sitemap parser service. It returns URL count and detailed error information
+     * to help users diagnose issues before starting the full engine setup.
+     * @param requestBody
+     * @returns SitemapValidationResponse Successful Response
+     * @throws ApiError
+     */
+    public static validateSitemapApiEngineSetupValidateSitemapPost(
+        requestBody: SitemapValidationRequest,
+    ): CancelablePromise<SitemapValidationResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/engine-setup/validate-sitemap',
+            body: requestBody,
+            mediaType: 'application/json',
             errors: {
                 422: `Validation Error`,
             },
