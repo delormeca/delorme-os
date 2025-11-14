@@ -67,10 +67,8 @@ export const EngineSetupProgressDialog: React.FC<EngineSetupProgressDialogProps>
   };
 
   const handleClose = () => {
-    // Only allow closing if not in progress
-    if (progress?.status !== "in_progress" && progress?.status !== "pending") {
-      onClose();
-    }
+    // Allow closing at any time
+    onClose();
   };
 
   if (!runId || !progress) {
@@ -116,7 +114,7 @@ export const EngineSetupProgressDialog: React.FC<EngineSetupProgressDialogProps>
               size="small"
             />
           </Box>
-          <IconButton onClick={handleClose} disabled={isInProgress}>
+          <IconButton onClick={handleClose}>
             <Close />
           </IconButton>
         </Box>

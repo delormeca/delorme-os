@@ -7,6 +7,12 @@ import {
   useTheme,
   Divider,
   Alert,
+  Switch,
+  FormControlLabel,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
 } from '@mui/material';
 import {
   ArrowBack,
@@ -67,6 +73,10 @@ const ClientDetail: React.FC = () => {
   const [activeCrawlRunId, setActiveCrawlRunId] = useState<string | null>(null);
   const { data: crawlRuns } = usePageCrawlRuns(clientId || '', 1);
 
+  // SEO Workflows state
+  const [workflowsEnabled, setWorkflowsEnabled] = useState(false);
+  const [selectedWorkflow, setSelectedWorkflow] = useState('');
+
   const handleDelete = async () => {
     if (!client) return;
 
@@ -95,6 +105,10 @@ const ClientDetail: React.FC = () => {
     setCurrentRunId(null);
     // Refresh client data
     queryClient.invalidateQueries({ queryKey: ['clients', clientId] });
+    // Navigate to crawl page after setup completes
+    if (client) {
+      navigate(`/clients/${client.slug}/crawl`);
+    }
   };
 
   const handleCrawlStarted = (crawlRunId: string) => {
@@ -243,17 +257,17 @@ const ClientDetail: React.FC = () => {
             <ModernCard sx={{ textAlign: 'center', py: 6 }}>
               <Warning sx={{ fontSize: 48, color: 'warning.main', mb: 2 }} />
               <Typography variant="h6" sx={{ mb: 1 }}>
-                Website Engine Setup Required
+                Website Crawl Setup Required
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                Configure the Website Engine to discover and import pages from this client's website.
+                Initiate a website crawl to automatically discover and index all pages from this client's website.
               </Typography>
               <StandardButton
                 variant="contained"
                 startIcon={<Settings />}
                 onClick={() => setShowEngineSetup(true)}
               >
-                Setup Website Engine
+                Start Website Crawl
               </StandardButton>
             </ModernCard>
           ) : (
@@ -299,28 +313,59 @@ const ClientDetail: React.FC = () => {
           )}
         </Box>
 
-        {/* Projects Section */}
-        <Box>
-          <Box sx={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            mb: 3
-          }}>
-            <Typography variant="h5" sx={{ fontWeight: 600 }}>
-              Projects
-            </Typography>
-            <StandardButton
-              variant="contained"
-              startIcon={<Add />}
-              onClick={() => navigate(`/clients/${client.slug}/projects/new`)}
-            >
-              Add Project
-            </StandardButton>
-          </Box>
+        {/* SEO Workflows & App Section */}
+        {client.engine_setup_completed && (
+          <Box sx={{ mb: 4 }}>
+            <ModernCard variant="glass">
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                <Typography variant="h5" sx={{ fontWeight: 600 }}>
+                  SEO Workflows & App
+                </Typography>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={workflowsEnabled}
+                      onChange={(e) => setWorkflowsEnabled(e.target.checked)}
+                      color="primary"
+                    />
+                  }
+                  label="Enable Workflows"
+                />
+              </Box>
 
-          <ProjectsList clientId={client.id} showCreateButton={false} />
-        </Box>
+              {workflowsEnabled && (
+                <Box>
+                  <Divider sx={{ mb: 3 }} />
+                  <FormControl fullWidth>
+                    <InputLabel id="workflow-select-label">Select n8n Workflow</InputLabel>
+                    <Select
+                      labelId="workflow-select-label"
+                      value={selectedWorkflow}
+                      label="Select n8n Workflow"
+                      onChange={(e) => setSelectedWorkflow(e.target.value)}
+                    >
+                      <MenuItem value="">
+                        <em>None</em>
+                      </MenuItem>
+                      <MenuItem value="content-optimization">Content Optimization</MenuItem>
+                      <MenuItem value="keyword-research">Keyword Research</MenuItem>
+                      <MenuItem value="backlink-analysis">Backlink Analysis</MenuItem>
+                      <MenuItem value="competitor-tracking">Competitor Tracking</MenuItem>
+                      <MenuItem value="rank-monitoring">Rank Monitoring</MenuItem>
+                    </Select>
+                  </FormControl>
+
+                  {selectedWorkflow && (
+                    <Alert severity="info" sx={{ mt: 2 }}>
+                      Workflow "{selectedWorkflow.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}" is configured.
+                      Automation will run according to n8n schedule.
+                    </Alert>
+                  )}
+                </Box>
+              )}
+            </ModernCard>
+          </Box>
+        )}
 
         {/* Engine Setup Modal */}
         <EngineSetupModal

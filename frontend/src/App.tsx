@@ -48,6 +48,7 @@ import MyClients from "./pages/Clients/MyClients";
 import CreateClient from "./pages/Clients/CreateClient";
 import EditClient from "./pages/Clients/EditClient";
 import ClientDetail from "./pages/Clients/ClientDetail";
+import ClientCrawl from "./pages/Clients/ClientCrawl";
 import CreateProject from "./pages/Projects/CreateProject";
 import EditProject from "./pages/Projects/EditProject";
 import ProjectDetail from "./pages/Projects/ProjectDetail";
@@ -137,6 +138,7 @@ function App(props: { disableCustomTheme?: boolean }) {
                     <Route path="clients/new" element={<CreateClient />} />
                     <Route path="clients/:clientId" element={<ClientDetail />} />
                     <Route path="clients/:clientId/edit" element={<EditClient />} />
+                    <Route path="clients/:clientId/crawl" element={<ClientCrawl />} />
 
                     {/* Project routes */}
                     <Route path="clients/:clientId/projects/new" element={<CreateProject />} />
