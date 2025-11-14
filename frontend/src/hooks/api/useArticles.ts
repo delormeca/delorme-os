@@ -1,17 +1,13 @@
-
 /**
- * Custom hook to fetch articles using react-query.
- *
- * @param {Object} params - Parameters for fetching articles.
- * @param {boolean} [params.publishedOnly] - If true, fetch only published articles.
- * @returns {QueryObserverResult} The result of the query, including status and data.
+ * Stub hook for useArticles - Articles feature has been removed
+ * Returns empty data to prevent build errors
  */
-import { ArticlesService } from "@/client";
 import { useQuery } from "@tanstack/react-query";
 
-export const useArticles = ({ publishedOnly }: { publishedOnly?: boolean } = {}) => {
+export const useArticles = () => {
   return useQuery({
-    queryKey: ["articles"],
-    queryFn: () => ArticlesService.listArticlesApiArticlesGet(publishedOnly),
+    queryKey: ['articles'],
+    queryFn: async () => [],
+    enabled: false, // Never actually run this query
   });
 };

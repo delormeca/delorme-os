@@ -1,20 +1,13 @@
 /**
- * Custom hook to create an article using the ArticlesService.
- *
- * This hook utilizes the `useMutation` hook from `@tanstack/react-query` to handle
- * the mutation for creating a new article.
- *
- * @returns {UseMutationResult} The result of the mutation, including status and mutation functions.
- *
- * @example
- * const { mutateAsync: createArticle } = useCreateArticle();
- * await createArticle(articleData);
+ * Stub hook for useCreateArticle - Articles feature has been removed
+ * Returns stub mutation to prevent build errors
  */
-import { ArticlesService } from "@/client";
 import { useMutation } from "@tanstack/react-query";
 
 export const useCreateArticle = () => {
   return useMutation({
-    mutationFn: ArticlesService.createArticleApiArticlesPost,
+    mutationFn: async () => {
+      throw new Error("Articles feature is no longer available");
+    },
   });
 };
