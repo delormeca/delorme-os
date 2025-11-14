@@ -205,7 +205,7 @@ export default function NavBar() {
               }}
             >
               <img
-                src="/assets/delorme-logo.svg"
+                src={theme.palette.mode === 'dark' ? "/assets/branding/LOGO_PRIMAIRE_BLANC.png" : "/assets/branding/LOGO_PRIMAIRE_NOIR.png"}
                 alt="Delorme"
                 style={{
                   height: "32px",
@@ -296,7 +296,7 @@ export default function NavBar() {
                   }}
                 >
                   <img
-                    src="/assets/delorme-logo.svg"
+                    src={theme.palette.mode === 'dark' ? "/assets/branding/LOGO_PRIMAIRE_BLANC.png" : "/assets/branding/LOGO_PRIMAIRE_NOIR.png"}
                     alt="Delorme"
                     style={{
                       height: "28px",
@@ -477,7 +477,7 @@ export default function NavBar() {
               }}
             >
               <img
-                src="/assets/delorme-logo.svg"
+                src={theme.palette.mode === 'dark' ? "/assets/branding/LOGO_PRIMAIRE_BLANC.png" : "/assets/branding/LOGO_PRIMAIRE_NOIR.png"}
                 alt="Delorme"
                 style={{
                   height: "28px",

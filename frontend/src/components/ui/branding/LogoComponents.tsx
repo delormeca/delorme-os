@@ -136,13 +136,12 @@ export const LogoText: React.FC<LogoTextProps> = ({ size = "medium", sx }) => {
   return (
     <Box
       component="img"
-      src="/assets/delorme-logo.svg"
+      src={theme.palette.mode === 'dark' ? "/assets/branding/LOGO_PRIMAIRE_BLANC.png" : "/assets/branding/LOGO_PRIMAIRE_NOIR.png"}
       alt="Delorme"
       sx={{
         height: heightMap[size],
         width: 'auto',
         objectFit: 'contain',
-        color: theme.palette.text.primary, // SVG will use currentColor
         ...sx,
       }}
     />

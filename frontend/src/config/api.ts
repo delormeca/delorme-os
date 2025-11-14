@@ -35,14 +35,16 @@ export const API_BASE_URL = getApiBaseUrl();
 export const initializeApiClient = (): void => {
   // Configure OpenAPI client
   OpenAPI.BASE = API_BASE_URL;
+  OpenAPI.WITH_CREDENTIALS = true; // Enable sending cookies with requests
   OpenAPI.CREDENTIALS = 'include'; // Include cookies for authentication
-  
+
   // Debug info (removed in production builds)
   if (import.meta.env.DEV) {
     console.log('🔧 API Client Initialized:', {
       mode: import.meta.env.MODE,
       baseUrl: OpenAPI.BASE || 'same-origin (proxy/docker)',
       deployment: API_BASE_URL ? 'separate-services' : 'single-docker/proxy',
+      withCredentials: OpenAPI.WITH_CREDENTIALS,
       credentials: OpenAPI.CREDENTIALS
     });
   }
