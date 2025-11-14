@@ -25,17 +25,22 @@ interface IEditClientFormInputs {
 }
 
 export const EditClientForm: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
+  const { clientId } = useParams<{ clientId: string }>();
   const navigate = useNavigate();
   const theme = useTheme();
-  const { data: client, isLoading: isLoadingClient } = useClientDetail(id || "");
+  const { data: client, isLoading: isLoadingClient } = useClientDetail(clientId || "");
   const { mutateAsync: updateClient } = useUpdateClient();
 
   const form = useStandardForm<IEditClientFormInputs>({
     schema: formSchemas.client,
     onSuccess: async (data) => {
-      await updateClient({ clientId: id!, data });
-      navigate(`/clients/${id}`);
+      await updateClient({ clientId: clientId!, data });
+      // Navigate back using slug
+      if (client) {
+        navigate(`/clients/${client.slug}`);
+      } else {
+        navigate(`/clients/${clientId}`);
+      }
     },
     successMessage: "Client updated successfully!",
     defaultValues: {
@@ -81,7 +86,7 @@ export const EditClientForm: React.FC = () => {
         <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 4 }}>
           <StandardIconButton
             variant="outlined"
-            onClick={() => navigate(`/clients/${id}`)}
+            onClick={() => navigate(client?.slug ? `/clients/${client.slug}` : `/clients/${clientId}`)}
           >
             <ArrowBack />
           </StandardIconButton>
@@ -130,7 +135,7 @@ export const EditClientForm: React.FC = () => {
               <StandardButton
                 variant="outlined"
                 startIcon={<ArrowBack />}
-                onClick={() => navigate(`/clients/${id}`)}
+                onClick={() => navigate(client?.slug ? `/clients/${client.slug}` : `/clients/${clientId}`)}
               >
                 Cancel
               </StandardButton>
