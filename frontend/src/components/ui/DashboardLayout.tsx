@@ -368,17 +368,32 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const sidebarContent = (
     <>
       {/* Logo Section */}
-      <LogoSection 
-        collapsed={collapsed} 
+      <LogoSection
+        collapsed={collapsed}
         onClick={() => navigate('/')}
       >
-        <LogoIcon>
-          <Rocket />
-        </LogoIcon>
-        {!collapsed && (
-          <LogoText variant="h6">
-            CraftYourStartup
-          </LogoText>
+        {collapsed ? (
+          <Box
+            component="img"
+            src="/assets/branding/icone_verte.png"
+            alt="Delorme OS"
+            sx={{
+              width: 32,
+              height: 32,
+              objectFit: 'contain',
+            }}
+          />
+        ) : (
+          <Box
+            component="img"
+            src={theme.palette.mode === 'dark' ? "/assets/branding/LOGO_PRIMAIRE_BLANC.png" : "/assets/branding/LOGO_PRIMAIRE_NOIR.png"}
+            alt="Delorme OS"
+            sx={{
+              height: 32,
+              width: 'auto',
+              objectFit: 'contain',
+            }}
+          />
         )}
       </LogoSection>
 

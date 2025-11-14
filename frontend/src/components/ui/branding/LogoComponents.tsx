@@ -1,6 +1,5 @@
 import React from "react";
-import { Box, Typography, styled } from "@mui/material";
-import { Rocket } from "@mui/icons-material";
+import { Box, Typography, styled, useTheme } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { designTokens, styleHelpers } from "@/theme/customizations";
 
@@ -102,22 +101,50 @@ const getLogoContainerStyles = (
  */
 export const LogoIcon: React.FC<LogoIconProps> = ({ size = 48, sx }) => {
   return (
-    <StyledLogoIcon iconSize={size} className="logo-icon" sx={sx}>
-      <Rocket />
-    </StyledLogoIcon>
+    <Box
+      component="img"
+      src="/assets/branding/icone_verte.png"
+      alt="Delorme OS"
+      className="logo-icon"
+      sx={{
+        width: size,
+        height: size,
+        objectFit: 'contain',
+        flexShrink: 0,
+        transition: `transform ${designTokens.animation.normal} ${designTokens.easing.standard}`,
+        ...sx,
+      }}
+    />
   );
 };
 
 /**
- * Reusable logo text component
+ * Reusable logo text component (full logo image)
  */
 export const LogoText: React.FC<LogoTextProps> = ({ size = "medium", sx }) => {
+  const theme = useTheme();
   const config = sizeConfig[size];
 
+  // Calculate height based on text size
+  const heightMap = {
+    small: 24,
+    medium: 32,
+    large: 40,
+    xlarge: 48,
+  };
+
   return (
-    <StyledLogoText variant="h6" textSize={config.textSize} sx={sx}>
-      CraftYourStartup
-    </StyledLogoText>
+    <Box
+      component="img"
+      src={theme.palette.mode === 'dark' ? "/assets/branding/LOGO_PRIMAIRE_BLANC.png" : "/assets/branding/LOGO_PRIMAIRE_NOIR.png"}
+      alt="Delorme OS"
+      sx={{
+        height: heightMap[size],
+        width: 'auto',
+        objectFit: 'contain',
+        ...sx,
+      }}
+    />
   );
 };
 
