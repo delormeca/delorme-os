@@ -43,11 +43,8 @@ import { useCurrentUser } from "@/hooks/api/useCurrentUser";
 import { AuthService } from "@/client";
 import ColorModeIconDropdown from "@/theme/ColorModeIconDropdown";
 
-const pages = [
-  ["Features", "/#features"],
-  ["Testimonials", "/#testimonials"],
-  ["FAQ", "/#faq"],
-  ["Pricing", "/pricing"],
+const pages: string[][] = [
+  // Removed boilerplate menu items
 ];
 
 const profilePages = [
@@ -59,7 +56,6 @@ const profilePages = [
 
 const secondaryMenuPages = [
   { to: "dashboard/billing", label: "Billing", icon: <Payment /> },
-  { to: "/pricing", label: "Pricing", icon: <Payment /> },
   { to: "/privacy", label: "Privacy Policy", icon: <Policy /> },
   { to: "/terms", label: "Terms of Service", icon: <Description /> },
 ];
@@ -193,9 +189,6 @@ export default function NavBar() {
             sx={{
               display: { xs: "none", md: "flex" },
               alignItems: "center",
-              gap: 1.5,
-              textDecoration: "none",
-              color: "text.primary",
               transition: "transform 0.2s ease-out",
               "&:hover": {
                 transform: "scale(1.05)",
@@ -207,15 +200,18 @@ export default function NavBar() {
               style={{
                 display: "flex",
                 alignItems: "center",
-                gap: "12px",
                 textDecoration: "none",
                 color: "inherit",
               }}
             >
-              <LogoIcon>
-                <Rocket />
-              </LogoIcon>
-              <LogoText variant="h6">CraftYourStartup</LogoText>
+              <img
+                src="/assets/delorme-logo.svg"
+                alt="Delorme"
+                style={{
+                  height: "32px",
+                  width: "auto",
+                }}
+              />
             </a>
           </Box>
 
@@ -295,15 +291,18 @@ export default function NavBar() {
                   style={{
                     display: "flex",
                     alignItems: "center",
-                    gap: "12px",
                     textDecoration: "none",
                     color: "inherit",
                   }}
                 >
-                  <LogoIcon>
-                    <Rocket />
-                  </LogoIcon>
-                  <LogoText variant="h6">CraftYourStartup</LogoText>
+                  <img
+                    src="/assets/delorme-logo.svg"
+                    alt="Delorme"
+                    style={{
+                      height: "28px",
+                      width: "auto",
+                    }}
+                  />
                 </a>
                 <IconButton onClick={toggleDrawer(false)}>
                   <Close />
@@ -473,15 +472,18 @@ export default function NavBar() {
               style={{
                 display: "flex",
                 alignItems: "center",
-                gap: "12px",
                 textDecoration: "none",
                 color: "inherit",
               }}
             >
-              <LogoIcon>
-                <Rocket />
-              </LogoIcon>
-              <LogoText variant="h6">CraftYourStartup</LogoText>
+              <img
+                src="/assets/delorme-logo.svg"
+                alt="Delorme"
+                style={{
+                  height: "28px",
+                  width: "auto",
+                }}
+              />
             </a>
           </Box>
 

@@ -127,21 +127,22 @@ export const LogoText: React.FC<LogoTextProps> = ({ size = "medium", sx }) => {
 
   // Calculate height based on text size
   const heightMap = {
-    small: 24,
-    medium: 32,
-    large: 40,
-    xlarge: 48,
+    small: 28,
+    medium: 36,
+    large: 44,
+    xlarge: 52,
   };
 
   return (
     <Box
       component="img"
-      src={theme.palette.mode === 'dark' ? "/assets/branding/LOGO_PRIMAIRE_BLANC.png" : "/assets/branding/LOGO_PRIMAIRE_NOIR.png"}
-      alt="Delorme OS"
+      src="/assets/delorme-logo.svg"
+      alt="Delorme"
       sx={{
         height: heightMap[size],
         width: 'auto',
         objectFit: 'contain',
+        color: theme.palette.text.primary, // SVG will use currentColor
         ...sx,
       }}
     />
@@ -244,7 +245,7 @@ export const SidebarLogo: React.FC<{
 );
 
 export const AuthPageLogo: React.FC = () => (
-  <Logo size="large" variant="horizontal" clickable={true} />
+  <LogoText size="xlarge" />
 );
 
 export default Logo;

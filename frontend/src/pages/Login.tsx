@@ -51,7 +51,7 @@ export default function Login() {
         autoHide: true,
         severity: "success",
       });
-      navigate("/");
+      navigate("/dashboard");
     },
     onError: () => {
       createSnackBar({
