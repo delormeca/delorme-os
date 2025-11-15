@@ -42,6 +42,8 @@ import { useClientPageCount } from '@/hooks/api/useClientPages';
 import { usePageCrawlRuns } from '@/hooks/api/usePageCrawl';
 import { useConfirm } from 'material-ui-confirm';
 import { useQueryClient } from '@tanstack/react-query';
+import { DebugPanel } from '@/components/DebugPanel';
+import { useDebugLogger } from '@/hooks/useDebugLogger';
 
 const ClientDetail: React.FC = () => {
   const { clientId } = useParams<{ clientId: string }>();
@@ -52,6 +54,9 @@ const ClientDetail: React.FC = () => {
   const { data: client, isLoading, error } = useClientDetail(clientId || '');
   const { mutateAsync: deleteClient } = useDeleteClient();
   const { data: pageCount } = useClientPageCount(clientId || '');
+
+  // Debug logger
+  const { logs, clearLogs, logEvent } = useDebugLogger();
 
   // Debug logging
   React.useEffect(() => {
@@ -112,6 +117,7 @@ const ClientDetail: React.FC = () => {
   };
 
   const handleCrawlStarted = (crawlRunId: string) => {
+    logEvent(`Crawl started: ${crawlRunId}`);
     setActiveCrawlRunId(crawlRunId);
     setShowCrawlDialog(false);
   };
@@ -393,6 +399,9 @@ const ClientDetail: React.FC = () => {
           onCrawlStarted={handleCrawlStarted}
         />
       </Box>
+
+      {/* Debug Panel */}
+      <DebugPanel logs={logs} onClear={clearLogs} />
     </DashboardLayout>
   );
 };
