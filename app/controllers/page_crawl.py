@@ -200,25 +200,137 @@ async def get_crawl_status(
 @router.post("/cancel/{job_id}", response_model=JobResponse)
 async def cancel_crawl(
     job_id: str,
+    db: AsyncSession = Depends(get_async_db_session),
     current_user: User = Depends(get_current_user),
 ):
     """
     Cancel a running or scheduled crawl job.
 
-    Note: This cancels the scheduled job. If the job is already running,
-    it will continue until the current page finishes.
-    """
-    success = cancel_page_crawl_job(job_id)
+    Enhanced version that:
+    1. Removes job from APScheduler
+    2. Updates CrawlRun status in database to 'cancelled'
+    3. Works even if APScheduler job is not found (marks as cancelled anyway)
 
-    if not success:
+    Note: If the job is already running, it will continue until the current page finishes.
+    """
+    from sqlalchemy import select, update
+
+    # Extract crawl_run_id from job_id (format: page_crawl_{uuid})
+    crawl_run_id_str = job_id.replace("page_crawl_", "")
+
+    try:
+        crawl_run_id = uuid.UUID(crawl_run_id_str)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid job ID format: {job_id}",
+        )
+
+    # Try to cancel the APScheduler job
+    scheduler_cancelled = cancel_page_crawl_job(job_id)
+
+    # Update the CrawlRun in database regardless of scheduler status
+    result = await db.execute(
+        select(CrawlRun).where(CrawlRun.id == crawl_run_id)
+    )
+    crawl_run = result.scalar_one_or_none()
+
+    if not crawl_run:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Job {job_id} not found or already completed",
+            detail=f"Crawl run {crawl_run_id} not found in database",
         )
+
+    # Only update if not already in a terminal state
+    if crawl_run.status not in ["completed", "failed", "cancelled"]:
+        crawl_run.status = "cancelled"
+        crawl_run.completed_at = datetime.now(timezone.utc)
+        await db.commit()
+        await db.refresh(crawl_run)
+
+    message = f"Crawl job {job_id} cancelled successfully"
+    if not scheduler_cancelled:
+        message += " (job not found in scheduler, but database updated)"
 
     return JobResponse(
         job_id=job_id,
-        message=f"Crawl job {job_id} cancelled successfully",
+        message=message,
+    )
+
+
+@router.post("/force-kill/{crawl_run_id}", response_model=JobResponse)
+async def force_kill_crawl(
+    crawl_run_id: str,
+    db: AsyncSession = Depends(get_async_db_session),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Force-kill a stuck crawl job.
+
+    This is a more aggressive version of cancel that:
+    1. Marks the CrawlRun as 'failed' in the database
+    2. Attempts to remove from APScheduler (but doesn't fail if not found)
+    3. Sets appropriate error message
+    4. Works even if the job is completely stuck/unresponsive
+
+    Use this when:
+    - A crawl is stuck at 0% and won't progress
+    - Cancel button doesn't work
+    - Job needs to be forcefully terminated
+
+    Args:
+        crawl_run_id: The UUID of the CrawlRun to force-kill
+    """
+    from sqlalchemy import select
+
+    # Parse UUID
+    try:
+        run_id = uuid.UUID(crawl_run_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid crawl run ID format: {crawl_run_id}",
+        )
+
+    # Get the CrawlRun from database
+    result = await db.execute(
+        select(CrawlRun).where(CrawlRun.id == run_id)
+    )
+    crawl_run = result.scalar_one_or_none()
+
+    if not crawl_run:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Crawl run {crawl_run_id} not found in database",
+        )
+
+    # TODO: Add permission check - user must own the client
+    # For now, any authenticated user can force-kill
+
+    # Try to remove from scheduler (if it exists)
+    job_id = f"page_crawl_{crawl_run_id}"
+    scheduler_removed = cancel_page_crawl_job(job_id)
+
+    # Mark as failed in database
+    crawl_run.status = "failed"
+    crawl_run.completed_at = datetime.now(timezone.utc)
+
+    # Add error information if not already present
+    if not crawl_run.current_status_message:
+        crawl_run.current_status_message = "Force-killed by user due to stuck process"
+
+    await db.commit()
+    await db.refresh(crawl_run)
+
+    message = f"Crawl run {crawl_run_id} force-killed successfully"
+    if scheduler_removed:
+        message += " (removed from scheduler)"
+    else:
+        message += " (not found in scheduler, database updated)"
+
+    return JobResponse(
+        job_id=job_id,
+        message=message,
     )
 
 

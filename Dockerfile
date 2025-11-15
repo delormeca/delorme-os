@@ -1,71 +1,80 @@
-# Use an official Python runtime as a parent image
-FROM python:3.11-slim
-# Updated: 2025-11-12 - Force rebuild with automated superuser creation
+# Dockerfile for Delorme OS Backend with Playwright Support
+# Optimized for Render.com deployment
+
+FROM python:3.13-slim
+
+# Set working directory
+WORKDIR /app
 
 # Set environment variables
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
 
-# Install system dependencies required for Playwright and other packages
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
+# Install system dependencies required for Playwright
+RUN apt-get update && apt-get install -y \
+    # Playwright browser dependencies
     wget \
-    gnupg \
     ca-certificates \
     fonts-liberation \
     libasound2 \
     libatk-bridge2.0-0 \
     libatk1.0-0 \
-    libatspi2.0-0 \
+    libc6 \
+    libcairo2 \
     libcups2 \
     libdbus-1-3 \
-    libdrm2 \
+    libexpat1 \
+    libfontconfig1 \
     libgbm1 \
+    libgcc1 \
+    libglib2.0-0 \
     libgtk-3-0 \
     libnspr4 \
     libnss3 \
-    libwayland-client0 \
+    libpango-1.0-0 \
+    libpangocairo-1.0-0 \
+    libstdc++6 \
+    libx11-6 \
+    libx11-xcb1 \
+    libxcb1 \
     libxcomposite1 \
+    libxcursor1 \
     libxdamage1 \
+    libxext6 \
     libxfixes3 \
-    libxkbcommon0 \
+    libxi6 \
     libxrandr2 \
+    libxrender1 \
+    libxss1 \
+    libxtst6 \
+    lsb-release \
     xdg-utils \
-    libu2f-udev \
-    libvulkan1 \
+    # Additional utilities
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Poetry
-RUN pip install --no-cache-dir poetry
+# Copy requirements file
+COPY requirements.txt .
 
-# Set the working directory in the container
-WORKDIR /usr/src/app
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the Poetry configuration files into the container
-COPY pyproject.toml poetry.lock ./
+# Install Playwright and Chromium browser
+RUN playwright install chromium && \
+    playwright install-deps chromium
 
-# Copy installation script
-COPY install-deps.sh ./
-
-# Make script executable and run it
-RUN chmod +x install-deps.sh && ./install-deps.sh
-
-# Install Playwright browsers (Chromium only for efficiency)
-# Using --with-deps but system deps are already installed above
-RUN playwright install chromium
-
-# Copy the rest of the application code
+# Copy application code
 COPY . .
 
-# Create static directory for future use (optional)
-RUN mkdir -p /usr/src/app/static
+# Expose port (Render will override this with PORT env var)
+EXPOSE 8000
 
-# Make startup script executable
-RUN chmod +x startup.sh
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:8000/api/health || exit 1
 
-# Expose port (Render will use PORT env var)
-EXPOSE ${PORT:-8080}
-
-# Run startup script which handles migrations, superuser creation, and app start
-CMD ["./startup.sh"]
+# Run the application
+# Render will provide PORT environment variable
+CMD uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}

@@ -308,3 +308,60 @@ export const useCancelPageCrawl = () => {
     },
   });
 };
+
+/**
+ * Force-kill a stuck page crawl
+ * Use this when cancel doesn't work or crawl is completely stuck at 0%
+ * @param crawlRunId - The UUID of the CrawlRun (NOT prefixed with 'page_crawl_')
+ */
+export const useForceKillPageCrawl = () => {
+  const queryClient = useQueryClient();
+  const { createSnackBar } = useSnackBarContext();
+
+  return useMutation({
+    mutationFn: async (crawlRunId: string): Promise<JobResponse> => {
+      const response = await axios.post(
+        `/api/page-crawl/force-kill/${crawlRunId}`,
+        {},
+        getAxiosConfig()
+      );
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["page-crawl-jobs"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["page-crawl-status"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["page-crawl-runs"],
+      });
+      createSnackBar({
+        content: "Stuck crawl force-killed successfully",
+        severity: "warning",
+        autoHide: true,
+      });
+    },
+    onError: (error: any) => {
+      let errorMessage = "Failed to force-kill crawl";
+
+      if (error.response?.data?.detail) {
+        const detail = error.response.data.detail;
+        if (Array.isArray(detail)) {
+          errorMessage = detail.map((err: any) => err.msg).join(", ");
+        } else if (typeof detail === "string") {
+          errorMessage = detail;
+        }
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      createSnackBar({
+        content: errorMessage,
+        severity: "error",
+        autoHide: true,
+      });
+    },
+  });
+};

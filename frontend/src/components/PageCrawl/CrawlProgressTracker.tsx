@@ -26,8 +26,9 @@ import {
   ExpandMore,
   ExpandLess,
   Cancel as CancelIcon,
+  DeleteForever,
 } from "@mui/icons-material";
-import { usePageCrawlStatus, useCancelPageCrawl } from "@/hooks/api/usePageCrawl";
+import { usePageCrawlStatus, useCancelPageCrawl, useForceKillPageCrawl } from "@/hooks/api/usePageCrawl";
 import { formatDistanceToNow } from "date-fns";
 
 interface CrawlProgressTrackerProps {
@@ -41,6 +42,7 @@ const CrawlProgressTracker: React.FC<CrawlProgressTrackerProps> = ({
 }) => {
   const { data: status, isLoading } = usePageCrawlStatus(crawlRunId, !!crawlRunId);
   const cancelMutation = useCancelPageCrawl();
+  const forceKillMutation = useForceKillPageCrawl();
   const [showErrors, setShowErrors] = useState(false);
   const [showCosts, setShowCosts] = useState(false);
 
@@ -123,18 +125,36 @@ const CrawlProgressTracker: React.FC<CrawlProgressTrackerProps> = ({
               size="small"
             />
             {status.status === "in_progress" && (
-              <IconButton
-                size="small"
-                onClick={() => {
-                  // CRITICAL FIX: Job ID format matches backend APScheduler job ID
-                  const jobId = `page_crawl_${status.id}`;
-                  cancelMutation.mutate(jobId);
-                }}
-                disabled={cancelMutation.isPending}
-                title="Cancel crawl"
-              >
-                <CancelIcon fontSize="small" />
-              </IconButton>
+              <>
+                <IconButton
+                  size="small"
+                  onClick={() => {
+                    // CRITICAL FIX: Job ID format matches backend APScheduler job ID
+                    const jobId = `page_crawl_${status.id}`;
+                    cancelMutation.mutate(jobId);
+                  }}
+                  disabled={cancelMutation.isPending}
+                  title="Cancel crawl"
+                >
+                  <CancelIcon fontSize="small" />
+                </IconButton>
+                {/* Force-kill button: shows for stuck crawls (0% progress after some time) */}
+                {status.progress_percentage === 0 && status.successful_pages === 0 && (
+                  <IconButton
+                    size="small"
+                    color="error"
+                    onClick={() => {
+                      if (window.confirm("Force-kill this stuck crawl? This will mark it as failed.")) {
+                        forceKillMutation.mutate(status.id);
+                      }
+                    }}
+                    disabled={forceKillMutation.isPending}
+                    title="Force-kill stuck crawl (use when cancel doesn't work)"
+                  >
+                    <DeleteForever fontSize="small" />
+                  </IconButton>
+                )}
+              </>
             )}
           </Box>
         </Box>

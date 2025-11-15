@@ -1,22 +1,84 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.hypothesis/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Documentation
+*.md
+docs/
+CLAUDE.md
+
 # Environment files
+*.env
 local.env
 prod.env
-.env
-
-# Logs
-*.log
-
-# Python cache
-__pycache__/
-*.pyc
+.env.example
 
 # Frontend
 frontend/
+node_modules/
 
-# Deep researcher
-deep-researcher/
+# Development
+.editorconfig
+.pre-commit-config.yaml
 
-# Test files
-test_*.py
-cookies.txt
-*.json
+# Docker
+Dockerfile
+.dockerignore
+docker-compose.yml
+
+# Build artifacts
+*.egg-info/
+dist/
+build/
+
+# Logs
+*.log
+logs/
+
+# Task runner
+Taskfile.yml
+
+# CI/CD
+.github/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Alembic (keep migrations)
+alembic.ini
+
+# Misc
+.mypy_cache/
+.ruff_cache/
