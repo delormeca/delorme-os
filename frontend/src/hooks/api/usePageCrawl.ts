@@ -5,6 +5,7 @@ import { useSnackBarContext } from "@/context/SnackBarContext";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { OpenAPI } from "@/client";
 import axios from "axios";
+import { useRef, useEffect } from "react";
 
 // Types based on backend schemas
 export interface StartCrawlRequest {
@@ -135,6 +136,22 @@ export const useStartPageCrawl = () => {
   });
 };
 
+interface ExponentialBackoffConfig {
+  phase1: { maxPolls: number; intervalMs: number };
+  phase2: { maxPolls: number; intervalMs: number };
+  phase3: { maxPolls: number; intervalMs: number };
+  phase4: { intervalMs: number };
+  terminalStatuses: string[];
+}
+
+const CRAWL_STATUS_BACKOFF_CONFIG: ExponentialBackoffConfig = {
+  phase1: { maxPolls: 5, intervalMs: 2000 },
+  phase2: { maxPolls: 15, intervalMs: 5000 },
+  phase3: { maxPolls: 30, intervalMs: 10000 },
+  phase4: { intervalMs: 30000 },
+  terminalStatuses: ["completed", "failed", "partial"],
+};
+
 /**
  * Get crawl run status (for real-time polling)
  */
@@ -142,6 +159,12 @@ export const usePageCrawlStatus = (
   crawlRunId: string | null,
   enabled: boolean = true
 ) => {
+  const pollCountRef = useRef<number>(0);
+
+  useEffect(() => {
+    pollCountRef.current = 0;
+  }, [crawlRunId, enabled]);
+
   return useQuery({
     queryKey: ["page-crawl-status", crawlRunId],
     queryFn: async (): Promise<CrawlStatusResponse> => {
@@ -149,17 +172,32 @@ export const usePageCrawlStatus = (
         `/api/page-crawl/status/${crawlRunId}`,
         getAxiosConfig()
       );
+      pollCountRef.current += 1;
       return response.data;
     },
     enabled: !!crawlRunId && enabled,
     refetchInterval: (query) => {
-      // Poll every 2 seconds if status is pending or in_progress
       const data = query.state.data;
-      if (data?.status === "pending" || data?.status === "in_progress") {
-        return 2000; // 2 seconds
+      const pollCount = pollCountRef.current;
+
+      if (data?.status && CRAWL_STATUS_BACKOFF_CONFIG.terminalStatuses.includes(data.status)) {
+        return false;
       }
-      // Stop polling once completed or failed
-      return false;
+
+      if (data?.status !== "pending" && data?.status !== "in_progress") {
+        return false;
+      }
+
+      const config = CRAWL_STATUS_BACKOFF_CONFIG;
+      if (pollCount <= config.phase1.maxPolls) {
+        return config.phase1.intervalMs;
+      } else if (pollCount <= config.phase2.maxPolls) {
+        return config.phase2.intervalMs;
+      } else if (pollCount <= config.phase3.maxPolls) {
+        return config.phase3.intervalMs;
+      } else {
+        return config.phase4.intervalMs;
+      }
     },
     refetchIntervalInBackground: false,
   });
@@ -200,7 +238,24 @@ export const usePageCrawlJobs = () => {
 };
 
 /**
- * Cancel a crawl job
+ * Ensures job ID is in APScheduler format: page_crawl_{crawl_run_id}
+ * Handles both input formats defensively:
+ * - Raw crawl_run_id: "abc-123" → "page_crawl_abc-123"
+ * - Already formatted: "page_crawl_abc-123" → "page_crawl_abc-123"
+ *
+ * @param input - Either raw crawl_run_id or full job_id with prefix
+ * @returns Normalized job ID in APScheduler format
+ */
+function normalizeJobId(input: string): string {
+  if (input.startsWith('page_crawl_')) {
+    return input;
+  }
+  return `page_crawl_${input}`;
+}
+
+/**
+ * Cancel a page crawl job
+ * @param jobId - Crawl run ID (with or without 'page_crawl_' prefix)
  */
 export const useCancelPageCrawl = () => {
   const queryClient = useQueryClient();
@@ -208,8 +263,10 @@ export const useCancelPageCrawl = () => {
 
   return useMutation({
     mutationFn: async (jobId: string): Promise<JobResponse> => {
+      const normalizedJobId = normalizeJobId(jobId);
+
       const response = await axios.post(
-        `/api/page-crawl/cancel/${jobId}`,
+        `/api/page-crawl/cancel/${normalizedJobId}`,
         {},
         getAxiosConfig()
       );

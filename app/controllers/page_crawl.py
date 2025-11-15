@@ -2,11 +2,15 @@
 API endpoints for page crawling and data extraction (Phase 4).
 """
 import uuid
-from typing import Optional, List
+import sys
+import asyncio
+from typing import Optional, List, Literal
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel, Field
+from apscheduler.schedulers.base import STATE_RUNNING, STATE_PAUSED, STATE_STOPPED
 
 from app.db import get_async_db_session
 from app.services.users_service import get_current_user
@@ -75,6 +79,21 @@ class JobResponse(BaseModel):
 
     job_id: str
     message: str
+
+
+class HealthCheckDetail(BaseModel):
+    status: Literal["pass", "warn", "fail"]
+    message: str
+    details: Optional[dict] = None
+    timestamp: datetime
+
+
+class HealthCheckResponse(BaseModel):
+    overall_status: Literal["healthy", "degraded", "unhealthy"]
+    timestamp: datetime
+    checks: dict[str, HealthCheckDetail]
+    execution_time_ms: int
+    recommendations: list[str]
 
 
 # ============================================================================
@@ -269,3 +288,268 @@ async def list_client_crawl_runs(
         })
 
     return runs_list
+
+
+@router.get("/health", response_model=HealthCheckResponse)
+async def get_page_crawl_health(
+    include_test_crawl: bool = False,
+):
+    """
+    Comprehensive health check for page crawl infrastructure.
+
+    Diagnoses common issues that cause crawls to get stuck:
+    - Windows event loop policy (ProactorEventLoop required)
+    - Playwright browser installation
+    - Crawl4AI initialization capability
+    - APScheduler running status
+    - Optional: End-to-end test crawl
+
+    Args:
+        include_test_crawl: Whether to perform actual crawl test (adds ~5-10s)
+
+    Returns:
+        HealthCheckResponse with detailed diagnostic information
+    """
+    start_time = asyncio.get_event_loop().time()
+    timestamp = datetime.now(timezone.utc)
+    checks: dict[str, HealthCheckDetail] = {}
+    recommendations: list[str] = []
+
+    # Check 1: Event Loop Policy (Windows-specific)
+    try:
+        if sys.platform == 'win32':
+            policy = asyncio.get_event_loop_policy()
+            loop = asyncio.get_running_loop()
+            is_proactor = isinstance(loop, asyncio.ProactorEventLoop)
+
+            if is_proactor:
+                checks["event_loop_policy"] = HealthCheckDetail(
+                    status="pass",
+                    message="Windows ProactorEventLoop policy is correctly set",
+                    details={
+                        "policy_type": type(policy).__name__,
+                        "loop_type": type(loop).__name__,
+                        "platform": sys.platform
+                    },
+                    timestamp=datetime.now(timezone.utc)
+                )
+            else:
+                checks["event_loop_policy"] = HealthCheckDetail(
+                    status="fail",
+                    message="Windows event loop policy is not ProactorEventLoop",
+                    details={
+                        "policy_type": type(policy).__name__,
+                        "loop_type": type(loop).__name__,
+                        "platform": sys.platform,
+                        "expected": "ProactorEventLoop",
+                        "actual": type(loop).__name__
+                    },
+                    timestamp=datetime.now(timezone.utc)
+                )
+                recommendations.append(
+                    "Set event loop policy in main.py before uvicorn starts: "
+                    "asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())"
+                )
+        else:
+            checks["event_loop_policy"] = HealthCheckDetail(
+                status="pass",
+                message="Not Windows, event loop check not applicable",
+                details={"platform": sys.platform},
+                timestamp=datetime.now(timezone.utc)
+            )
+    except Exception as e:
+        checks["event_loop_policy"] = HealthCheckDetail(
+            status="fail",
+            message=f"Failed to check event loop policy: {str(e)}",
+            details={"error": str(e), "error_type": type(e).__name__},
+            timestamp=datetime.now(timezone.utc)
+        )
+        recommendations.append("Investigate event loop configuration error")
+
+    # Check 2: Playwright Installation
+    try:
+        from playwright.sync_api import sync_playwright
+        with sync_playwright() as p:
+            browser_type = p.chromium
+            executable_path = browser_type.executable_path
+            checks["playwright_installation"] = HealthCheckDetail(
+                status="pass",
+                message="Playwright Chromium browser is installed",
+                details={"executable_path": str(executable_path)},
+                timestamp=datetime.now(timezone.utc)
+            )
+    except ImportError as e:
+        checks["playwright_installation"] = HealthCheckDetail(
+            status="fail",
+            message="Playwright not installed",
+            details={"error": str(e)},
+            timestamp=datetime.now(timezone.utc)
+        )
+        recommendations.append("Install Playwright: pip install playwright")
+    except Exception as e:
+        checks["playwright_installation"] = HealthCheckDetail(
+            status="fail",
+            message=f"Playwright browser not found: {str(e)}",
+            details={"error": str(e), "error_type": type(e).__name__},
+            timestamp=datetime.now(timezone.utc)
+        )
+        recommendations.append("Install Playwright browsers: playwright install chromium")
+
+    # Check 3: Crawl4AI Initialization
+    try:
+        from app.services.crawl4ai_service import Crawl4AIService
+        init_start = asyncio.get_event_loop().time()
+        async with Crawl4AIService() as crawler:
+            init_time_ms = int((asyncio.get_event_loop().time() - init_start) * 1000)
+            checks["crawl4ai_initialization"] = HealthCheckDetail(
+                status="pass",
+                message="Crawl4AI service initialized successfully",
+                details={"initialization_time_ms": init_time_ms},
+                timestamp=datetime.now(timezone.utc)
+            )
+    except Exception as e:
+        checks["crawl4ai_initialization"] = HealthCheckDetail(
+            status="fail",
+            message=f"Crawl4AI initialization failed: {str(e)}",
+            details={
+                "error": str(e),
+                "error_type": type(e).__name__
+            },
+            timestamp=datetime.now(timezone.utc)
+        )
+        recommendations.append(
+            f"Check Crawl4AI dependencies and event loop policy. Error: {str(e)}"
+        )
+
+    # Check 4: APScheduler Status
+    try:
+        from app.tasks.page_crawl_tasks import get_page_crawl_scheduler
+        scheduler = get_page_crawl_scheduler()
+        state = scheduler.state
+        state_names = {
+            STATE_STOPPED: "stopped",
+            STATE_RUNNING: "running",
+            STATE_PAUSED: "paused"
+        }
+        state_name = state_names.get(state, "unknown")
+        job_count = len(scheduler.get_jobs())
+
+        if state == STATE_RUNNING:
+            checks["apscheduler_status"] = HealthCheckDetail(
+                status="pass",
+                message=f"APScheduler is running with {job_count} active jobs",
+                details={
+                    "state": state_name,
+                    "state_code": state,
+                    "job_count": job_count,
+                    "scheduler_class": type(scheduler).__name__
+                },
+                timestamp=datetime.now(timezone.utc)
+            )
+        else:
+            checks["apscheduler_status"] = HealthCheckDetail(
+                status="fail",
+                message=f"APScheduler is not running (state: {state_name})",
+                details={
+                    "state": state_name,
+                    "state_code": state,
+                    "job_count": job_count,
+                    "expected_state": "running"
+                },
+                timestamp=datetime.now(timezone.utc)
+            )
+            recommendations.append(
+                "APScheduler not running. Check main.py lifespan manager and ensure "
+                "get_page_crawl_scheduler() is called during startup"
+            )
+    except Exception as e:
+        checks["apscheduler_status"] = HealthCheckDetail(
+            status="fail",
+            message=f"Failed to check APScheduler status: {str(e)}",
+            details={"error": str(e), "error_type": type(e).__name__},
+            timestamp=datetime.now(timezone.utc)
+        )
+        recommendations.append("Check APScheduler initialization in main.py")
+
+    # Check 5: Test Crawl (optional)
+    if include_test_crawl:
+        try:
+            from app.services.crawl4ai_service import Crawl4AIService
+            crawl_start = asyncio.get_event_loop().time()
+            async with Crawl4AIService() as crawler:
+                result = await asyncio.wait_for(
+                    crawler.crawl_page("https://example.com"),
+                    timeout=30.0
+                )
+                crawl_time_ms = int((asyncio.get_event_loop().time() - crawl_start) * 1000)
+
+                if result.success:
+                    checks["test_crawl"] = HealthCheckDetail(
+                        status="pass",
+                        message="Test crawl of example.com succeeded",
+                        details={
+                            "url": "https://example.com",
+                            "status_code": result.status_code,
+                            "crawl_time_ms": crawl_time_ms,
+                            "html_length": len(result.html) if result.html else 0
+                        },
+                        timestamp=datetime.now(timezone.utc)
+                    )
+                else:
+                    checks["test_crawl"] = HealthCheckDetail(
+                        status="fail",
+                        message=f"Test crawl failed: {result.error_message}",
+                        details={
+                            "url": "https://example.com",
+                            "error": result.error_message,
+                            "crawl_time_ms": crawl_time_ms
+                        },
+                        timestamp=datetime.now(timezone.utc)
+                    )
+                    recommendations.append(
+                        f"Test crawl failed. Error: {result.error_message}"
+                    )
+        except asyncio.TimeoutError:
+            checks["test_crawl"] = HealthCheckDetail(
+                status="warn",
+                message="Test crawl timed out after 30 seconds",
+                details={"timeout_seconds": 30, "url": "https://example.com"},
+                timestamp=datetime.now(timezone.utc)
+            )
+            recommendations.append(
+                "Test crawl timed out. Check network connectivity and performance."
+            )
+        except Exception as e:
+            checks["test_crawl"] = HealthCheckDetail(
+                status="fail",
+                message=f"Test crawl failed: {str(e)}",
+                details={
+                    "error": str(e),
+                    "error_type": type(e).__name__,
+                    "url": "https://example.com"
+                },
+                timestamp=datetime.now(timezone.utc)
+            )
+            recommendations.append(
+                f"Test crawl failed. Check network connectivity and Playwright. Error: {str(e)}"
+            )
+
+    # Calculate overall status
+    statuses = [check.status for check in checks.values()]
+    if "fail" in statuses:
+        overall_status = "unhealthy"
+    elif "warn" in statuses:
+        overall_status = "degraded"
+    else:
+        overall_status = "healthy"
+
+    # Calculate execution time
+    execution_time_ms = int((asyncio.get_event_loop().time() - start_time) * 1000)
+
+    return HealthCheckResponse(
+        overall_status=overall_status,
+        timestamp=timestamp,
+        checks=checks,
+        execution_time_ms=execution_time_ms,
+        recommendations=recommendations
+    )
