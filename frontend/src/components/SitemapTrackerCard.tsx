@@ -29,7 +29,6 @@ import {
   Settings,
   PlayArrow,
   History,
-  Dashboard,
   Warning,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
@@ -91,11 +90,7 @@ export const SitemapTrackerCard: React.FC<SitemapTrackerCardProps> = ({ clientId
 
   // Handle navigation
   const handleViewHistory = () => {
-    navigate(`/clients/${client.slug}/sitemap-tracker/runs`);
-  };
-
-  const handleViewDashboard = () => {
-    navigate(`/clients/${client.slug}/sitemap-tracker/dashboard`);
+    navigate(`/clients/${clientId}/sitemap-tracker/runs`);
   };
 
   // Open dialog with current values
@@ -358,14 +353,6 @@ export const SitemapTrackerCard: React.FC<SitemapTrackerCardProps> = ({ clientId
               onClick={handleViewHistory}
             >
               View History
-            </StandardButton>
-            <StandardButton
-              variant="outlined"
-              size="small"
-              startIcon={<Dashboard />}
-              onClick={handleViewDashboard}
-            >
-              View Dashboard
             </StandardButton>
           </CardActions>
         )}
