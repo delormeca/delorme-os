@@ -1,22 +1,17 @@
 /**
  * Client Crawler Page
  *
- * Dedicated page for web crawling functionality with Engine Setup and Apify Crawler
+ * Dedicated page for Apify web crawling with comprehensive data table
  */
 import React, { useState } from 'react';
 import {
   Box,
   Typography,
-  Stack,
-  Alert,
   useTheme,
 } from '@mui/material';
 import {
   ArrowBack,
   TravelExplore,
-  Settings,
-  Warning,
-  Add,
 } from '@mui/icons-material';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useClientDetail } from '@/hooks/api/useClients';
@@ -24,70 +19,15 @@ import {
   DashboardLayout,
   StandardIconButton,
   LoadingState,
-  StandardButton,
-  ModernCard,
 } from '@/components/ui';
-import { EngineSetupModal } from '@/components/Clients/EngineSetupModal';
-import { EngineSetupProgressDialog } from '@/components/Clients/EngineSetupProgressDialog';
-import { EnhancedClientPagesList } from '@/components/Clients/EnhancedClientPagesList';
-import { StartCrawlDialog, CrawlProgressTracker } from '@/components/PageCrawl';
-import { useClientPageCount } from '@/hooks/api/useClientPages';
-import { usePageCrawlRuns } from '@/hooks/api/usePageCrawl';
-import { useQueryClient } from '@tanstack/react-query';
-import { ApifyCrawlerControlPanel, ApifyCrawlHistory } from '@/components/ApifyCrawler';
+import { ApifyCrawlerControlPanel, ApifyCrawlHistory, ApifyCrawlResultsTable } from '@/components/ApifyCrawler';
 
 const ClientCrawlerPage: React.FC = () => {
   const { clientId } = useParams<{ clientId: string }>();
   const navigate = useNavigate();
   const theme = useTheme();
-  const queryClient = useQueryClient();
   const { data: client, isLoading, error } = useClientDetail(clientId || '');
-  const { data: pageCount } = useClientPageCount(clientId || '');
-
-  // Engine setup state
-  const [showEngineSetup, setShowEngineSetup] = useState(false);
-  const [showProgress, setShowProgress] = useState(false);
-  const [currentRunId, setCurrentRunId] = useState<string | null>(null);
-
-  // Page crawl state
-  const [showCrawlDialog, setShowCrawlDialog] = useState(false);
-  const [activeCrawlRunId, setActiveCrawlRunId] = useState<string | null>(null);
-  const { data: crawlRuns } = usePageCrawlRuns(clientId || '', 1);
-
-  const handleSetupStarted = (runId: string) => {
-    setCurrentRunId(runId);
-    setShowEngineSetup(false);
-    setShowProgress(true);
-  };
-
-  const handleProgressClose = () => {
-    setShowProgress(false);
-    setCurrentRunId(null);
-    // Refresh client data
-    queryClient.invalidateQueries({ queryKey: ['clients', clientId] });
-  };
-
-  const handleCrawlStarted = (crawlRunId: string) => {
-    setActiveCrawlRunId(crawlRunId);
-    setShowCrawlDialog(false);
-  };
-
-  const handleCrawlComplete = () => {
-    setActiveCrawlRunId(null);
-    // Refresh pages list
-    queryClient.invalidateQueries({ queryKey: ['client-pages', clientId] });
-    queryClient.invalidateQueries({ queryKey: ['page-crawl-runs', clientId] });
-  };
-
-  // Check if there's an active crawl on mount
-  React.useEffect(() => {
-    if (crawlRuns && crawlRuns.length > 0) {
-      const latestRun = crawlRuns[0];
-      if (latestRun.status === 'in_progress' || latestRun.status === 'pending') {
-        setActiveCrawlRunId(latestRun.id);
-      }
-    }
-  }, [crawlRuns]);
+  const [selectedCrawlRunId, setSelectedCrawlRunId] = useState<string | null>(null);
 
   if (isLoading) {
     return (
@@ -138,107 +78,30 @@ const ClientCrawlerPage: React.FC = () => {
           </Box>
         </Box>
 
-        {/* Engine Setup Section */}
+        {/* Apify Crawler Control Panel */}
         <Box sx={{ mb: 4 }}>
-          {!client.engine_setup_completed ? (
-            <ModernCard sx={{ textAlign: 'center', py: 6 }}>
-              <Warning sx={{ fontSize: 48, color: 'warning.main', mb: 2 }} />
-              <Typography variant="h6" sx={{ mb: 1 }}>
-                Website Crawl Setup Required
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                Initiate a website crawl to automatically discover and index all pages from this client's website.
-              </Typography>
-              <StandardButton
-                variant="contained"
-                startIcon={<Settings />}
-                onClick={() => setShowEngineSetup(true)}
-              >
-                Start Website Crawl Setup
-              </StandardButton>
-            </ModernCard>
-          ) : (
-            <Box>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                <Typography variant="h5" sx={{ fontWeight: 600 }}>
-                  Discovered Pages ({pageCount?.total_pages || 0})
-                </Typography>
-                <Stack direction="row" spacing={1}>
-                  <StandardButton
-                    variant="contained"
-                    size="small"
-                    startIcon={<Add />}
-                    onClick={() => setShowCrawlDialog(true)}
-                    disabled={!!activeCrawlRunId}
-                  >
-                    {crawlRuns && crawlRuns.length > 0 ? 'Crawl Again' : 'Start Crawl'}
-                  </StandardButton>
-                  <StandardButton
-                    variant="outlined"
-                    size="small"
-                    startIcon={<Settings />}
-                    onClick={() => setShowEngineSetup(true)}
-                  >
-                    Re-run Setup
-                  </StandardButton>
-                </Stack>
-              </Box>
-
-              {/* Active Crawl Progress */}
-              {activeCrawlRunId && (
-                <CrawlProgressTracker
-                  crawlRunId={activeCrawlRunId}
-                  onComplete={handleCrawlComplete}
-                />
-              )}
-
-              <Alert severity="success" sx={{ mb: 2 }}>
-                Engine setup completed! {pageCount?.total_pages || 0} pages discovered.
-              </Alert>
-              <EnhancedClientPagesList clientId={client.id} />
-            </Box>
-          )}
+          <ApifyCrawlerControlPanel
+            clientId={client.id}
+            clientName={client.name}
+            baseUrl={client.base_url || undefined}
+          />
         </Box>
 
-        {/* Apify Crawler Section */}
-        {client.engine_setup_completed && (
+        {/* Crawl History */}
+        <Box sx={{ mb: 4 }}>
+          <ApifyCrawlHistory
+            clientId={client.id}
+            limit={10}
+            onViewCrawl={(crawlRunId) => setSelectedCrawlRunId(crawlRunId)}
+          />
+        </Box>
+
+        {/* Crawl Results Table - Big data table with tags and SEO metrics */}
+        {selectedCrawlRunId && (
           <Box sx={{ mb: 4 }}>
-            <Stack spacing={3}>
-              <ApifyCrawlerControlPanel
-                clientId={client.id}
-                clientName={client.name}
-                baseUrl={client.base_url || undefined}
-              />
-              <ApifyCrawlHistory clientId={client.id} limit={5} />
-            </Stack>
+            <ApifyCrawlResultsTable crawlRunId={selectedCrawlRunId} />
           </Box>
         )}
-
-        {/* Engine Setup Modal */}
-        <EngineSetupModal
-          open={showEngineSetup}
-          onClose={() => setShowEngineSetup(false)}
-          clientId={client.id}
-          clientName={client.name}
-          defaultSitemapUrl={client.sitemap_url || undefined}
-          onSetupStarted={handleSetupStarted}
-        />
-
-        {/* Engine Setup Progress Dialog */}
-        <EngineSetupProgressDialog
-          open={showProgress}
-          onClose={handleProgressClose}
-          runId={currentRunId}
-          clientId={client.id}
-        />
-
-        {/* Page Crawl Dialog */}
-        <StartCrawlDialog
-          open={showCrawlDialog}
-          onClose={() => setShowCrawlDialog(false)}
-          clientId={client.id}
-          onCrawlStarted={handleCrawlStarted}
-        />
       </Box>
     </DashboardLayout>
   );
