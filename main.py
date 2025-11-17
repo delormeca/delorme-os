@@ -46,6 +46,7 @@ from app.controllers.page_crawl import router as page_crawl_router
 from app.controllers.sitemap_tracker import router as sitemap_tracker_router
 from app.controllers.tags import router as tags_router
 from app.controllers.setup import setup_router
+from app.controllers.apify_crawler import router as apify_crawler_router
 from app.db import async_engine
 from app.config.base import config
 
@@ -167,6 +168,7 @@ app.include_router(page_crawl_router, tags=["page-crawl"])
 app.include_router(sitemap_tracker_router)
 app.include_router(tags_router, prefix="/api", tags=["tags"])
 app.include_router(setup_router, prefix="/api/setup", tags=["setup"])
+app.include_router(apify_crawler_router, prefix="/api", tags=["apify-crawler"])
 
 static_directory = "static/static"
 

@@ -52,6 +52,8 @@ google-cloud-language = "^2.18.0"
 openai = "^2.7.1"
 redis = "^7.0.1"
 slowapi = "^0.1.9"
+apify-client = "^2.3.0"
+pgvector = "^0.4.1"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.0.0"

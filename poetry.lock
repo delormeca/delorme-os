@@ -278,6 +278,36 @@ test = ["anyio[trio]", "blockbuster (>=1.5.23)", "coverage[toml] (>=7)", "except
 trio = ["trio (>=0.26.1)"]
 
 [[package]]
+name = "apify-client"
+version = "2.3.0"
+description = "Apify API client for Python"
+optional = false
+python-versions = ">=3.10"
+groups = ["main"]
+files = [
+    {file = "apify_client-2.3.0-py3-none-any.whl", hash = "sha256:6ae9b1461c2a15ab19c6131bfcab55be9362259cced9b254b827b4c3b6c12d40"},
+    {file = "apify_client-2.3.0.tar.gz", hash = "sha256:ff6d32e27d5205343e89057ac0e0c02b53a9219ccedfd30a3c4d70d13d931488"},
+]
+
+[package.dependencies]
+apify-shared = ">=2.1.0,<3.0.0"
+colorama = ">=0.4.0"
+impit = ">=0.9.2"
+more-itertools = ">=10.0.0"
+
+[[package]]
+name = "apify-shared"
+version = "2.1.0"
+description = "Tools and constants shared across Apify projects."
+optional = false
+python-versions = ">=3.10"
+groups = ["main"]
+files = [
+    {file = "apify_shared-2.1.0-py3-none-any.whl", hash = "sha256:f6dacf375ae07fd72c1fa1daa64e5265b6cab1b05a98df077b7de0ec2077f7c3"},
+    {file = "apify_shared-2.1.0.tar.gz", hash = "sha256:95b603454788189e9c6fa98af0e311d78033178db1434a4f0690fac40467aae0"},
+]
+
+[[package]]
 name = "apscheduler"
 version = "3.11.1"
 description = "In-process task scheduler with Cron-like capabilities"
@@ -2636,6 +2666,64 @@ files = [
 all = ["flake8 (>=7.1.1)", "mypy (>=1.11.2)", "pytest (>=8.3.2)", "ruff (>=0.6.2)"]
 
 [[package]]
+name = "impit"
+version = "0.9.2"
+description = "A library for making HTTP requests through browser impersonation"
+optional = false
+python-versions = ">=3.10"
+groups = ["main"]
+files = [
+    {file = "impit-0.9.2-cp310-cp310-macosx_10_12_x86_64.whl", hash = "sha256:6cc02125368b3096231f706e8d3d55388efa7e1c6390c9d97f192feb7194d3de"},
+    {file = "impit-0.9.2-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:82f255cb52e143b46a8cf170ee8e36f69ee7c06841a5b3cff0098a9eb3d1b447"},
+    {file = "impit-0.9.2-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:ca3afe72f18e2b69736ccf70f7c23cd5f64e34cb56c935290f0557a43e17114f"},
+    {file = "impit-0.9.2-cp310-cp310-manylinux_2_28_aarch64.whl", hash = "sha256:83d1ae19b7713f5a9d7efc3fcfc09ab2a931a0baaebcd77fd4f861fa5fd059ab"},
+    {file = "impit-0.9.2-cp310-cp310-musllinux_1_2_aarch64.whl", hash = "sha256:a5dd8d4ce288fa8570063f528e84480a2377ae77ed9449ac3b44f2c386b3e342"},
+    {file = "impit-0.9.2-cp310-cp310-musllinux_1_2_x86_64.whl", hash = "sha256:5c8011b6a4bb0537c02257d0db3123c242b72ec12f13e545170f06fff7e031e0"},
+    {file = "impit-0.9.2-cp310-cp310-win_amd64.whl", hash = "sha256:c686347e6cfb6e6e70d8e4e28bfcc1210bbab2c56dc18a80d1eaa7052a17621e"},
+    {file = "impit-0.9.2-cp311-cp311-macosx_10_12_x86_64.whl", hash = "sha256:8d7bd73f13f763a85ad1742492a0fc6774aaaa6faebab626beebaead3c904aca"},
+    {file = "impit-0.9.2-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:885a90e428904a6220ab2931ede244c331703b868e9373f7281c5c971f38b3c1"},
+    {file = "impit-0.9.2-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:8ad0addce9aff32201759855eccf8a388194303d01798278a5f35d2aab5019ea"},
+    {file = "impit-0.9.2-cp311-cp311-manylinux_2_28_aarch64.whl", hash = "sha256:a83bbfc9eae1715ba996f20529bbb3932ad6a240e4e851e2f6b99498c07aa06d"},
+    {file = "impit-0.9.2-cp311-cp311-musllinux_1_2_aarch64.whl", hash = "sha256:873910774a5d79d61fbfa16e11331814e15a8f3f28cf064bb960fe68bcf3259c"},
+    {file = "impit-0.9.2-cp311-cp311-musllinux_1_2_x86_64.whl", hash = "sha256:57555c709181872f0130f633a46b2ccaffb7a2e523e528520435d7be3a5a5f74"},
+    {file = "impit-0.9.2-cp311-cp311-win_amd64.whl", hash = "sha256:eec68e07ef922076839c8521f495bf725d308c4a8d7640a2537a3f0c3c4e5acb"},
+    {file = "impit-0.9.2-cp312-cp312-macosx_10_12_x86_64.whl", hash = "sha256:722659d06986f37a22798c0168d1033418b348d911ff89d7743568d447e0a09c"},
+    {file = "impit-0.9.2-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:4ce350668b1ab00a7cf480f80b907d74c2ab1246d9d2e0d97a4d7fffbf5c6d1f"},
+    {file = "impit-0.9.2-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:1649a5577e103d687afdc53823cdcf07bc20515b63edd0ac9f9efb52ada3f636"},
+    {file = "impit-0.9.2-cp312-cp312-manylinux_2_28_aarch64.whl", hash = "sha256:3fb44214f0af2ea063698d98204948cfb07436e6e34df66a34773e42cccbc3e5"},
+    {file = "impit-0.9.2-cp312-cp312-musllinux_1_2_aarch64.whl", hash = "sha256:f0b7b2a591c1be10175a05964f38cb38e4dde16efaf06f9950a8cdf5a6ae0e90"},
+    {file = "impit-0.9.2-cp312-cp312-musllinux_1_2_x86_64.whl", hash = "sha256:7eaa56e723a7991f576295015597acf840b4a463735bf33020be343d259d5102"},
+    {file = "impit-0.9.2-cp312-cp312-win_amd64.whl", hash = "sha256:1b6135588ecece9d3fb5f619c9046d91d02f57eaec7af1e6b9a82f24f1d0312c"},
+    {file = "impit-0.9.2-cp313-cp313-macosx_10_12_x86_64.whl", hash = "sha256:93cd5a86590f5ff39e5b89e2a3cd1b8221f561b3550b5f1c3f323453030c5a2c"},
+    {file = "impit-0.9.2-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:cbd3ab4d96c3f61021013e260a823002fb6dafd0e22bdef1233fe0eedf032dab"},
+    {file = "impit-0.9.2-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:81a5cf718955d212c0deabae955ff4d2fc7f83fe16260e038ca9e81eac9422f9"},
+    {file = "impit-0.9.2-cp313-cp313-manylinux_2_28_aarch64.whl", hash = "sha256:0adb4b93e8e4a16e6908e4029ef288e8fe0cfb7301c02214e42a4db738382403"},
+    {file = "impit-0.9.2-cp313-cp313-musllinux_1_2_aarch64.whl", hash = "sha256:f432f68f38c9518d3e1201537f50293ea0885b547865f923650a0153f457f98e"},
+    {file = "impit-0.9.2-cp313-cp313-musllinux_1_2_x86_64.whl", hash = "sha256:9f7a950096f1f86d1c151c7e4ccae164022842f231e6417a2c2ee9f171441a83"},
+    {file = "impit-0.9.2-cp313-cp313-win_amd64.whl", hash = "sha256:c34c8cf74e6d5159dbb15bda60549c8a4e4032ab711cb87ec41b750c669f6d97"},
+    {file = "impit-0.9.2-cp313-cp313t-macosx_10_12_x86_64.whl", hash = "sha256:00ceef344fd68f466e509aba2933a9022072b9abcc1bd5498a47632821704a9a"},
+    {file = "impit-0.9.2-cp313-cp313t-macosx_11_0_arm64.whl", hash = "sha256:ede6d58d5e7014f77b58812ec9f9438666af412c7eb61e703e7389d682318e56"},
+    {file = "impit-0.9.2-cp313-cp313t-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:767e29edf4ac3daecf44df1b02aabcc1f2b0da829e2726f3e8321857b342e950"},
+    {file = "impit-0.9.2-cp313-cp313t-manylinux_2_28_aarch64.whl", hash = "sha256:0a8598d82d0016eebe59682daf9cf8e269da07430f0f5bd8d695a9a7de9cfeb2"},
+    {file = "impit-0.9.2-cp313-cp313t-musllinux_1_2_aarch64.whl", hash = "sha256:094ce3cf6459a1b3320a939f277e907d65cb7bdc2d528892c2b5fcba9d4de581"},
+    {file = "impit-0.9.2-cp313-cp313t-musllinux_1_2_x86_64.whl", hash = "sha256:4c715ea3f8a9c22be9979eb31b04af4a3547ae4e462a0274ab72adcf40759b57"},
+    {file = "impit-0.9.2-cp314-cp314-macosx_10_12_x86_64.whl", hash = "sha256:2f93c8b57ca158f28fdcdb7f0078ef8f8168ac3bc7f4c41e3fe9bd4bc71ec6ce"},
+    {file = "impit-0.9.2-cp314-cp314-macosx_11_0_arm64.whl", hash = "sha256:cf34fa668826dce78500463a1a4bdeb546e9d1ef47e54a4316ae45b4a8d53c48"},
+    {file = "impit-0.9.2-cp314-cp314-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:e46a7db3deef50af2be076f27132265f990cc28c0bddb1dfd96d635dd8be0ec6"},
+    {file = "impit-0.9.2-cp314-cp314-manylinux_2_28_aarch64.whl", hash = "sha256:ddb75d8cba25d78425fb6bcf221b85f3157c30c0f64f09edad793931088d26ca"},
+    {file = "impit-0.9.2-cp314-cp314-musllinux_1_2_aarch64.whl", hash = "sha256:82859a03559a099bf84483a9dde7ea5948e755b3c17c7f59ab14a1f0583da1d1"},
+    {file = "impit-0.9.2-cp314-cp314-musllinux_1_2_x86_64.whl", hash = "sha256:54ecf7b354a1b13ca443c79eafa639974f7c7a18605ab60dffe3766f7f8c79b6"},
+    {file = "impit-0.9.2-cp314-cp314-win_amd64.whl", hash = "sha256:19141cbacce57f21e18080ace46a93bd1d001d9daa2d76af7b2b8cea86dd4ab4"},
+    {file = "impit-0.9.2-cp314-cp314t-macosx_10_12_x86_64.whl", hash = "sha256:4e2641302397aed662a2196f00dda1c27f593608fee7694b2897a0d682acc96a"},
+    {file = "impit-0.9.2-cp314-cp314t-macosx_11_0_arm64.whl", hash = "sha256:f199d9e6565bfece4baa36c59af81047363ea57b64fe2fad6a8b7edb89409d8f"},
+    {file = "impit-0.9.2-cp314-cp314t-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:3955c20375f4fc139e778f2f2b66cfa8107e3db94ce8c228604e0ddc6bf4058b"},
+    {file = "impit-0.9.2-cp314-cp314t-manylinux_2_28_aarch64.whl", hash = "sha256:2078cfab35c4b1da00b94c88a5cf5ecb3cb5cdc920cbfa9fa5316d6898b6fd80"},
+    {file = "impit-0.9.2-cp314-cp314t-musllinux_1_2_aarch64.whl", hash = "sha256:6031a0701b59972ab8c391fd077ce25f74834a05902d5af910c4002c0e99b7dc"},
+    {file = "impit-0.9.2-cp314-cp314t-musllinux_1_2_x86_64.whl", hash = "sha256:98150759dd9fdb4805175292c67e3dfb03da0352de21c398857582f6cb93984d"},
+    {file = "impit-0.9.2.tar.gz", hash = "sha256:44a5c53cd3249db9a74837a41ca7f4eae4e25abc5f499a8538f32c17054d607f"},
+]
+
+[[package]]
 name = "importlib-metadata"
 version = "8.7.0"
 description = "Read metadata from Python packages"
@@ -3911,6 +3999,18 @@ files = [
 ]
 
 [[package]]
+name = "more-itertools"
+version = "10.8.0"
+description = "More routines for operating on iterables, beyond itertools"
+optional = false
+python-versions = ">=3.9"
+groups = ["main"]
+files = [
+    {file = "more_itertools-10.8.0-py3-none-any.whl", hash = "sha256:52d4362373dcf7c52546bc4af9a86ee7c4579df9a8dc268be0a2f949d376cc9b"},
+    {file = "more_itertools-10.8.0.tar.gz", hash = "sha256:f638ddf8a1a0d134181275fb5d58b086ead7c6a72429ad725c67503f13ba30bd"},
+]
+
+[[package]]
 name = "multidict"
 version = "6.7.0"
 description = "multidict implementation"
@@ -4559,6 +4659,21 @@ files = [
     {file = "pathspec-0.12.1-py3-none-any.whl", hash = "sha256:a0d503e138a4c123b27490a4f7beda6a01c6f288df0e4a8b79c7eb0dc7b4cc08"},
     {file = "pathspec-0.12.1.tar.gz", hash = "sha256:a482d51503a1ab33b1c67a6c3813a26953dbdc71c31dacaef9a838c4e29f5712"},
 ]
+
+[[package]]
+name = "pgvector"
+version = "0.4.1"
+description = "pgvector support for Python"
+optional = false
+python-versions = ">=3.9"
+groups = ["main"]
+files = [
+    {file = "pgvector-0.4.1-py3-none-any.whl", hash = "sha256:34bb4e99e1b13d08a2fe82dda9f860f15ddcd0166fbb25bffe15821cbfeb7362"},
+    {file = "pgvector-0.4.1.tar.gz", hash = "sha256:83d3a1c044ff0c2f1e95d13dfb625beb0b65506cfec0941bfe81fd0ad44f4003"},
+]
+
+[package.dependencies]
+numpy = "*"
 
 [[package]]
 name = "pillow"
@@ -8320,4 +8435,4 @@ cffi = ["cffi (>=1.17,<2.0) ; platform_python_implementation != \"PyPy\" and pyt
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.11"
-content-hash = "a2e37bf76aed5e244a9b53626b71b8b9fdea23951a676563af45b694b086161f"
+content-hash = "bd9bdd4ed8022d7d2a50f163aa7ac2abd238f3d8ba839375fb05989c1aa278ca"

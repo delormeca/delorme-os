@@ -83,7 +83,7 @@ class SitemapTrackerRunRead(BaseModel):
     comparison_baseline_snapshot: Optional[Dict[str, Any]] = None
     execution_time_seconds: Optional[float] = None
     average_response_time_ms: Optional[float] = None
-    changes: List[SitemapChangeRead] = []
+    # Note: Changes are fetched separately via /runs/{run_id}/changes endpoint
 
 
 class SitemapTrackerRunList(BaseModel):

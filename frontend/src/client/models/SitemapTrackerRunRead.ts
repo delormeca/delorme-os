@@ -2,7 +2,6 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
-import type { SitemapChangeRead } from './SitemapChangeRead';
 /**
  * Response schema for individual sitemap tracker run records.
  */
@@ -31,6 +30,5 @@ export type SitemapTrackerRunRead = {
     comparison_baseline_snapshot?: (Record<string, any> | null);
     execution_time_seconds?: (number | null);
     average_response_time_ms?: (number | null);
-    changes?: Array<SitemapChangeRead>;
 };
 

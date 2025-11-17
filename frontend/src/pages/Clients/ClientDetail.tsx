@@ -45,6 +45,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { DebugPanel } from '@/components/DebugPanel';
 import { useDebugLogger } from '@/hooks/useDebugLogger';
 import { SitemapTrackerCard } from '@/components/SitemapTrackerCard';
+import { ApifyCrawlerControlPanel, ApifyCrawlHistory } from '@/components/ApifyCrawler';
 
 const ClientDetail: React.FC = () => {
   const { clientId } = useParams<{ clientId: string }>();
@@ -320,10 +321,22 @@ const ClientDetail: React.FC = () => {
           )}
         </Box>
 
-        {/* Sitemap Tracker Section */}
+        {/* Sitemap Tracker Section - Fully Independent */}
+        <Box sx={{ mb: 4 }}>
+          <SitemapTrackerCard clientId={client.id} client={client} />
+        </Box>
+
+        {/* Apify Crawler Section - Full Control (START/STOP/PAUSE) */}
         {client.engine_setup_completed && (
           <Box sx={{ mb: 4 }}>
-            <SitemapTrackerCard clientId={client.id} client={client} />
+            <Stack spacing={3}>
+              <ApifyCrawlerControlPanel
+                clientId={client.id}
+                clientName={client.name}
+                baseUrl={client.base_url || undefined}
+              />
+              <ApifyCrawlHistory clientId={client.id} limit={5} />
+            </Stack>
           </Box>
         )}
 

@@ -55,4 +55,14 @@ export {
   useTrackerChanges,
   useCompareRuns,
   useTrackerDashboard,
-} from "./useSitemapTracker"; 
+} from "./useSitemapTracker";
+
+// Apify Crawler hooks (START/STOP/PAUSE controls)
+export {
+  useStartCrawl,
+  useStopCrawl,
+  usePauseCrawl,
+  useCrawlStatus,
+  useProcessCrawl,
+  useClientCrawls,
+} from "./useCrawler"; 

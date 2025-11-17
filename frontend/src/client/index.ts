@@ -8,6 +8,8 @@ export { OpenAPI } from './core/OpenAPI';
 export type { OpenAPIConfig } from './core/OpenAPI';
 
 export type { AllTagsResponse } from './models/AllTagsResponse';
+export type { app__controllers__apify_crawler__CrawlStatusResponse } from './models/app__controllers__apify_crawler__CrawlStatusResponse';
+export type { app__controllers__page_crawl__CrawlStatusResponse } from './models/app__controllers__page_crawl__CrawlStatusResponse';
 export type { Body_generate_backup_api_clients_backup_post } from './models/Body_generate_backup_api_clients_backup_post';
 export type { BulkUpdateTagsRequest } from './models/BulkUpdateTagsRequest';
 export type { BulkUpdateTagsResponse } from './models/BulkUpdateTagsResponse';
@@ -27,7 +29,10 @@ export type { ClientRead } from './models/ClientRead';
 export type { ClientSitemapTest } from './models/ClientSitemapTest';
 export type { ClientSitemapTestResult } from './models/ClientSitemapTestResult';
 export type { ClientUpdate } from './models/ClientUpdate';
-export type { CrawlStatusResponse } from './models/CrawlStatusResponse';
+export type { CrawlControlResponse } from './models/CrawlControlResponse';
+export type { CrawlProcessResponse } from './models/CrawlProcessResponse';
+export type { CrawlStartRequest } from './models/CrawlStartRequest';
+export type { CrawlStartResponse } from './models/CrawlStartResponse';
 export type { CreateCheckoutRequest } from './models/CreateCheckoutRequest';
 export type { CurrentUserResponse } from './models/CurrentUserResponse';
 export type { CustomerPortalResponse } from './models/CustomerPortalResponse';
@@ -88,6 +93,7 @@ export type { UserUpdate } from './models/UserUpdate';
 export type { ValidationError } from './models/ValidationError';
 export type { WebhookEventResponse } from './models/WebhookEventResponse';
 
+export { ApifyCrawlerService } from './services/ApifyCrawlerService';
 export { AuthService } from './services/AuthService';
 export { ClientPagesService } from './services/ClientPagesService';
 export { ClientsService } from './services/ClientsService';

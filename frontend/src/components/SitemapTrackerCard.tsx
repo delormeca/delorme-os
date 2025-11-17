@@ -36,6 +36,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   useConfigureSitemapTracker,
   useStartTrackerRun,
+  useExecuteTrackerRun,
   useTrackerDashboard,
   SitemapTrackerConfigUpdate,
 } from '@/hooks/api/useSitemapTracker';
@@ -54,6 +55,7 @@ export const SitemapTrackerCard: React.FC<SitemapTrackerCardProps> = ({ clientId
   // API hooks
   const configureMutation = useConfigureSitemapTracker();
   const startRunMutation = useStartTrackerRun();
+  const executeRunMutation = useExecuteTrackerRun();
   const { data: dashboard, isLoading: dashboardLoading } = useTrackerDashboard(clientId);
 
   // Dialog state
@@ -77,10 +79,14 @@ export const SitemapTrackerCard: React.FC<SitemapTrackerCardProps> = ({ clientId
 
   // Handle manual run
   const handleRunNow = async () => {
-    await startRunMutation.mutateAsync({
+    // Step 1: Create the tracker run (returns pending run with ID)
+    const createdRun = await startRunMutation.mutateAsync({
       clientId,
       data: { run_type: 'manual' },
     });
+
+    // Step 2: Execute the run (actually performs sitemap parsing)
+    await executeRunMutation.mutateAsync(createdRun.id);
   };
 
   // Handle navigation
@@ -169,14 +175,17 @@ export const SitemapTrackerCard: React.FC<SitemapTrackerCardProps> = ({ clientId
             )
           }
           action={
-            <StandardButton
-              variant="outlined"
-              size="small"
-              startIcon={<Settings />}
-              onClick={handleConfigureClick}
-            >
-              Configure
-            </StandardButton>
+            <Box sx={{ position: 'relative', zIndex: 1300 }}>
+              <StandardButton
+                variant="outlined"
+                size="small"
+                startIcon={<Settings />}
+                onClick={handleConfigureClick}
+                sx={{ position: 'relative', zIndex: 1300 }}
+              >
+                Configure
+              </StandardButton>
+            </Box>
           }
         />
 
@@ -335,11 +344,12 @@ export const SitemapTrackerCard: React.FC<SitemapTrackerCardProps> = ({ clientId
               onClick={handleRunNow}
               disabled={
                 startRunMutation.isPending ||
+                executeRunMutation.isPending ||
                 latestRun?.status === 'in_progress' ||
                 latestRun?.status === 'pending'
               }
             >
-              {startRunMutation.isPending ? 'Starting...' : 'Run Now'}
+              {startRunMutation.isPending || executeRunMutation.isPending ? 'Starting...' : 'Run Now'}
             </StandardButton>
             <StandardButton
               variant="outlined"

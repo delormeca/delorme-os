@@ -2,7 +2,7 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
-import type { CrawlStatusResponse } from '../models/CrawlStatusResponse';
+import type { app__controllers__page_crawl__CrawlStatusResponse } from '../models/app__controllers__page_crawl__CrawlStatusResponse';
 import type { HealthCheckResponse } from '../models/HealthCheckResponse';
 import type { JobResponse } from '../models/JobResponse';
 import type { StartCrawlRequest } from '../models/StartCrawlRequest';
@@ -79,12 +79,12 @@ export class PageCrawlService {
      * - Performance metrics
      * - Error log
      * @param crawlRunId
-     * @returns CrawlStatusResponse Successful Response
+     * @returns app__controllers__page_crawl__CrawlStatusResponse Successful Response
      * @throws ApiError
      */
     public static getCrawlStatusApiPageCrawlStatusCrawlRunIdGet(
         crawlRunId: string,
-    ): CancelablePromise<CrawlStatusResponse> {
+    ): CancelablePromise<app__controllers__page_crawl__CrawlStatusResponse> {
         return __request(OpenAPI, {
             method: 'GET',
             url: '/api/page-crawl/status/{crawl_run_id}',
@@ -107,12 +107,12 @@ export class PageCrawlService {
      * - Performance metrics
      * - Error log
      * @param crawlRunId
-     * @returns CrawlStatusResponse Successful Response
+     * @returns app__controllers__page_crawl__CrawlStatusResponse Successful Response
      * @throws ApiError
      */
     public static getCrawlStatusApiPageCrawlStatusCrawlRunIdGet1(
         crawlRunId: string,
-    ): CancelablePromise<CrawlStatusResponse> {
+    ): CancelablePromise<app__controllers__page_crawl__CrawlStatusResponse> {
         return __request(OpenAPI, {
             method: 'GET',
             url: '/api/page-crawl/status/{crawl_run_id}',

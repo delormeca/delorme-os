@@ -5,7 +5,7 @@
 /**
  * Response with crawl status.
  */
-export type CrawlStatusResponse = {
+export type app__controllers__page_crawl__CrawlStatusResponse = {
     id: string;
     status: string;
     progress_percentage: number;

@@ -14,7 +14,6 @@ from typing import Dict, List, Optional
 from uuid import UUID
 
 from sqlalchemy import and_, desc, func, select
-from sqlalchemy.orm import selectinload
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.models import Client, SitemapChange, SitemapTrackerRun, ChangeType
@@ -230,32 +229,40 @@ class SitemapTrackerService:
                 f"Run must be in 'pending' status to execute (current: {run.status})"
             )
 
+        # Store sitemap URL before committing (to avoid lazy-load issues)
+        sitemap_url = run.sitemap_url
+        previous_run_id = run.previous_run_id
+
         # Update status to in_progress
         run.status = "in_progress"
         run.started_at = get_utcnow()
         run.current_status_message = "Fetching sitemap..."
         await self.db.commit()
+        await self.db.refresh(run)  # Refresh to keep run attached to session
 
         try:
             # Import sitemap parser
             import sys
             import os
             # Add parent directory to path to import sitemap_parser_production
-            sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+            # __file__ is app/services/sitemap_tracker_service.py
+            # We need to go up 4 levels to get to the parent of velocity-boilerplate
+            parent_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+            sys.path.insert(0, parent_dir)
 
             from sitemap_parser_production import RobustSitemapParser
 
-            # Parse sitemap
-            run.current_status_message = f"Parsing sitemap from {run.sitemap_url}..."
-            await self.db.commit()
+            # Parse sitemap (synchronous operation - no database commits inside)
+            run.current_status_message = f"Parsing sitemap from {sitemap_url}..."
 
+            # Parse sitemap synchronously
             with RobustSitemapParser() as parser:
                 # Use recursive parsing to handle sitemap indexes
-                all_urls = parser.parse_sitemap_recursive(run.sitemap_url)
+                all_urls = parser.parse_sitemap_recursive(sitemap_url)
 
                 if not all_urls:
                     # Check if there was an error
-                    result = parser.parse_sitemap(run.sitemap_url)
+                    result = parser.parse_sitemap(sitemap_url)
                     if result.error:
                         raise Exception(f"Sitemap parsing failed: {result.error}")
 
@@ -269,15 +276,17 @@ class SitemapTrackerService:
                 for url_obj in all_urls
             }
 
+            # Update run with results (async operations now that parser is closed)
             run.total_urls_in_sitemap = len(current_sitemap_data)
             run.current_status_message = f"Found {len(current_sitemap_data)} URLs in sitemap"
             await self.db.commit()
+            await self.db.refresh(run)  # Refresh to keep run attached
 
             # Get previous run data for comparison
             previous_urls = {}
-            if run.previous_run_id:
+            if previous_run_id:
                 previous_query = select(SitemapTrackerRun).where(
-                    SitemapTrackerRun.id == run.previous_run_id
+                    SitemapTrackerRun.id == previous_run_id
                 )
                 previous_result = await self.db.execute(previous_query)
                 previous_run = previous_result.scalar_one_or_none()
@@ -288,6 +297,7 @@ class SitemapTrackerService:
             # Detect changes
             run.current_status_message = "Detecting changes..."
             await self.db.commit()
+            await self.db.refresh(run)  # Refresh to keep run attached
 
             current_urls_set = set(current_sitemap_data.keys())
             previous_urls_set = set(previous_urls.keys())
@@ -415,17 +425,13 @@ class SitemapTrackerService:
             run_id: ID of the run to retrieve
 
         Returns:
-            Run data with all changes
+            Run data (changes are fetched separately via list_run_changes)
 
         Raises:
             NotFoundException: If run not found
         """
-        # Fetch run with changes
-        query = (
-            select(SitemapTrackerRun)
-            .options(selectinload(SitemapTrackerRun.changes))
-            .where(SitemapTrackerRun.id == run_id)
-        )
+        # Fetch run (changes loaded separately via list_run_changes endpoint)
+        query = select(SitemapTrackerRun).where(SitemapTrackerRun.id == run_id)
         result = await self.db.execute(query)
         run = result.scalar_one_or_none()
 
