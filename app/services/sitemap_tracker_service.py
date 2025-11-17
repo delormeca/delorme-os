@@ -90,6 +90,9 @@ class SitemapTrackerService:
                     f"Tracking frequency must be one of: {', '.join(valid_frequencies)}"
                 )
 
+        # Check if this is the first time configuration (client was not configured before)
+        is_first_time_config = not client.sitemap_tracker_configured
+
         # Update client configuration
         if config.sitemap_url is not None:
             client.sitemap_url = config.sitemap_url
@@ -112,6 +115,35 @@ class SitemapTrackerService:
             f"Updated sitemap tracker config for client {client_id}: "
             f"url={config.sitemap_url}, frequency={config.tracking_frequency}, enabled={config.enabled}"
         )
+
+        # If this is the first time configuration and tracker is now configured and enabled,
+        # automatically create and execute a run to pull pages immediately
+        if is_first_time_config and client.sitemap_tracker_configured and client.sitemap_tracker_enabled:
+            logger.info(f"First time configuration for client {client_id}, creating and executing initial run")
+
+            # Create a new run
+            new_run = SitemapTrackerRun(
+                client_id=client_id,
+                schedule_frequency=client.sitemap_tracking_frequency or "manual_only",
+                sitemap_url=client.sitemap_url,
+                status="pending",
+                progress_percentage=0,
+                previous_run_id=None,  # No previous run for first setup
+            )
+
+            self.db.add(new_run)
+            await self.db.commit()
+            await self.db.refresh(new_run)
+
+            logger.info(f"Created initial run {new_run.id}, now executing...")
+
+            # Execute the run immediately
+            try:
+                await self.execute_tracker_run(new_run.id)
+                logger.info(f"Successfully executed initial run {new_run.id}")
+            except Exception as e:
+                logger.error(f"Failed to execute initial run {new_run.id}: {str(e)}")
+                # Don't raise - configuration was successful even if run failed
 
         return ClientRead.model_validate(client)
 

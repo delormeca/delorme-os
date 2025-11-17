@@ -236,3 +236,48 @@ export const useClientCrawls = (clientId: string, limit: number = 10) => {
     enabled: !!clientId,
   });
 };
+
+/**
+ * Hook to pull latest pages from sitemap tracker.
+ *
+ * This fetches URLs from the latest completed sitemap tracker run
+ * and adds only new pages that don't already exist in the client's page list.
+ *
+ * @example
+ * const { mutate: pullPages, isPending } = usePullPagesFromSitemap();
+ * pullPages("client-uuid");
+ */
+export const usePullPagesFromSitemap = () => {
+  const queryClient = useQueryClient();
+  const { createSnackBar } = useSnackBarContext();
+
+  return useMutation({
+    mutationFn: (clientId: string) =>
+      ApifyCrawlerService.pullPagesFromSitemapApiClientsClientIdPullFromSitemapPost(clientId),
+    onSuccess: (response) => {
+      // Invalidate client pages and crawls to refresh UI
+      queryClient.invalidateQueries({
+        queryKey: ["client-pages"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["client-crawls"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["client-detail"],
+      });
+      createSnackBar({
+        content: `Successfully pulled ${response.new_pages_added} new pages from sitemap. ${response.existing_pages_skipped} pages already existed.`,
+        severity: "success",
+        autoHide: true,
+      });
+    },
+    onError: (error: any) => {
+      const errorMessage = error.body?.detail || error.message || "Failed to pull pages from sitemap";
+      createSnackBar({
+        content: errorMessage,
+        severity: "error",
+        autoHide: false,
+      });
+    },
+  });
+};

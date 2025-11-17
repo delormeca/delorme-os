@@ -343,3 +343,124 @@ async def get_client_crawls(
         )
         for run in crawl_runs
     ]
+
+
+class PullPagesResponse(BaseModel):
+    """Response after pulling pages from sitemap tracker."""
+
+    total_urls_in_sitemap: int = Field(..., description="Total URLs in latest sitemap")
+    new_pages_added: int = Field(..., description="Number of new pages added")
+    existing_pages_skipped: int = Field(..., description="Number of pages that already existed")
+    pages: List[str] = Field(..., description="URLs of newly added pages")
+    message: str = Field(..., description="Status message")
+
+
+@router.post("/clients/{client_id}/pull-from-sitemap", response_model=PullPagesResponse)
+async def pull_pages_from_sitemap(
+    client_id: UUID,
+    db: AsyncSession = Depends(get_async_db_session),
+    current_user: CurrentUserResponse = Depends(get_current_user),
+):
+    """
+    **Pull latest pages from sitemap tracker and add them to the client.**
+
+    This endpoint:
+    1. Gets the latest completed sitemap tracker run
+    2. Extracts all URLs from the sitemap
+    3. Checks which URLs don't already exist in ClientPage
+    4. Adds only the new URLs to ClientPage
+
+    **Purpose:**
+    - Allows crawler to import pages discovered by sitemap tracker
+    - Only adds pages that haven't been added yet (no duplicates)
+    - Works alongside manual page addition
+
+    **Usage:**
+    Call this endpoint before starting a crawl to ensure all sitemap URLs are available.
+    """
+    from sqlmodel import select
+    from app.models import Client, ClientPage, SitemapTrackerRun, PageSource
+    from app.utils.helpers import get_utcnow
+    from sqlalchemy import desc
+
+    # Get client
+    client_result = await db.execute(
+        select(Client).where(Client.id == client_id)
+    )
+    client = client_result.scalar_one_or_none()
+
+    if not client:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Client with ID {client_id} not found"
+        )
+
+    # Get latest completed sitemap tracker run
+    run_result = await db.execute(
+        select(SitemapTrackerRun)
+        .where(
+            SitemapTrackerRun.client_id == client_id,
+            SitemapTrackerRun.status == "completed"
+        )
+        .order_by(desc(SitemapTrackerRun.completed_at))
+        .limit(1)
+    )
+    latest_run = run_result.scalar_one_or_none()
+
+    if not latest_run:
+        raise HTTPException(
+            status_code=404,
+            detail="No completed sitemap tracker run found for this client. Please run sitemap tracker first."
+        )
+
+    # Get all URLs from the sitemap (from comparison_baseline_snapshot)
+    sitemap_urls = []
+    if latest_run.comparison_baseline_snapshot:
+        sitemap_urls = list(latest_run.comparison_baseline_snapshot.keys())
+
+    if not sitemap_urls:
+        return PullPagesResponse(
+            total_urls_in_sitemap=0,
+            new_pages_added=0,
+            existing_pages_skipped=0,
+            pages=[],
+            message="No URLs found in sitemap tracker run"
+        )
+
+    # Get existing page URLs for this client
+    existing_pages_result = await db.execute(
+        select(ClientPage.url).where(ClientPage.client_id == client_id)
+    )
+    existing_urls = set(row[0] for row in existing_pages_result.fetchall())
+
+    # Find URLs that don't exist yet
+    new_urls = [url for url in sitemap_urls if url not in existing_urls]
+
+    # Add new pages to ClientPage
+    new_pages = []
+    for url in new_urls:
+        # Extract slug from URL (last part of path)
+        url_parts = url.rstrip('/').split('/')
+        slug = url_parts[-1] if len(url_parts) > 3 else ''
+
+        page = ClientPage(
+            client_id=client_id,
+            url=url,
+            slug=slug,
+            source=PageSource.SITEMAP_AUTO,  # Mark as coming from sitemap
+            created_at=get_utcnow(),
+            updated_at=get_utcnow()
+        )
+        new_pages.append(page)
+
+    if new_pages:
+        db.add_all(new_pages)
+        await db.commit()
+
+    return PullPagesResponse(
+        total_urls_in_sitemap=len(sitemap_urls),
+        new_pages_added=len(new_pages),
+        existing_pages_skipped=len(sitemap_urls) - len(new_pages),
+        pages=new_urls[:100],  # Return first 100 URLs to avoid huge response
+        message=f"Successfully added {len(new_pages)} new pages from sitemap. {len(sitemap_urls) - len(new_pages)} pages already existed."
+    )

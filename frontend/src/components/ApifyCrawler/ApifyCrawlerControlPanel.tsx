@@ -33,6 +33,7 @@ import {
   Error as ErrorIcon,
   HourglassEmpty,
   Timeline,
+  Sync,
 } from '@mui/icons-material';
 import { ModernCard, StandardButton } from '@/components/ui';
 import {
@@ -41,6 +42,7 @@ import {
   usePauseCrawl,
   useCrawlStatus,
   useProcessCrawl,
+  usePullPagesFromSitemap,
 } from '@/hooks/api/useCrawler';
 import { CrawlStartRequest } from '@/client';
 
@@ -71,6 +73,7 @@ export const ApifyCrawlerControlPanel: React.FC<ApifyCrawlerControlPanelProps> =
   const { mutate: stopCrawl, isPending: isStopping } = useStopCrawl();
   const { mutate: pauseCrawl, isPending: isPausing } = usePauseCrawl();
   const { mutate: processCrawl, isPending: isProcessing } = useProcessCrawl();
+  const { mutate: pullPages, isPending: isPullingPages } = usePullPagesFromSitemap();
 
   // Status monitoring (with automatic polling for active crawls)
   const { data: status, isLoading: isLoadingStatus } = useCrawlStatus(activeCrawlRunId || '', {
@@ -190,6 +193,11 @@ export const ApifyCrawlerControlPanel: React.FC<ApifyCrawlerControlPanelProps> =
     }
   };
 
+  // Handle pull pages from sitemap
+  const handlePullPagesFromSitemap = () => {
+    pullPages(clientId);
+  };
+
   return (
     <ModernCard variant="glass">
       {/* Header */}
@@ -250,15 +258,29 @@ export const ApifyCrawlerControlPanel: React.FC<ApifyCrawlerControlPanelProps> =
       {/* Control Buttons */}
       <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
         {!isActive ? (
-          <StandardButton
-            variant="contained"
-            startIcon={<PlayArrow />}
-            onClick={handleStartCrawl}
-            disabled={isStarting || !baseUrl}
-            size="small"
-          >
-            {isStarting ? 'Starting...' : 'Start Crawl'}
-          </StandardButton>
+          <>
+            <StandardButton
+              variant="contained"
+              startIcon={<PlayArrow />}
+              onClick={handleStartCrawl}
+              disabled={isStarting || !baseUrl}
+              size="small"
+            >
+              {isStarting ? 'Starting...' : 'Start Crawl'}
+            </StandardButton>
+            <Tooltip title="Pull latest pages from sitemap tracker to add to available pages">
+              <StandardButton
+                variant="outlined"
+                color="primary"
+                startIcon={<Sync />}
+                onClick={handlePullPagesFromSitemap}
+                disabled={isPullingPages}
+                size="small"
+              >
+                {isPullingPages ? 'Pulling...' : 'Pull Latest Pages'}
+              </StandardButton>
+            </Tooltip>
+          </>
         ) : (
           <>
             <Tooltip title="Stop crawl immediately">
