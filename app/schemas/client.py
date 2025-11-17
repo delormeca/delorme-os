@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Optional
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, HttpUrl
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl, computed_field
 
 from app.schemas.project_lead import ProjectLeadBasic
 
@@ -65,7 +65,14 @@ class ClientRead(BaseModel):
     created_by: UUID
     created_at: datetime
     updated_at: datetime
+
     model_config = ConfigDict(from_attributes=True)
+
+    @computed_field
+    @property
+    def base_url(self) -> Optional[str]:
+        """Computed field: alias for website_url for compatibility with crawler components."""
+        return self.website_url
 
 
 # Schema for deleting a client (requires password confirmation)
