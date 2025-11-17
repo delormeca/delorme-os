@@ -5,7 +5,7 @@ from typing import List, Optional
 
 from pydantic import ConfigDict
 import sqlalchemy as sa
-from sqlalchemy import Column, JSON, UniqueConstraint
+from sqlalchemy import Column, JSON, Text, UniqueConstraint
 from sqlalchemy.ext.asyncio import AsyncAttrs
 from sqlalchemy.orm import registry
 from sqlmodel import Field, Relationship, SQLModel
@@ -97,6 +97,28 @@ class DataPointDataType(str, Enum):
     DATETIME = "datetime"
 
 
+class PageSource(str, Enum):
+    """Enum for tracking how a page was added to the system."""
+    MANUAL = "manual"              # Manually added by user
+    SITEMAP_AUTO = "sitemap_auto"  # Auto-discovered from sitemap
+
+
+class SitemapTrackingFrequency(str, Enum):
+    """Enum for sitemap tracking frequency options."""
+    DAILY = "daily"
+    WEEKLY = "weekly"
+    BI_MONTHLY = "bi_monthly"
+    MONTHLY = "monthly"
+    MANUAL_ONLY = "manual_only"
+
+
+class ChangeType(str, Enum):
+    """Enum for sitemap change types."""
+    ADDED = "added"              # New URL discovered in sitemap
+    REMOVED = "removed"          # URL no longer in sitemap
+    STATUS_CHANGED = "status_changed"  # HTTP status code changed
+
+
 class Subscription(UUIDModelBase, table=True):
     """
     Model representing a user's subscription plan.
@@ -163,6 +185,11 @@ class Client(UUIDModelBase, table=True):
     )
     logo_url: Optional[str] = None
     crawl_frequency: str = Field(default="Manual Only", nullable=False)
+    sitemap_tracking_frequency: str = Field(
+        default=SitemapTrackingFrequency.WEEKLY.value,
+        nullable=False
+    )  # Sitemap tracking schedule (separate from crawl_frequency)
+    sitemap_tracker_enabled: bool = Field(default=True, nullable=False)  # Enable/disable sitemap tracking
     status: str = Field(default="Active", nullable=False, index=True)
     page_count: int = Field(default=0, nullable=False)
 
@@ -187,11 +214,20 @@ class Client(UUIDModelBase, table=True):
 
     # Engine Setup Fields (Phase 2)
     engine_setup_completed: bool = Field(default=False, nullable=False, index=True)
+    sitemap_tracker_configured: bool = Field(
+        default=False,
+        nullable=False,
+        index=True
+    )  # Sitemap tracker configured and run at least once
     last_setup_run_id: Optional[uuid.UUID] = Field(
         default=None,
         foreign_key="engine_setup_run.id",
         nullable=True,
     )
+    last_sitemap_tracker_run_id: Optional[uuid.UUID] = Field(
+        default=None,
+        foreign_key="sitemap_tracker_run.id"
+    )  # FK to most recent sitemap tracker run
 
     # Relationships
     project_lead: Optional["ProjectLead"] = Relationship(back_populates="clients")
@@ -207,11 +243,22 @@ class Client(UUIDModelBase, table=True):
             "foreign_keys": "EngineSetupRun.client_id"
         }
     )
+    sitemap_tracker_runs: List["SitemapTrackerRun"] = Relationship(
+        back_populates="client",
+        sa_relationship_kwargs={"foreign_keys": "SitemapTrackerRun.client_id"}
+    )
+    sitemap_changes: List["SitemapChange"] = Relationship(back_populates="client")
     last_setup_run: Optional["EngineSetupRun"] = Relationship(
         sa_relationship_kwargs={
             "lazy": "selectin",
             "foreign_keys": "Client.last_setup_run_id",
             "post_update": True
+        }
+    )
+    last_sitemap_tracker_run: Optional["SitemapTrackerRun"] = Relationship(
+        sa_relationship_kwargs={
+            "foreign_keys": "[Client.last_sitemap_tracker_run_id]",
+            "lazy": "joined"
         }
     )
 
@@ -277,6 +324,17 @@ class ClientPage(UUIDModelBase, table=True):
     # Metadata
     last_crawled_at: Optional[datetime.datetime] = Field(default=None)
     crawl_run_id: Optional[uuid.UUID] = Field(default=None, foreign_key="crawl_run.id", index=True)
+
+    # Sitemap Tracker Integration Fields
+    source: PageSource = Field(default=PageSource.MANUAL, nullable=False, index=True)
+    sent_to_crawler_at: Optional[datetime.datetime] = Field(default=None)
+    crawl_count: int = Field(default=0, nullable=False, index=True)
+    in_crawler: bool = Field(default=False, nullable=False, index=True)
+    status_code_history: Optional[list] = Field(
+        default=None,
+        sa_column=Column(JSON),
+        description="Array tracking status code changes: [{status_code: int, checked_at: ISO datetime, source: 'sitemap'|'crawler'}]"
+    )
 
     # Relationships
     client: "Client" = Relationship(back_populates="client_pages")
@@ -481,6 +539,139 @@ class CrawlRun(UUIDModelBase, table=True):
     pages: List["ClientPage"] = Relationship(
         back_populates="crawl_run",
         sa_relationship_kwargs={"lazy": "selectin"}
+    )
+
+
+class SitemapTrackerRun(UUIDModelBase, table=True):
+    """Tracks each sitemap monitoring execution with full historical data."""
+    __tablename__ = "sitemap_tracker_run"
+
+    # Foreign Key & Core Configuration
+    client_id: uuid.UUID = Field(foreign_key="client.id", nullable=False, index=True)
+    schedule_frequency: str = Field(default="weekly", nullable=False)  # daily, weekly, bi_monthly, monthly, manual
+    sitemap_url: str = Field(nullable=False)  # The sitemap URL checked during this run
+
+    # Run Status & Progress
+    status: str = Field(default="pending", nullable=False, index=True)  # pending, in_progress, completed, failed, cancelled
+    progress_percentage: int = Field(default=0, nullable=False)  # 0-100
+    current_url_being_checked: Optional[str] = Field(default=None)
+    current_status_message: Optional[str] = Field(default=None)
+
+    # Statistics - Sitemap Inventory
+    total_urls_in_sitemap: int = Field(default=0, nullable=False)
+    total_urls_checked: int = Field(default=0, nullable=False)
+
+    # Statistics - Change Detection
+    new_urls_count: int = Field(default=0, nullable=False)
+    removed_urls_count: int = Field(default=0, nullable=False)
+    status_code_changes_count: int = Field(default=0, nullable=False)
+    unchanged_urls_count: int = Field(default=0, nullable=False)
+
+    # Statistics - HTTP Status Codes
+    status_code_summary: Optional[dict] = Field(
+        default=None,
+        sa_column=Column(JSON),
+        description="Distribution of status codes: {\"200\": 1150, \"404\": 3, ...}"
+    )
+
+    # Timestamps
+    started_at: Optional[datetime.datetime] = Field(default=None, index=True)
+    completed_at: Optional[datetime.datetime] = Field(default=None)
+    created_at: datetime.datetime = Field(default_factory=get_utcnow, nullable=False, index=True)
+
+    # Error Handling
+    error_message: Optional[str] = Field(default=None)
+    error_log: Optional[dict] = Field(
+        default=None,
+        sa_column=Column(JSON),
+        description="Detailed error information: {\"failed_urls\": [...], \"errors\": [...]}"
+    )
+
+    # Comparison Metadata
+    previous_run_id: Optional[uuid.UUID] = Field(
+        default=None,
+        foreign_key="sitemap_tracker_run.id",
+        index=True
+    )
+    comparison_baseline_snapshot: Optional[dict] = Field(
+        default=None,
+        sa_column=Column(JSON),
+        description="Snapshot of previous run's URL list for delta calculation"
+    )
+
+    # Performance Metrics
+    execution_time_seconds: Optional[float] = Field(default=None)
+    average_response_time_ms: Optional[float] = Field(default=None)
+
+    # Relationships
+    client: "Client" = Relationship(
+        back_populates="sitemap_tracker_runs",
+        sa_relationship_kwargs={"foreign_keys": "[SitemapTrackerRun.client_id]"}
+    )
+    changes: List["SitemapChange"] = Relationship(
+        back_populates="sitemap_tracker_run",
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+    )
+    previous_run: Optional["SitemapTrackerRun"] = Relationship(
+        sa_relationship_kwargs={
+            "remote_side": "SitemapTrackerRun.id",
+            "foreign_keys": "[SitemapTrackerRun.previous_run_id]"
+        }
+    )
+
+
+class SitemapChange(UUIDModelBase, table=True):
+    """Records individual URL changes detected during sitemap monitoring runs."""
+    __tablename__ = "sitemap_change"
+
+    # Foreign Keys
+    client_id: uuid.UUID = Field(foreign_key="client.id", nullable=False, index=True)
+    sitemap_tracker_run_id: uuid.UUID = Field(
+        foreign_key="sitemap_tracker_run.id",
+        nullable=False,
+        index=True
+    )
+
+    # Change Identification
+    url: str = Field(sa_column=Column(Text, nullable=False, index=True))
+    change_type: ChangeType = Field(nullable=False, index=True)
+
+    # Status Tracking
+    old_status_code: Optional[int] = Field(default=None, index=True)
+    new_status_code: Optional[int] = Field(default=None, index=True)
+
+    # Timestamps
+    detected_at: datetime.datetime = Field(
+        default_factory=get_utcnow,
+        nullable=False,
+        index=True
+    )
+    last_seen_at: Optional[datetime.datetime] = Field(default=None)
+
+    # Crawler Integration
+    pushed_to_crawler: bool = Field(default=False, nullable=False, index=True)
+    pushed_at: Optional[datetime.datetime] = Field(default=None)
+
+    # Importance & Filtering
+    importance: Optional[str] = Field(default=None, index=True)
+    notes: Optional[str] = Field(default=None, sa_column=Column(Text))
+
+    # Relationships
+    client: "Client" = Relationship(
+        back_populates="sitemap_changes",
+        sa_relationship_kwargs={"lazy": "selectin"}
+    )
+    sitemap_tracker_run: "SitemapTrackerRun" = Relationship(
+        back_populates="changes",
+        sa_relationship_kwargs={"lazy": "selectin"}
+    )
+
+    # Table Constraints & Indexes
+    __table_args__ = (
+        sa.Index("ix_sitemap_change_client_type", "client_id", "change_type"),
+        sa.Index("ix_sitemap_change_status_codes", "new_status_code", "old_status_code"),
+        sa.Index("ix_sitemap_change_client_detected", "client_id", "detected_at"),
+        sa.Index("ix_sitemap_change_unpushed", "client_id", "pushed_to_crawler"),
     )
 
 

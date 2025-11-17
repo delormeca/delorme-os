@@ -18,6 +18,10 @@ export type ClientRead = {
     page_count: number;
     engine_setup_completed?: boolean;
     last_setup_run_id?: (string | null);
+    sitemap_tracking_frequency?: (string | null);
+    sitemap_tracker_enabled?: boolean;
+    sitemap_tracker_configured?: boolean;
+    last_sitemap_tracker_run_id?: (string | null);
     project_lead_id?: (string | null);
     project_lead?: (ProjectLeadBasic | null);
     created_by: string;

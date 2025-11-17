@@ -53,6 +53,13 @@ class ClientRead(BaseModel):
     page_count: int
     engine_setup_completed: bool = False
     last_setup_run_id: Optional[UUID] = None
+
+    # Sitemap Tracker fields
+    sitemap_tracking_frequency: Optional[str] = None
+    sitemap_tracker_enabled: bool = False
+    sitemap_tracker_configured: bool = False
+    last_sitemap_tracker_run_id: Optional[UUID] = None
+
     project_lead_id: Optional[UUID] = None
     project_lead: Optional[ProjectLeadBasic] = None
     created_by: UUID

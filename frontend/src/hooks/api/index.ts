@@ -43,4 +43,16 @@ export {
   useBulkUpdateTags,
   useDeletePageTags,
   useClientTags,
-} from "./useTags"; 
+} from "./useTags";
+
+// Sitemap Tracker hooks
+export {
+  useConfigureSitemapTracker,
+  useStartTrackerRun,
+  useExecuteTrackerRun,
+  useTrackerRun,
+  useTrackerRuns,
+  useTrackerChanges,
+  useCompareRuns,
+  useTrackerDashboard,
+} from "./useSitemapTracker"; 

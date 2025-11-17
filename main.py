@@ -43,6 +43,7 @@ from app.controllers.project_leads import router as project_leads_router
 from app.controllers.engine_setup import router as engine_setup_router
 from app.controllers.client_pages import router as client_pages_router
 from app.controllers.page_crawl import router as page_crawl_router
+from app.controllers.sitemap_tracker import router as sitemap_tracker_router
 from app.controllers.tags import router as tags_router
 from app.controllers.setup import setup_router
 from app.db import async_engine
@@ -163,6 +164,7 @@ app.include_router(project_leads_router, prefix="/api", tags=["project-leads"])
 app.include_router(engine_setup_router, prefix="/api", tags=["engine-setup"])
 app.include_router(client_pages_router, prefix="/api", tags=["client-pages"])
 app.include_router(page_crawl_router, tags=["page-crawl"])
+app.include_router(sitemap_tracker_router)
 app.include_router(tags_router, prefix="/api", tags=["tags"])
 app.include_router(setup_router, prefix="/api/setup", tags=["setup"])
 
@@ -228,5 +230,6 @@ if __name__ == "__main__":
     import uvicorn
 
     uvicorn.run(app, host="localhost", port=8020)
+
 
 

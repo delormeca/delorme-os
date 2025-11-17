@@ -3,6 +3,7 @@
 /* tslint:disable */
 /* eslint-disable */
 import type { CrawlStatusResponse } from '../models/CrawlStatusResponse';
+import type { HealthCheckResponse } from '../models/HealthCheckResponse';
 import type { JobResponse } from '../models/JobResponse';
 import type { StartCrawlRequest } from '../models/StartCrawlRequest';
 import type { CancelablePromise } from '../core/CancelablePromise';
@@ -127,8 +128,12 @@ export class PageCrawlService {
      * Cancel Crawl
      * Cancel a running or scheduled crawl job.
      *
-     * Note: This cancels the scheduled job. If the job is already running,
-     * it will continue until the current page finishes.
+     * Enhanced version that:
+     * 1. Removes job from APScheduler
+     * 2. Updates CrawlRun status in database to 'cancelled'
+     * 3. Works even if APScheduler job is not found (marks as cancelled anyway)
+     *
+     * Note: If the job is already running, it will continue until the current page finishes.
      * @param jobId
      * @returns JobResponse Successful Response
      * @throws ApiError
@@ -151,8 +156,12 @@ export class PageCrawlService {
      * Cancel Crawl
      * Cancel a running or scheduled crawl job.
      *
-     * Note: This cancels the scheduled job. If the job is already running,
-     * it will continue until the current page finishes.
+     * Enhanced version that:
+     * 1. Removes job from APScheduler
+     * 2. Updates CrawlRun status in database to 'cancelled'
+     * 3. Works even if APScheduler job is not found (marks as cancelled anyway)
+     *
+     * Note: If the job is already running, it will continue until the current page finishes.
      * @param jobId
      * @returns JobResponse Successful Response
      * @throws ApiError
@@ -165,6 +174,76 @@ export class PageCrawlService {
             url: '/api/page-crawl/cancel/{job_id}',
             path: {
                 'job_id': jobId,
+            },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * Force Kill Crawl
+     * Force-kill a stuck crawl job.
+     *
+     * This is a more aggressive version of cancel that:
+     * 1. Marks the CrawlRun as 'failed' in the database
+     * 2. Attempts to remove from APScheduler (but doesn't fail if not found)
+     * 3. Sets appropriate error message
+     * 4. Works even if the job is completely stuck/unresponsive
+     *
+     * Use this when:
+     * - A crawl is stuck at 0% and won't progress
+     * - Cancel button doesn't work
+     * - Job needs to be forcefully terminated
+     *
+     * Args:
+     * crawl_run_id: The UUID of the CrawlRun to force-kill
+     * @param crawlRunId
+     * @returns JobResponse Successful Response
+     * @throws ApiError
+     */
+    public static forceKillCrawlApiPageCrawlForceKillCrawlRunIdPost(
+        crawlRunId: string,
+    ): CancelablePromise<JobResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/page-crawl/force-kill/{crawl_run_id}',
+            path: {
+                'crawl_run_id': crawlRunId,
+            },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * Force Kill Crawl
+     * Force-kill a stuck crawl job.
+     *
+     * This is a more aggressive version of cancel that:
+     * 1. Marks the CrawlRun as 'failed' in the database
+     * 2. Attempts to remove from APScheduler (but doesn't fail if not found)
+     * 3. Sets appropriate error message
+     * 4. Works even if the job is completely stuck/unresponsive
+     *
+     * Use this when:
+     * - A crawl is stuck at 0% and won't progress
+     * - Cancel button doesn't work
+     * - Job needs to be forcefully terminated
+     *
+     * Args:
+     * crawl_run_id: The UUID of the CrawlRun to force-kill
+     * @param crawlRunId
+     * @returns JobResponse Successful Response
+     * @throws ApiError
+     */
+    public static forceKillCrawlApiPageCrawlForceKillCrawlRunIdPost1(
+        crawlRunId: string,
+    ): CancelablePromise<JobResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/page-crawl/force-kill/{crawl_run_id}',
+            path: {
+                'crawl_run_id': crawlRunId,
             },
             errors: {
                 422: `Validation Error`,
@@ -249,6 +328,74 @@ export class PageCrawlService {
             },
             query: {
                 'limit': limit,
+            },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * Get Page Crawl Health
+     * Comprehensive health check for page crawl infrastructure.
+     *
+     * Diagnoses common issues that cause crawls to get stuck:
+     * - Windows event loop policy (ProactorEventLoop required)
+     * - Playwright browser installation
+     * - Crawl4AI initialization capability
+     * - APScheduler running status
+     * - Optional: End-to-end test crawl
+     *
+     * Args:
+     * include_test_crawl: Whether to perform actual crawl test (adds ~5-10s)
+     *
+     * Returns:
+     * HealthCheckResponse with detailed diagnostic information
+     * @param includeTestCrawl
+     * @returns HealthCheckResponse Successful Response
+     * @throws ApiError
+     */
+    public static getPageCrawlHealthApiPageCrawlHealthGet(
+        includeTestCrawl: boolean = false,
+    ): CancelablePromise<HealthCheckResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/page-crawl/health',
+            query: {
+                'include_test_crawl': includeTestCrawl,
+            },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * Get Page Crawl Health
+     * Comprehensive health check for page crawl infrastructure.
+     *
+     * Diagnoses common issues that cause crawls to get stuck:
+     * - Windows event loop policy (ProactorEventLoop required)
+     * - Playwright browser installation
+     * - Crawl4AI initialization capability
+     * - APScheduler running status
+     * - Optional: End-to-end test crawl
+     *
+     * Args:
+     * include_test_crawl: Whether to perform actual crawl test (adds ~5-10s)
+     *
+     * Returns:
+     * HealthCheckResponse with detailed diagnostic information
+     * @param includeTestCrawl
+     * @returns HealthCheckResponse Successful Response
+     * @throws ApiError
+     */
+    public static getPageCrawlHealthApiPageCrawlHealthGet1(
+        includeTestCrawl: boolean = false,
+    ): CancelablePromise<HealthCheckResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/page-crawl/health',
+            query: {
+                'include_test_crawl': includeTestCrawl,
             },
             errors: {
                 422: `Validation Error`,

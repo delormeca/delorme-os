@@ -44,6 +44,7 @@ import { useConfirm } from 'material-ui-confirm';
 import { useQueryClient } from '@tanstack/react-query';
 import { DebugPanel } from '@/components/DebugPanel';
 import { useDebugLogger } from '@/hooks/useDebugLogger';
+import { SitemapTrackerCard } from '@/components/SitemapTrackerCard';
 
 const ClientDetail: React.FC = () => {
   const { clientId } = useParams<{ clientId: string }>();
@@ -318,6 +319,13 @@ const ClientDetail: React.FC = () => {
             </Box>
           )}
         </Box>
+
+        {/* Sitemap Tracker Section */}
+        {client.engine_setup_completed && (
+          <Box sx={{ mb: 4 }}>
+            <SitemapTrackerCard clientId={client.id} client={client} />
+          </Box>
+        )}
 
         {/* SEO Workflows & App Section */}
         {client.engine_setup_completed && (
