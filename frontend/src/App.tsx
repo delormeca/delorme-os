@@ -43,8 +43,10 @@ import Billing from "./pages/Billing";
 import MyClients from "./pages/Clients/MyClients";
 import CreateClient from "./pages/Clients/CreateClient";
 import EditClient from "./pages/Clients/EditClient";
-import ClientDetail from "./pages/Clients/ClientDetail";
-import ClientCrawl from "./pages/Clients/ClientCrawl";
+import ClientLandingPage from "./pages/Clients/ClientLandingPage";
+import ClientSitemapPage from "./pages/Clients/ClientSitemapPage";
+import ClientCrawlerPage from "./pages/Clients/ClientCrawlerPage";
+import ClientWorkflowPage from "./pages/Clients/ClientWorkflowPage";
 import DeepResearchList from "./pages/DeepResearch/DeepResearchList";
 import CreateResearch from "./pages/DeepResearch/CreateResearch";
 import ResearchDetail from "./pages/DeepResearch/ResearchDetail";
@@ -124,9 +126,11 @@ function App(props: { disableCustomTheme?: boolean }) {
                     {/* Client routes */}
                     <Route path="clients" element={<MyClients />} />
                     <Route path="clients/new" element={<CreateClient />} />
-                    <Route path="clients/:clientId" element={<ClientDetail />} />
+                    <Route path="clients/:clientId" element={<ClientLandingPage />} />
                     <Route path="clients/:clientId/edit" element={<EditClient />} />
-                    <Route path="clients/:clientId/crawl" element={<ClientCrawl />} />
+                    <Route path="clients/:clientId/sitemap" element={<ClientSitemapPage />} />
+                    <Route path="clients/:clientId/crawler" element={<ClientCrawlerPage />} />
+                    <Route path="clients/:clientId/workflows/:workflowType" element={<ClientWorkflowPage />} />
 
                     {/* Deep Researcher routes */}
                     <Route path="dashboard/deep-researcher" element={<DeepResearchList />} />
