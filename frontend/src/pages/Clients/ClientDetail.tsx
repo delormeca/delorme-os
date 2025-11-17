@@ -33,7 +33,6 @@ import {
   LoadingState,
   StandardButton,
 } from '@/components/ui';
-import { ProjectsList } from '@/components/Projects/ProjectsList';
 import { EngineSetupModal } from '@/components/Clients/EngineSetupModal';
 import { EngineSetupProgressDialog } from '@/components/Clients/EngineSetupProgressDialog';
 import { EnhancedClientPagesList } from '@/components/Clients/EnhancedClientPagesList';

@@ -45,10 +45,6 @@ import CreateClient from "./pages/Clients/CreateClient";
 import EditClient from "./pages/Clients/EditClient";
 import ClientDetail from "./pages/Clients/ClientDetail";
 import ClientCrawl from "./pages/Clients/ClientCrawl";
-import CreateProject from "./pages/Projects/CreateProject";
-import EditProject from "./pages/Projects/EditProject";
-import ProjectDetail from "./pages/Projects/ProjectDetail";
-import ProjectCrawling from "./pages/Projects/ProjectCrawling";
 import DeepResearchList from "./pages/DeepResearch/DeepResearchList";
 import CreateResearch from "./pages/DeepResearch/CreateResearch";
 import ResearchDetail from "./pages/DeepResearch/ResearchDetail";
@@ -131,12 +127,6 @@ function App(props: { disableCustomTheme?: boolean }) {
                     <Route path="clients/:clientId" element={<ClientDetail />} />
                     <Route path="clients/:clientId/edit" element={<EditClient />} />
                     <Route path="clients/:clientId/crawl" element={<ClientCrawl />} />
-
-                    {/* Project routes */}
-                    <Route path="clients/:clientId/projects/new" element={<CreateProject />} />
-                    <Route path="projects/:projectId" element={<ProjectDetail />} />
-                    <Route path="projects/:projectId/edit" element={<EditProject />} />
-                    <Route path="projects/:projectId/crawling" element={<ProjectCrawling />} />
 
                     {/* Deep Researcher routes */}
                     <Route path="dashboard/deep-researcher" element={<DeepResearchList />} />
