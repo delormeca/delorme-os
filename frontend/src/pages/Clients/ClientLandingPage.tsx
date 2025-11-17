@@ -19,7 +19,7 @@ import {
   ArrowBack,
   Business,
   CalendarToday,
-  SitemapOutlined,
+  AccountTree,
   TravelExplore,
   AutoAwesome,
   TrendingUp,
@@ -204,7 +204,7 @@ const ClientLandingPage: React.FC = () => {
             <NavigationCard
               title="Sitemap Tracker"
               description="Monitor and track sitemap changes, page additions, and removals"
-              icon={<SitemapOutlined />}
+              icon={<AccountTree />}
               onClick={() => navigate(`/clients/${client.id}/sitemap`)}
             />
           </Grid>

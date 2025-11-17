@@ -11,7 +11,7 @@ import {
 } from '@mui/material';
 import {
   ArrowBack,
-  SitemapOutlined,
+  AccountTree,
 } from '@mui/icons-material';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useClientDetail } from '@/hooks/api/useClients';
@@ -60,7 +60,7 @@ const ClientSitemapPage: React.FC = () => {
             <ArrowBack />
           </StandardIconButton>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1 }}>
-            <SitemapOutlined
+            <AccountTree
               sx={{
                 fontSize: 40,
                 color: theme.palette.primary.main,
