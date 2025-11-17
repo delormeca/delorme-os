@@ -331,7 +331,8 @@ async def update_client(
 
 async def delete_client(session: AsyncSession, client_id: UUID, user_id: UUID, password: str) -> None:
     """
-    Delete a client. Requires password confirmation.
+    Delete a client. Requires password confirmation for users with passwords.
+    OAuth users (without passwords) can delete without password verification.
     """
     from passlib.context import CryptContext
 
@@ -342,7 +343,7 @@ async def delete_client(session: AsyncSession, client_id: UUID, user_id: UUID, p
             detail="Client not found",
         )
 
-    # Verify password
+    # Verify password only if user has a password (skip for OAuth users)
     user = await session.get(User, user_id)
     if not user:
         raise HTTPException(
@@ -350,12 +351,19 @@ async def delete_client(session: AsyncSession, client_id: UUID, user_id: UUID, p
             detail="User not found",
         )
 
-    pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-    if not pwd_context.verify(password, user.password_hash):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect password",
-        )
+    # Only require password verification if user has a password_hash (not OAuth)
+    if user.password_hash:
+        if not password:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Password is required for deletion",
+            )
+        pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+        if not pwd_context.verify(password, user.password_hash):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Incorrect password. Please enter your account password.",
+            )
 
     await session.delete(client)
     await session.commit()
