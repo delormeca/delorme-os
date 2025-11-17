@@ -65,14 +65,9 @@ class ClientRead(BaseModel):
     created_by: UUID
     created_at: datetime
     updated_at: datetime
+    base_url: Optional[str] = None  # Alias for website_url, populated in controller
 
     model_config = ConfigDict(from_attributes=True)
-
-    @computed_field
-    @property
-    def base_url(self) -> Optional[str]:
-        """Computed field: alias for website_url for compatibility with crawler components."""
-        return self.website_url
 
 
 # Schema for deleting a client (requires password confirmation)

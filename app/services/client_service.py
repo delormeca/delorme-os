@@ -22,6 +22,12 @@ logger = logging.getLogger(__name__)
 
 ALLOWED_TEAM_LEADS = ["Tommy Delorme", "Ismael Girard", "OP"]
 
+def _to_client_read(client: Client) -> ClientRead:
+    """Convert Client model to ClientRead schema with base_url populated."""
+    client_read = ClientRead.model_validate(client)
+    client_read.base_url = client.website_url  # Populate base_url from website_url
+    return client_read
+
 def generate_slug(name: str) -> str:
     """Generate URL-friendly slug from name."""
     slug = name.lower()
@@ -84,7 +90,7 @@ async def get_clients(
     clients = result.scalars().all()
 
     logger.info("Fetched %d clients (search=%s, lead=%s)", len(clients), search, project_lead_id)
-    return [ClientRead.model_validate(client) for client in clients]
+    return [_to_client_read(client) for client in clients]
 
 
 async def get_client_by_id(session: AsyncSession, client_id: UUID) -> ClientRead:
@@ -101,7 +107,7 @@ async def get_client_by_id(session: AsyncSession, client_id: UUID) -> ClientRead
             detail="Client not found",
         )
 
-    return ClientRead.model_validate(client)
+    return _to_client_read(client)
 
 
 async def get_client_by_slug(session: AsyncSession, slug: str) -> ClientRead:
@@ -128,7 +134,7 @@ async def get_client_by_slug(session: AsyncSession, slug: str) -> ClientRead:
             detail=f"Client with slug '{slug}' not found",
         )
 
-    return ClientRead.model_validate(client)
+    return _to_client_read(client)
 
 
 async def create_client(session: AsyncSession, client_data: ClientCreate, user_id: UUID) -> ClientRead:
@@ -230,7 +236,7 @@ async def create_client(session: AsyncSession, client_data: ClientCreate, user_i
     client = result.scalar_one()
 
     logger.info("Client created: %s by user %s", client_data.name, user_id)
-    return ClientRead.model_validate(client)
+    return _to_client_read(client)
 
 
 async def update_client(
@@ -326,7 +332,7 @@ async def update_client(
     client = result.scalar_one()
 
     logger.info("Client updated: %s", client_id)
-    return ClientRead.model_validate(client)
+    return _to_client_read(client)
 
 
 async def delete_client(session: AsyncSession, client_id: UUID, user_id: UUID, password: str) -> None:
