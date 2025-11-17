@@ -183,6 +183,11 @@ class BaseConfig(BaseSettings):
         default=8000, description="Maximum tokens for embedding generation"
     )
 
+    # Apify Configuration
+    apify_api_token: Optional[str] = Field(
+        default=None, description="Apify API token for website crawling"
+    )
+
     def get_database_url(self) -> str:
         """
         Get database URL.
@@ -280,3 +285,6 @@ CRAWL_RETRY_ATTEMPTS = config.crawl_retry_attempts
 EMBEDDING_MODEL = config.embedding_model
 EMBEDDING_DIMENSIONS = config.embedding_dimensions
 EMBEDDING_MAX_TOKENS = config.embedding_max_tokens
+
+# Apify
+APIFY_API_TOKEN = config.apify_api_token

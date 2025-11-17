@@ -273,16 +273,8 @@ class SitemapTrackerService:
         await self.db.refresh(run)  # Refresh to keep run attached to session
 
         try:
-            # Import sitemap parser
-            import sys
-            import os
-            # Add parent directory to path to import sitemap_parser_production
-            # __file__ is app/services/sitemap_tracker_service.py
-            # We need to go up 4 levels to get to the parent of velocity-boilerplate
-            parent_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
-            sys.path.insert(0, parent_dir)
-
-            from sitemap_parser_production import RobustSitemapParser
+            # Import sitemap parser from local utils
+            from app.utils.sitemap_parser_production import RobustSitemapParser
 
             # Parse sitemap (synchronous operation - no database commits inside)
             run.current_status_message = f"Parsing sitemap from {sitemap_url}..."
