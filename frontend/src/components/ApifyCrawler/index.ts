@@ -6,3 +6,4 @@
 export { ApifyCrawlerControlPanel } from './ApifyCrawlerControlPanel';
 export { ApifyCrawlHistory } from './ApifyCrawlHistory';
 export { ApifyCrawlResultsTable } from './ApifyCrawlResultsTable';
+export { ClientPagesTable } from './ClientPagesTable';
