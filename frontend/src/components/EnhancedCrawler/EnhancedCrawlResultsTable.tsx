@@ -24,12 +24,26 @@ import {
   useTheme,
   alpha,
   Paper,
+  Menu,
+  MenuItem,
+  ListItemIcon,
+  ListItemText,
+  Divider,
 } from '@mui/material';
 import {
   Search,
   ViewColumn,
   Label,
   Visibility,
+  CheckCircle,
+  Link as LinkIcon,
+  Image,
+  Code,
+  Speed,
+  Language,
+  DataObject,
+  TextFields,
+  Share,
 } from '@mui/icons-material';
 import { useEnhancedCrawlResults, EnhancedCrawlPageData } from '@/hooks/api/useEnhancedCrawlResults';
 import { HistoricalDropdown } from './HistoricalDropdown';
@@ -165,6 +179,118 @@ const COLUMN_DEFINITIONS: ColumnDefinition[] = [
   { id: 'author', label: 'Author', minWidth: 150, isPrimary: false, defaultVisible: false },
 ];
 
+// Preset Quick Views
+interface QuickView {
+  id: string;
+  label: string;
+  description: string;
+  icon: React.ReactElement;
+  columns: string[];
+}
+
+const QUICK_VIEWS: QuickView[] = [
+  {
+    id: 'default',
+    label: 'Default View',
+    description: 'Core SEO columns',
+    icon: <CheckCircle fontSize="small" />,
+    columns: ['url', 'h1', 'meta_title', 'meta_description', 'page_title', 'word_count', 'status_code', 'internal_link_count', 'external_link_count', 'image_count'],
+  },
+  {
+    id: 'seo_overview',
+    label: 'SEO Overview',
+    description: 'All SEO metadata fields',
+    icon: <CheckCircle fontSize="small" />,
+    columns: [
+      'url', 'h1', 'meta_title', 'meta_description', 'page_title', 'canonical_url', 'meta_robots',
+      'word_count', 'status_code', 'meta_keywords', 'meta_viewport', 'meta_generator',
+      'hreflang', 'publishing_date', 'last_modified',
+    ],
+  },
+  {
+    id: 'content_analysis',
+    label: 'Content Analysis',
+    description: 'Content quality and structure',
+    icon: <TextFields fontSize="small" />,
+    columns: [
+      'url', 'h1', 'word_count', 'character_count', 'readability_score',
+      'h1_count', 'h2_count', 'h3_count', 'h4_count', 'h5_count', 'h6_count',
+      'h1_list', 'webpage_structure', 'raw_text', 'markdown_text',
+    ],
+  },
+  {
+    id: 'link_analysis',
+    label: 'Link Analysis',
+    description: 'Internal and external links',
+    icon: <LinkIcon fontSize="small" />,
+    columns: [
+      'url', 'status_code', 'internal_links', 'internal_link_count',
+      'external_links', 'external_link_count', 'total_link_count', 'canonical_url',
+    ],
+  },
+  {
+    id: 'media_audit',
+    label: 'Media Audit',
+    description: 'Images, videos, and media',
+    icon: <Image fontSize="small" />,
+    columns: [
+      'url', 'image_count', 'image_alt_texts', 'video_count', 'iframe_count',
+      'screenshot_url', 'screenshot_file', 'favicon',
+    ],
+  },
+  {
+    id: 'social_og',
+    label: 'Social/OG Tags',
+    description: 'Open Graph and Twitter Card',
+    icon: <Share fontSize="small" />,
+    columns: [
+      'url', 'og_title', 'og_description', 'og_image', 'og_type', 'og_url', 'og_site_name', 'og_locale',
+      'twitter_card', 'twitter_title', 'twitter_description', 'twitter_image', 'twitter_site', 'twitter_creator',
+      'fb_app_id', 'fb_admins',
+    ],
+  },
+  {
+    id: 'technical_seo',
+    label: 'Technical SEO',
+    description: 'Performance and technical',
+    icon: <Speed fontSize="small" />,
+    columns: [
+      'url', 'status_code', 'http_status_code', 'page_weight_kb', 'page_weight_mb',
+      'load_time_ms', 'html_lang', 'html_dir', 'charset', 'meta_viewport',
+      'apify_loaded_time', 'apify_crawl_depth',
+    ],
+  },
+  {
+    id: 'schema_structured',
+    label: 'Schema & Structured Data',
+    description: 'Schema markup and hreflang',
+    icon: <Code fontSize="small" />,
+    columns: [
+      'url', 'schema_markup', 'schema_types', 'hreflang',
+      'language', 'html_lang', 'og_locale',
+    ],
+  },
+  {
+    id: 'apify_data',
+    label: 'Apify Crawl Data',
+    description: 'All Apify-specific information',
+    icon: <DataObject fontSize="small" />,
+    columns: [
+      'url', 'http_status_code', 'apify_loaded_url', 'apify_loaded_time',
+      'apify_referrer_url', 'apify_crawl_depth', 'apify_request_handler_mode',
+      'apify_has_html', 'apify_has_markdown', 'apify_has_screenshot',
+      'screenshot_url', 'screenshot_file',
+    ],
+  },
+  {
+    id: 'all_columns',
+    label: 'All Columns',
+    description: 'Show everything',
+    icon: <Visibility fontSize="small" />,
+    columns: COLUMN_DEFINITIONS.map((col) => col.id),
+  },
+];
+
 // LocalStorage key for column preferences
 const getColumnPrefsKey = (clientId: string) => `enhanced-table-columns-${clientId}`;
 
@@ -179,6 +305,7 @@ export const EnhancedCrawlResultsTable: React.FC<EnhancedCrawlResultsTableProps>
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
   const [columnManagementOpen, setColumnManagementOpen] = useState(false);
+  const [quickViewsAnchorEl, setQuickViewsAnchorEl] = useState<null | HTMLElement>(null);
   const [visibleColumns, setVisibleColumns] = useState<string[]>(() => {
     // Load from localStorage on mount
     const stored = localStorage.getItem(getColumnPrefsKey(clientId));
@@ -238,6 +365,19 @@ export const EnhancedCrawlResultsTable: React.FC<EnhancedCrawlResultsTableProps>
       newSelected.add(id);
     }
     setSelectedRows(newSelected);
+  };
+
+  const handleQuickViewsClick = (event: React.MouseEvent<HTMLElement>) => {
+    setQuickViewsAnchorEl(event.currentTarget);
+  };
+
+  const handleQuickViewsClose = () => {
+    setQuickViewsAnchorEl(null);
+  };
+
+  const handleApplyQuickView = (view: QuickView) => {
+    setVisibleColumns(view.columns);
+    handleQuickViewsClose();
   };
 
   const isAllSelected = data && selectedRows.size === data.pages.length && data.pages.length > 0;
@@ -315,6 +455,7 @@ export const EnhancedCrawlResultsTable: React.FC<EnhancedCrawlResultsTableProps>
             variant="outlined"
             size="small"
             startIcon={<Visibility />}
+            onClick={handleQuickViewsClick}
           >
             Quick Views
           </Button>
@@ -457,6 +598,56 @@ export const EnhancedCrawlResultsTable: React.FC<EnhancedCrawlResultsTableProps>
           rowsPerPageOptions={[25, 50, 100]}
         />
       )}
+
+      {/* Quick Views Menu */}
+      <Menu
+        anchorEl={quickViewsAnchorEl}
+        open={Boolean(quickViewsAnchorEl)}
+        onClose={handleQuickViewsClose}
+        PaperProps={{
+          sx: {
+            mt: 1,
+            minWidth: 280,
+            maxHeight: 500,
+          },
+        }}
+      >
+        <Box sx={{ px: 2, py: 1.5, borderBottom: 1, borderColor: 'divider' }}>
+          <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+            Quick Views
+          </Typography>
+          <Typography variant="caption" color="text.secondary">
+            Apply preset column configurations
+          </Typography>
+        </Box>
+
+        {QUICK_VIEWS.map((view, index) => (
+          <Box key={view.id}>
+            {index === 1 && <Divider />}
+            {index === QUICK_VIEWS.length - 1 && <Divider />}
+            <MenuItem
+              onClick={() => handleApplyQuickView(view)}
+              sx={{
+                py: 1.5,
+                px: 2,
+                '&:hover': {
+                  backgroundColor: alpha(theme.palette.primary.main, 0.08),
+                },
+              }}
+            >
+              <ListItemIcon sx={{ color: theme.palette.primary.main }}>
+                {view.icon}
+              </ListItemIcon>
+              <ListItemText
+                primary={view.label}
+                secondary={view.description}
+                primaryTypographyProps={{ variant: 'body2', fontWeight: 500 }}
+                secondaryTypographyProps={{ variant: 'caption' }}
+              />
+            </MenuItem>
+          </Box>
+        ))}
+      </Menu>
 
       {/* Column Management Modal */}
       <ColumnManagementModal
