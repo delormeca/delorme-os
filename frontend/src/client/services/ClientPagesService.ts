@@ -6,6 +6,7 @@ import type { ClientPageCreate } from '../models/ClientPageCreate';
 import type { ClientPageList } from '../models/ClientPageList';
 import type { ClientPageRead } from '../models/ClientPageRead';
 import type { ClientPageUpdate } from '../models/ClientPageUpdate';
+import type { EnhancedCrawlResultsList } from '../models/EnhancedCrawlResultsList';
 import type { ExtractBatchRequest } from '../models/ExtractBatchRequest';
 import type { ExtractionResponse } from '../models/ExtractionResponse';
 import type { ExtractPageRequest } from '../models/ExtractPageRequest';
@@ -262,6 +263,41 @@ export class ClientPagesService {
             url: '/api/client-pages/extract-batch',
             body: requestBody,
             mediaType: 'application/json',
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * Get Enhanced Crawl Results
+     * Get enhanced crawl results with historical tracking for all datapoints.
+     * Each datapoint shows current value + history from previous crawls.
+     *
+     * Perfect for Screaming Frog-style table with per-cell historical dropdowns.
+     * @param clientId
+     * @param search Search in URL
+     * @param page Page number
+     * @param pageSize Items per page
+     * @returns EnhancedCrawlResultsList Successful Response
+     * @throws ApiError
+     */
+    public static getEnhancedCrawlResultsApiClientsClientIdCrawlResultsGet(
+        clientId: string,
+        search?: string,
+        page: number = 1,
+        pageSize: number = 50,
+    ): CancelablePromise<EnhancedCrawlResultsList> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/clients/{client_id}/crawl-results',
+            path: {
+                'client_id': clientId,
+            },
+            query: {
+                'search': search,
+                'page': page,
+                'page_size': pageSize,
+            },
             errors: {
                 422: `Validation Error`,
             },

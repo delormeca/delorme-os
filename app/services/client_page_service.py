@@ -509,12 +509,16 @@ class ClientPageService:
                 has_changed=has_changed
             )
 
-        # Build enhanced page data with all datapoints
+        # Build enhanced page data with all 83 datapoints
         return EnhancedCrawlPageData(
             id=client_page.id,
             url=client_page.url,
             slug=client_page.slug,
+
+            # Status
             status_code=build_datapoint('status_code'),
+
+            # Core SEO datapoints
             page_title=build_datapoint('page_title'),
             meta_title=build_datapoint('meta_title'),
             meta_description=build_datapoint('meta_description'),
@@ -522,9 +526,115 @@ class ClientPageService:
             canonical_url=build_datapoint('canonical_url'),
             meta_robots=build_datapoint('meta_robots'),
             word_count=build_datapoint('word_count'),
-            image_count=build_datapoint('image_count'),
+
+            # Dates
+            publishing_date=build_datapoint('publishing_date'),
+            last_modified=build_datapoint('last_modified'),
+
+            # Headings
+            h1_count=build_datapoint('h1_count'),
+            h2_count=build_datapoint('h2_count'),
+            h3_count=build_datapoint('h3_count'),
+            h4_count=build_datapoint('h4_count'),
+            h5_count=build_datapoint('h5_count'),
+            h6_count=build_datapoint('h6_count'),
+            h1_list=build_datapoint('h1_list'),
+            webpage_structure=build_datapoint('webpage_structure'),
+
+            # Content
+            raw_text=build_datapoint('raw_text'),
+            markdown_text=build_datapoint('markdown_text'),
+            character_count=build_datapoint('character_count'),
+            readability_score=build_datapoint('readability_score'),
+
+            # Page metrics
+            page_weight_kb=build_datapoint('page_weight_kb'),
+            page_weight_mb=build_datapoint('page_weight_mb'),
+            load_time_ms=build_datapoint('load_time_ms'),
+
+            # SEO metadata
+            meta_keywords=build_datapoint('meta_keywords'),
+            meta_viewport=build_datapoint('meta_viewport'),
+            meta_generator=build_datapoint('meta_generator'),
+
+            # Structured data
+            schema_markup=build_datapoint('schema_markup'),
+            schema_types=build_datapoint('schema_types'),
+            hreflang=build_datapoint('hreflang'),
+
+            # Links
+            internal_links=build_datapoint('internal_links'),
             internal_link_count=build_datapoint('internal_link_count'),
+            external_links=build_datapoint('external_links'),
             external_link_count=build_datapoint('external_link_count'),
+            total_link_count=build_datapoint('total_link_count'),
+
+            # Media
+            image_count=build_datapoint('image_count'),
+            image_alt_texts=build_datapoint('image_alt_texts'),
+            video_count=build_datapoint('video_count'),
+            iframe_count=build_datapoint('iframe_count'),
+
+            # Open Graph
+            og_title=build_datapoint('og_title'),
+            og_description=build_datapoint('og_description'),
+            og_image=build_datapoint('og_image'),
+            og_type=build_datapoint('og_type'),
+            og_url=build_datapoint('og_url'),
+            og_site_name=build_datapoint('og_site_name'),
+            og_locale=build_datapoint('og_locale'),
+
+            # Twitter Card
+            twitter_card=build_datapoint('twitter_card'),
+            twitter_title=build_datapoint('twitter_title'),
+            twitter_description=build_datapoint('twitter_description'),
+            twitter_image=build_datapoint('twitter_image'),
+            twitter_site=build_datapoint('twitter_site'),
+            twitter_creator=build_datapoint('twitter_creator'),
+
+            # Facebook
+            fb_app_id=build_datapoint('fb_app_id'),
+            fb_admins=build_datapoint('fb_admins'),
+
+            # Apify crawl info
+            http_status_code=build_datapoint('http_status_code'),
+            apify_loaded_url=build_datapoint('apify_loaded_url'),
+            apify_loaded_time=build_datapoint('apify_loaded_time'),
+            apify_referrer_url=build_datapoint('apify_referrer_url'),
+            apify_crawl_depth=build_datapoint('apify_crawl_depth'),
+            apify_request_handler_mode=build_datapoint('apify_request_handler_mode'),
+
+            # Apify flags
+            apify_has_html=build_datapoint('apify_has_html'),
+            apify_has_markdown=build_datapoint('apify_has_markdown'),
+            apify_has_screenshot=build_datapoint('apify_has_screenshot'),
+
+            # Screenshots
+            screenshot_url=build_datapoint('screenshot_url'),
+            screenshot_file=build_datapoint('screenshot_file'),
+
+            # HTML technical info
+            html_lang=build_datapoint('html_lang'),
+            html_dir=build_datapoint('html_dir'),
+            charset=build_datapoint('charset'),
+            favicon=build_datapoint('favicon'),
+
+            # Forms & interactivity
+            form_count=build_datapoint('form_count'),
+            input_count=build_datapoint('input_count'),
+            button_count=build_datapoint('button_count'),
+
+            # Scripts & styles
+            script_count=build_datapoint('script_count'),
+            style_count=build_datapoint('style_count'),
+            external_scripts=build_datapoint('external_scripts'),
+            external_stylesheets=build_datapoint('external_stylesheets'),
+
+            # Language & author
+            language=build_datapoint('language'),
+            author=build_datapoint('author'),
+
+            # Additional metadata
             tags=client_page.tags,
             last_crawled_at=client_page.last_crawled_at,
             crawl_count=client_page.crawl_count,

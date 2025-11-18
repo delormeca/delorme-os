@@ -160,7 +160,7 @@ class EnhancedDatapoint(BaseModel):
 
 
 class EnhancedCrawlPageData(BaseModel):
-    """Enhanced page data with historical tracking for all datapoints."""
+    """Enhanced page data with historical tracking for all 83 datapoints from Apify."""
     model_config = {"from_attributes": True}
 
     # Core identifiers
@@ -180,10 +180,112 @@ class EnhancedCrawlPageData(BaseModel):
     meta_robots: EnhancedDatapoint
     word_count: EnhancedDatapoint
 
-    # Content metrics with history
-    image_count: EnhancedDatapoint
+    # Dates with history
+    publishing_date: EnhancedDatapoint
+    last_modified: EnhancedDatapoint
+
+    # Headings with history
+    h1_count: EnhancedDatapoint
+    h2_count: EnhancedDatapoint
+    h3_count: EnhancedDatapoint
+    h4_count: EnhancedDatapoint
+    h5_count: EnhancedDatapoint
+    h6_count: EnhancedDatapoint
+    h1_list: EnhancedDatapoint
+    webpage_structure: EnhancedDatapoint
+
+    # Content with history
+    raw_text: EnhancedDatapoint
+    markdown_text: EnhancedDatapoint
+    character_count: EnhancedDatapoint
+    readability_score: EnhancedDatapoint
+
+    # Page metrics with history
+    page_weight_kb: EnhancedDatapoint
+    page_weight_mb: EnhancedDatapoint
+    load_time_ms: EnhancedDatapoint
+
+    # SEO metadata with history
+    meta_keywords: EnhancedDatapoint
+    meta_viewport: EnhancedDatapoint
+    meta_generator: EnhancedDatapoint
+
+    # Structured data with history
+    schema_markup: EnhancedDatapoint
+    schema_types: EnhancedDatapoint
+    hreflang: EnhancedDatapoint
+
+    # Links with history
+    internal_links: EnhancedDatapoint
     internal_link_count: EnhancedDatapoint
+    external_links: EnhancedDatapoint
     external_link_count: EnhancedDatapoint
+    total_link_count: EnhancedDatapoint
+
+    # Media with history
+    image_count: EnhancedDatapoint
+    image_alt_texts: EnhancedDatapoint
+    video_count: EnhancedDatapoint
+    iframe_count: EnhancedDatapoint
+
+    # Open Graph with history
+    og_title: EnhancedDatapoint
+    og_description: EnhancedDatapoint
+    og_image: EnhancedDatapoint
+    og_type: EnhancedDatapoint
+    og_url: EnhancedDatapoint
+    og_site_name: EnhancedDatapoint
+    og_locale: EnhancedDatapoint
+
+    # Twitter Card with history
+    twitter_card: EnhancedDatapoint
+    twitter_title: EnhancedDatapoint
+    twitter_description: EnhancedDatapoint
+    twitter_image: EnhancedDatapoint
+    twitter_site: EnhancedDatapoint
+    twitter_creator: EnhancedDatapoint
+
+    # Facebook with history
+    fb_app_id: EnhancedDatapoint
+    fb_admins: EnhancedDatapoint
+
+    # Apify crawl info with history
+    http_status_code: EnhancedDatapoint
+    apify_loaded_url: EnhancedDatapoint
+    apify_loaded_time: EnhancedDatapoint
+    apify_referrer_url: EnhancedDatapoint
+    apify_crawl_depth: EnhancedDatapoint
+    apify_request_handler_mode: EnhancedDatapoint
+
+    # Apify flags with history
+    apify_has_html: EnhancedDatapoint
+    apify_has_markdown: EnhancedDatapoint
+    apify_has_screenshot: EnhancedDatapoint
+
+    # Screenshots with history
+    screenshot_url: EnhancedDatapoint
+    screenshot_file: EnhancedDatapoint
+
+    # HTML technical info with history
+    html_lang: EnhancedDatapoint
+    html_dir: EnhancedDatapoint
+    charset: EnhancedDatapoint
+    favicon: EnhancedDatapoint
+
+    # Forms & interactivity with history
+    form_count: EnhancedDatapoint
+    input_count: EnhancedDatapoint
+    button_count: EnhancedDatapoint
+
+    # Scripts & styles with history
+    script_count: EnhancedDatapoint
+    style_count: EnhancedDatapoint
+    external_scripts: EnhancedDatapoint
+    external_stylesheets: EnhancedDatapoint
+
+    # Language & author with history
+    language: EnhancedDatapoint
+    author: EnhancedDatapoint
 
     # Additional metadata
     tags: Optional[list[str]] = None
