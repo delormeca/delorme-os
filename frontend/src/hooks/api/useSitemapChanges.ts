@@ -1,6 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import axios from 'axios';
-import { getAxiosConfig } from '@/utils/apiHelpers';
+import { OpenAPI } from '@/client';
 
 export interface SitemapChange {
   id: string;
@@ -41,18 +40,24 @@ export const useSitemapChanges = (params: SitemapChangesParams) => {
   return useQuery<SitemapChangeList>({
     queryKey: ['sitemap-changes', run_id, change_type, page, page_size],
     queryFn: async () => {
-      const response = await axios.get(
-        `/api/sitemap-tracker/runs/${run_id}/changes`,
-        {
-          ...getAxiosConfig(),
-          params: {
-            change_type,
-            page,
-            page_size,
-          },
-        }
-      );
-      return response.data;
+      const params = new URLSearchParams();
+      if (change_type) params.append('change_type', change_type);
+      params.append('page', page.toString());
+      params.append('page_size', page_size.toString());
+
+      const url = `${OpenAPI.BASE}/api/sitemap-tracker/runs/${run_id}/changes?${params}`;
+      const response = await fetch(url, {
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch sitemap changes');
+      }
+
+      return response.json();
     },
     enabled: !!run_id, // Only run if run_id is provided
   });
