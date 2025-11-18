@@ -3,7 +3,7 @@
  *
  * Dedicated page for Apify web crawling with comprehensive data table
  */
-import React, { useState } from 'react';
+import React from 'react';
 import {
   Box,
   Typography,
@@ -20,14 +20,14 @@ import {
   StandardIconButton,
   LoadingState,
 } from '@/components/ui';
-import { ApifyCrawlerControlPanel, ApifyCrawlHistory, ApifyCrawlResultsTable } from '@/components/ApifyCrawler';
+import { ApifyCrawlerControlPanel, ApifyCrawlHistory } from '@/components/ApifyCrawler';
+import { EnhancedCrawlResultsTable } from '@/components/EnhancedCrawler';
 
 const ClientCrawlerPage: React.FC = () => {
   const { clientId } = useParams<{ clientId: string }>();
   const navigate = useNavigate();
   const theme = useTheme();
   const { data: client, isLoading, error } = useClientDetail(clientId || '');
-  const [selectedCrawlRunId, setSelectedCrawlRunId] = useState<string | null>(null);
 
   if (isLoading) {
     return (
@@ -92,16 +92,17 @@ const ClientCrawlerPage: React.FC = () => {
           <ApifyCrawlHistory
             clientId={client.id}
             limit={10}
-            onViewCrawl={(crawlRunId) => setSelectedCrawlRunId(crawlRunId)}
           />
         </Box>
 
-        {/* Crawl Results Table - Big data table with tags and SEO metrics */}
-        {selectedCrawlRunId && (
-          <Box sx={{ mb: 4 }}>
-            <ApifyCrawlResultsTable crawlRunId={selectedCrawlRunId} />
-          </Box>
-        )}
+        {/* Enhanced Crawl Results Table - Always visible, shows all pages with historical tracking */}
+        <Box sx={{ mb: 4 }}>
+          <EnhancedCrawlResultsTable
+            clientId={client.id}
+            clientName={client.name}
+            lastCrawl={client.updated_at}
+          />
+        </Box>
       </Box>
     </DashboardLayout>
   );

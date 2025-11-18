@@ -7,13 +7,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import uuid
 import datetime
 
-from app.models import ClientPage, Client
+from app.models import ClientPage, Client, ClientPageVersion
 from app.schemas.client_page import (
     ClientPageCreate,
     ClientPageUpdate,
     ClientPageRead,
     ClientPageList,
-    ClientPageSearchParams
+    ClientPageSearchParams,
+    EnhancedCrawlResultsList,
+    EnhancedCrawlPageData,
+    EnhancedDatapoint,
+    DatapointHistory
 )
 from app.core.exceptions import NotFoundException, ValidationException
 
@@ -396,3 +400,133 @@ class ClientPageService:
             raise NotFoundException("One or more page IDs not found")
 
         return [ClientPageRead.model_validate(page) for page in pages]
+
+    async def get_enhanced_crawl_results(
+        self,
+        client_id: uuid.UUID,
+        search: Optional[str] = None,
+        page: int = 1,
+        page_size: int = 50
+    ) -> EnhancedCrawlResultsList:
+        """
+        Get enhanced crawl results with historical tracking for all datapoints.
+        Each datapoint includes current value + history from previous crawls.
+
+        Args:
+            client_id: Client UUID
+            search: Search term for URL filtering
+            page: Page number (1-indexed)
+            page_size: Number of items per page
+
+        Returns:
+            EnhancedCrawlResultsList with pages containing historical data per datapoint
+        """
+        from sqlalchemy.orm import selectinload
+
+        # Build base query
+        query = select(ClientPage).where(ClientPage.client_id == client_id)
+
+        # Apply search filter
+        if search:
+            query = query.where(ClientPage.url.ilike(f"%{search}%"))
+
+        # Get total count
+        count_query = select(func.count()).select_from(query.subquery())
+        total_result = await self.db.execute(count_query)
+        total = total_result.scalar() or 0
+
+        # Apply pagination and sorting
+        query = query.order_by(desc(ClientPage.created_at))
+        query = query.offset((page - 1) * page_size).limit(page_size)
+
+        # Execute query with versions eager loaded
+        query = query.options(selectinload(ClientPage.versions))
+        result = await self.db.execute(query)
+        client_pages = result.scalars().all()
+
+        # Build enhanced page data
+        enhanced_pages = []
+        for client_page in client_pages:
+            enhanced_page = await self._build_enhanced_page_data(client_page)
+            enhanced_pages.append(enhanced_page)
+
+        # Calculate total pages
+        total_pages = (total + page_size - 1) // page_size if page_size > 0 else 0
+
+        return EnhancedCrawlResultsList(
+            pages=enhanced_pages,
+            total=total,
+            page=page,
+            page_size=page_size,
+            total_pages=total_pages
+        )
+
+    async def _build_enhanced_page_data(self, client_page: ClientPage) -> EnhancedCrawlPageData:
+        """
+        Build enhanced page data with historical tracking for all datapoints.
+
+        Args:
+            client_page: ClientPage model instance with versions loaded
+
+        Returns:
+            EnhancedCrawlPageData with all datapoints enhanced with history
+        """
+        # Sort versions by version number descending (newest first)
+        versions = sorted(client_page.versions, key=lambda v: v.version, reverse=True)
+
+        # Helper to build enhanced datapoint
+        def build_datapoint(field_name: str) -> EnhancedDatapoint:
+            # Get current value from latest version or client_page
+            current_value = None
+            history_items = []
+
+            if versions:
+                # Use latest version as current
+                latest_version = versions[0]
+                current_value = getattr(latest_version, field_name, None)
+
+                # Build history from all versions (skip first as it's current)
+                for version in versions:
+                    value = getattr(version, field_name, None)
+                    history_items.append(DatapointHistory(
+                        value=value,
+                        crawled_at=version.created_at,
+                        crawl_run_id=version.crawl_run_id,
+                        version=version.version
+                    ))
+            else:
+                # No versions yet, use client_page value
+                current_value = getattr(client_page, field_name, None)
+
+            # Determine if value changed from previous crawl
+            has_changed = False
+            if len(history_items) >= 2:
+                has_changed = history_items[0].value != history_items[1].value
+
+            return EnhancedDatapoint(
+                current=current_value,
+                history=history_items,
+                has_changed=has_changed
+            )
+
+        # Build enhanced page data with all datapoints
+        return EnhancedCrawlPageData(
+            id=client_page.id,
+            url=client_page.url,
+            slug=client_page.slug,
+            status_code=build_datapoint('status_code'),
+            page_title=build_datapoint('page_title'),
+            meta_title=build_datapoint('meta_title'),
+            meta_description=build_datapoint('meta_description'),
+            h1=build_datapoint('h1'),
+            canonical_url=build_datapoint('canonical_url'),
+            meta_robots=build_datapoint('meta_robots'),
+            word_count=build_datapoint('word_count'),
+            image_count=build_datapoint('image_count'),
+            internal_link_count=build_datapoint('internal_link_count'),
+            external_link_count=build_datapoint('external_link_count'),
+            tags=client_page.tags,
+            last_crawled_at=client_page.last_crawled_at,
+            crawl_count=client_page.crawl_count,
+            created_at=client_page.created_at
+        )

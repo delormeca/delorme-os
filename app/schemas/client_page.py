@@ -140,3 +140,72 @@ class ClientPageSearchParams(BaseModel):
         if v not in ["asc", "desc"]:
             raise ValueError("sort_order must be 'asc' or 'desc'")
         return v
+
+
+# Enhanced Crawler Table Schemas with Historical Tracking
+
+class DatapointHistory(BaseModel):
+    """Historical value for a single datapoint."""
+    value: Optional[str | int | float | bool | dict | list] = Field(None, description="Historical value")
+    crawled_at: datetime.datetime = Field(..., description="When this value was crawled")
+    crawl_run_id: uuid.UUID = Field(..., description="Crawl run that produced this value")
+    version: int = Field(..., description="Version number")
+
+
+class EnhancedDatapoint(BaseModel):
+    """Datapoint with current value and historical versions."""
+    current: Optional[str | int | float | bool | dict | list] = Field(None, description="Current/latest value")
+    history: list[DatapointHistory] = Field(default_factory=list, description="Historical values ordered by crawled_at desc")
+    has_changed: bool = Field(False, description="Whether value changed from previous crawl")
+
+
+class EnhancedCrawlPageData(BaseModel):
+    """Enhanced page data with historical tracking for all datapoints."""
+    model_config = {"from_attributes": True}
+
+    # Core identifiers
+    id: uuid.UUID
+    url: str
+    slug: Optional[str] = None
+
+    # Status with history
+    status_code: EnhancedDatapoint
+
+    # Core SEO datapoints with history
+    page_title: EnhancedDatapoint
+    meta_title: EnhancedDatapoint
+    meta_description: EnhancedDatapoint
+    h1: EnhancedDatapoint
+    canonical_url: EnhancedDatapoint
+    meta_robots: EnhancedDatapoint
+    word_count: EnhancedDatapoint
+
+    # Content metrics with history
+    image_count: EnhancedDatapoint
+    internal_link_count: EnhancedDatapoint
+    external_link_count: EnhancedDatapoint
+
+    # Additional metadata
+    tags: Optional[list[str]] = None
+    last_crawled_at: Optional[datetime.datetime] = None
+    crawl_count: int = Field(0, description="Total number of times crawled")
+    created_at: datetime.datetime
+
+
+class EnhancedCrawlResultsList(BaseModel):
+    """Paginated list of enhanced crawl results with historical tracking."""
+    pages: list[EnhancedCrawlPageData]
+    total: int
+    page: int
+    page_size: int
+    total_pages: int
+
+    @field_validator("total_pages", mode="before")
+    @classmethod
+    def calculate_total_pages(cls, v, info):
+        """Calculate total pages based on total count and page size."""
+        if "total" in info.data and "page_size" in info.data:
+            page_size = info.data["page_size"]
+            total = info.data["total"]
+            return (total + page_size - 1) // page_size if page_size > 0 else 0
+        return v

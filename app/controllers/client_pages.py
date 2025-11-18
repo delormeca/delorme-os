@@ -15,7 +15,8 @@ from app.schemas.client_page import (
     ClientPageUpdate,
     ClientPageRead,
     ClientPageList,
-    ClientPageSearchParams
+    ClientPageSearchParams,
+    EnhancedCrawlResultsList
 )
 from app.services.client_page_service import ClientPageService
 from app.services.page_extraction_service import PageExtractionService
@@ -418,3 +419,38 @@ async def extract_batch_pages(
         page_id=None,
         extracted_count=len(request.urls)
     )
+
+
+@router.get("/clients/{client_id}/crawl-results", response_model=EnhancedCrawlResultsList)
+async def get_enhanced_crawl_results(
+    client_id: UUID,
+    search: str = Query(None, description="Search in URL"),
+    page: int = Query(1, ge=1, description="Page number"),
+    page_size: int = Query(50, ge=1, le=100, description="Items per page"),
+    db: AsyncSession = Depends(get_async_db_session),
+    current_user: CurrentUserResponse = Depends(get_current_user),
+):
+    """
+    Get enhanced crawl results with historical tracking for all datapoints.
+    Each datapoint shows current value + history from previous crawls.
+
+    Perfect for Screaming Frog-style table with per-cell historical dropdowns.
+    """
+    try:
+        page_service = ClientPageService(db)
+        return await page_service.get_enhanced_crawl_results(
+            client_id=client_id,
+            search=search,
+            page=page,
+            page_size=page_size
+        )
+    except Exception as e:
+        import traceback
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Failed to get enhanced crawl results: {str(e)}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get enhanced crawl results: {str(e)}"
+        )
