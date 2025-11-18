@@ -1,51 +1,32 @@
-"""
-Crawler Service - Orchestrates Apify crawling with embeddings and similarity.
+""" 
+Apify Crawler Service
 
-High-level service that combines:
-- ApifyService for crawl execution and control
-- EmbeddingsService for OpenAI embeddings
-- Database persistence for results and versioning
-- Similarity calculations for "similar to" feature
+Handles crawl operations using Apify's Website Content Crawler.
 """
+from typing import List, Optional, Dict, Any
+from uuid import UUID
 import logging
-import uuid
-from typing import Optional, List, Dict, Any, Tuple
-from datetime import datetime
-from sqlmodel import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.services.apify_service import get_apify_service
-from app.services.embeddings_service import get_embeddings_service
-from app.models import (
-    Client,
-    ClientPage,
-    ClientPageVersion,
-    ApifyCrawlRun,
-)
+from sqlmodel import select
+from sqlmodel.ext.asyncio.session import AsyncSession
+
+from app.models import Client, ApifyCrawlRun, ClientPage, ClientPageVersion, PageSource
+from app.services.apify_service import ApifyService
+from app.utils.helpers import get_utcnow
 
 logger = logging.getLogger(__name__)
 
 
 class CrawlerService:
-    """
-    Orchestrates the complete crawl workflow with manual control.
-
-    Provides:
-    - Manual start/stop/pause controls for crawls
-    - Automatic embedding generation for all pages
-    - Similarity calculations for recommendations
-    - Complete versioning and historical tracking
-    """
+    """Service for managing Apify crawls."""
 
     def __init__(self, db: AsyncSession):
-        """Initialize crawler service with database session."""
         self.db = db
-        self.apify_service = get_apify_service()
-        self.embeddings_service = get_embeddings_service()
+        self.apify_service = ApifyService()
 
     async def start_crawl(
         self,
-        client_id: uuid.UUID,
+        client_id: UUID,
         urls: Optional[List[str]] = None,
         max_depth: int = 0,
         save_html: bool = True,
@@ -112,85 +93,49 @@ class CrawlerService:
         if not apify_result:
             # Update status to failed
             crawl_run.status = "failed"
+            crawl_run.completed_at = get_utcnow()
             await self.db.commit()
-            logger.error(f"Failed to start Apify crawl for client: {client.name}")
+            logger.error(f"Failed to start Apify crawl for client: {client_id}")
             return None
 
-        # Update crawl run with Apify details
+        # Update crawl run with Apify run ID
         crawl_run.apify_run_id = apify_result["run_id"]
-        crawl_run.status = apify_result["status"]
-        crawl_run.started_at = datetime.fromisoformat(apify_result["started_at"].replace("Z", "+00:00")) if apify_result.get("started_at") else None
-
+        crawl_run.status = "running"
+        crawl_run.started_at = get_utcnow()
         await self.db.commit()
-        await self.db.refresh(crawl_run)
 
-        logger.info(f"✅ Crawl started: run_id={crawl_run.apify_run_id}, status={crawl_run.status}")
+        logger.info(f"✓ Apify crawl started: {crawl_run.apify_run_id}")
 
         return crawl_run
 
-    async def stop_crawl(self, crawl_run_id: uuid.UUID) -> bool:
-        """
-        Stop/abort a running crawl immediately.
-
-        Args:
-            crawl_run_id: ApifyCrawlRun UUID
-
-        Returns:
-            True if stopped successfully, False otherwise
-        """
+    async def stop_crawl(self, crawl_run_id: UUID) -> bool:
+        """Stop a running crawl."""
         # Get crawl run
         result = await self.db.execute(
             select(ApifyCrawlRun).where(ApifyCrawlRun.id == crawl_run_id)
         )
         crawl_run = result.scalar_one_or_none()
 
-        if not crawl_run:
-            logger.error(f"Crawl run not found: {crawl_run_id}")
+        if not crawl_run or not crawl_run.apify_run_id:
             return False
 
-        if not crawl_run.apify_run_id:
-            logger.error(f"Crawl run has no Apify run ID: {crawl_run_id}")
-            return False
-
-        logger.info(f"🛑 Stopping crawl: {crawl_run.apify_run_id}")
-
-        # Stop via Apify
-        success = await self.apify_service.stop_crawl(crawl_run.apify_run_id)
+        # Stop in Apify
+        success = await self.apify_service.abort_run(crawl_run.apify_run_id)
 
         if success:
-            # Update local status
-            crawl_run.status = "ABORTED"
-            crawl_run.completed_at = datetime.utcnow()
+            crawl_run.status = "aborted"
+            crawl_run.completed_at = get_utcnow()
             await self.db.commit()
-            logger.info(f"✅ Crawl stopped: {crawl_run.apify_run_id}")
 
         return success
 
-    async def pause_crawl(self, crawl_run_id: uuid.UUID) -> bool:
-        """
-        Pause a running crawl gracefully.
-
-        Note: Apify doesn't support native pause/resume. This performs graceful stop.
-
-        Args:
-            crawl_run_id: ApifyCrawlRun UUID
-
-        Returns:
-            True if paused successfully, False otherwise
-        """
-        logger.info(f"⏸️  Pausing crawl (graceful stop): {crawl_run_id}")
+    async def pause_crawl(self, crawl_run_id: UUID) -> bool:
+        """Pause a running crawl (graceful stop)."""
+        # Apify doesn't support native pause, so we just do a graceful stop
         return await self.stop_crawl(crawl_run_id)
 
-    async def get_crawl_status(self, crawl_run_id: uuid.UUID) -> Optional[Dict[str, Any]]:
-        """
-        Get current status of a crawl run.
-
-        Args:
-            crawl_run_id: ApifyCrawlRun UUID
-
-        Returns:
-            Status dict with local and Apify data or None on error
-        """
+    async def get_crawl_status(self, crawl_run_id: UUID) -> Optional[Dict[str, Any]]:
+        """Get current status of a crawl run."""
         # Get crawl run from database
         result = await self.db.execute(
             select(ApifyCrawlRun).where(ApifyCrawlRun.id == crawl_run_id)
@@ -198,22 +143,24 @@ class CrawlerService:
         crawl_run = result.scalar_one_or_none()
 
         if not crawl_run:
-            logger.error(f"Crawl run not found: {crawl_run_id}")
             return None
 
-        # Get live status from Apify if available
+        # If crawl is running, get latest status from Apify
         apify_status = None
-        if crawl_run.apify_run_id:
+        if crawl_run.apify_run_id and crawl_run.status in ["starting", "running"]:
             apify_status = await self.apify_service.get_run_status(crawl_run.apify_run_id)
 
-            # Update local database with latest status
             if apify_status:
-                crawl_run.status = apify_status["status"]
-                crawl_run.pages_crawled = apify_status.get("stats", {}).get("requestsFinished", 0)
-                crawl_run.pages_failed = apify_status.get("stats", {}).get("requestsFailed", 0)
+                # Update database with latest info
+                crawl_run.status = apify_status["status"].lower()
 
-                if apify_status.get("finished_at"):
-                    crawl_run.completed_at = datetime.fromisoformat(apify_status["finished_at"].replace("Z", "+00:00"))
+                if apify_status["status"] in ["SUCCEEDED", "FAILED", "ABORTED", "TIMED-OUT"]:
+                    crawl_run.completed_at = get_utcnow()
+
+                # Update progress
+                if "stats" in apify_status:
+                    crawl_run.pages_crawled = apify_status["stats"].get("requestsFinished", 0)
+                    crawl_run.pages_failed = apify_status["stats"].get("requestsFailed", 0)
 
                 await self.db.commit()
 
@@ -221,7 +168,7 @@ class CrawlerService:
             "id": str(crawl_run.id),
             "client_id": str(crawl_run.client_id),
             "apify_run_id": crawl_run.apify_run_id,
-            "status": crawl_run.status,
+            "status": crawl_run.status.upper(),
             "total_pages": crawl_run.total_pages,
             "pages_crawled": crawl_run.pages_crawled,
             "pages_failed": crawl_run.pages_failed,
@@ -232,356 +179,171 @@ class CrawlerService:
 
     async def process_crawl_results(
         self,
-        crawl_run_id: uuid.UUID,
+        crawl_run_id: UUID,
         generate_embeddings: bool = True,
         calculate_similarity: bool = True,
     ) -> Dict[str, Any]:
-        """
-        Process completed crawl results: fetch data, generate embeddings, calculate similarity.
-
-        This is called after a crawl completes (either manually or automatically).
-
-        Args:
-            crawl_run_id: ApifyCrawlRun UUID
-            generate_embeddings: Whether to generate OpenAI embeddings
-            calculate_similarity: Whether to calculate "similar to" recommendations
-
-        Returns:
-            Processing summary with counts and statistics
-        """
+        """Process completed crawl results."""
         # Get crawl run
         result = await self.db.execute(
             select(ApifyCrawlRun).where(ApifyCrawlRun.id == crawl_run_id)
         )
         crawl_run = result.scalar_one_or_none()
 
-        if not crawl_run:
-            logger.error(f"Crawl run not found: {crawl_run_id}")
+        if not crawl_run or not crawl_run.apify_run_id:
             return {"error": "Crawl run not found"}
 
-        if not crawl_run.apify_run_id:
-            logger.error(f"Crawl run has no Apify run ID: {crawl_run_id}")
-            return {"error": "No Apify run ID"}
+        if crawl_run.status not in ["succeeded", "completed"]:
+            return {"error": f"Crawl not complete. Status: {crawl_run.status}"}
 
-        logger.info(f"📥 Processing crawl results: {crawl_run.apify_run_id}")
-
-        # Get Apify run status to get dataset ID
-        apify_status = await self.apify_service.get_run_status(crawl_run.apify_run_id)
-
-        if not apify_status:
-            logger.error(f"Failed to get Apify status: {crawl_run.apify_run_id}")
-            return {"error": "Failed to get Apify status"}
-
-        dataset_id = apify_status.get("default_dataset_id")
-        if not dataset_id:
-            logger.error(f"No dataset ID in Apify status: {crawl_run.apify_run_id}")
-            return {"error": "No dataset ID"}
-
-        # Fetch dataset items
-        items = await self.apify_service.get_dataset_items(dataset_id)
+        # Fetch results from Apify dataset
+        logger.info(f"Fetching results for crawl run: {crawl_run_id}")
+        items = await self.apify_service.get_dataset_items(crawl_run.apify_run_id)
 
         if not items:
-            logger.warning(f"No items in dataset: {dataset_id}")
-            return {"pages_processed": 0, "embeddings_generated": 0}
+            return {"error": "No results found in Apify dataset"}
 
-        logger.info(f"✅ Fetched {len(items)} items from Apify dataset")
-
-        # Process each item
         pages_processed = 0
         embeddings_generated = 0
         embedding_errors = 0
 
         for item in items:
-            try:
-                # Create or get ClientPage
-                client_page = await self._get_or_create_client_page(
+            url = item.get("url")
+            if not url:
+                continue
+
+            # Get or create ClientPage
+            page_result = await self.db.execute(
+                select(ClientPage).where(
+                    ClientPage.client_id == crawl_run.client_id,
+                    ClientPage.url == url
+                )
+            )
+            page = page_result.scalar_one_or_none()
+
+            if not page:
+                # Create new page
+                url_parts = url.rstrip('/').split('/')
+                slug = url_parts[-1] if len(url_parts) > 3 else ''
+
+                page = ClientPage(
                     client_id=crawl_run.client_id,
-                    url=item.get("url", ""),
+                    url=url,
+                    slug=slug,
+                    source=PageSource.CRAWLER_AUTO,
+                    created_at=get_utcnow(),
+                    updated_at=get_utcnow()
                 )
+                self.db.add(page)
+                await self.db.commit()
+                await self.db.refresh(page)
 
-                if not client_page:
-                    logger.warning(f"Failed to create ClientPage for URL: {item.get('url')}")
-                    continue
-
-                # Calculate version number (incremental)
-                version = await self._get_next_version_number(client_page.id)
-
-                # Create ClientPageVersion with all 83 columns
-                page_version = await self._create_page_version(
-                    client_page_id=client_page.id,
-                    crawl_run_id=crawl_run.id,
-                    version=version,
-                    item=item,
-                )
-
-                pages_processed += 1
-
-                # Generate embeddings if requested
-                if generate_embeddings and page_version:
-                    success = await self._generate_embeddings_for_page(page_version)
-                    if success:
-                        embeddings_generated += 1
-                    else:
-                        embedding_errors += 1
-
-            except Exception as e:
-                logger.error(f"Error processing item: {str(e)}", exc_info=True)
-
-        # Calculate similarity if requested
-        similarity_calculated = 0
-        if calculate_similarity and embeddings_generated > 0:
-            similarity_calculated = await self._calculate_similarity_for_crawl(crawl_run.id)
-
-        # Update crawl run statistics
-        crawl_run.pages_crawled = pages_processed
-        crawl_run.status = "SUCCEEDED" if pages_processed > 0 else "FAILED"
-        crawl_run.completed_at = datetime.utcnow()
+            # Create ClientPageVersion with all 83 datapoints from Apify
+            version = ClientPageVersion(
+                page_id=page.id,
+                crawl_run_id=crawl_run.id,
+                url=url,
+                slug=page.slug,
+                # Map all Apify fields to our schema
+                page_title=item.get("pageTitle"),
+                meta_title=item.get("metaTitle"),
+                meta_description=item.get("metaDescription"),
+                h1=item.get("h1"),
+                canonical_url=item.get("canonicalUrl"),
+                meta_robots=item.get("metaRobots"),
+                word_count=item.get("wordCount"),
+                status_code=item.get("httpStatusCode"),
+                publishing_date=item.get("publishingDate"),
+                last_modified=item.get("lastModified"),
+                h1_count=item.get("h1Count"),
+                h2_count=item.get("h2Count"),
+                h3_count=item.get("h3Count"),
+                h4_count=item.get("h4Count"),
+                h5_count=item.get("h5Count"),
+                h6_count=item.get("h6Count"),
+                h1_list=item.get("h1List"),
+                webpage_structure=item.get("webpageStructure"),
+                raw_text=item.get("text"),
+                markdown_text=item.get("markdown"),
+                character_count=item.get("characterCount"),
+                readability_score=item.get("readabilityScore"),
+                page_weight_kb=item.get("pageWeightKb"),
+                page_weight_mb=item.get("pageWeightMb"),
+                load_time_ms=item.get("loadTimeMs"),
+                meta_keywords=item.get("metaKeywords"),
+                meta_viewport=item.get("metaViewport"),
+                meta_generator=item.get("metaGenerator"),
+                schema_markup=item.get("schemaMarkup"),
+                schema_types=item.get("schemaTypes"),
+                hreflang=item.get("hreflang"),
+                internal_links=item.get("internalLinks"),
+                internal_link_count=item.get("internalLinkCount"),
+                external_links=item.get("externalLinks"),
+                external_link_count=item.get("externalLinkCount"),
+                total_link_count=item.get("totalLinkCount"),
+                image_count=item.get("imageCount"),
+                image_alt_texts=item.get("imageAltTexts"),
+                video_count=item.get("videoCount"),
+                iframe_count=item.get("iframeCount"),
+                og_title=item.get("ogTitle"),
+                og_description=item.get("ogDescription"),
+                og_image=item.get("ogImage"),
+                og_type=item.get("ogType"),
+                og_url=item.get("ogUrl"),
+                og_site_name=item.get("ogSiteName"),
+                og_locale=item.get("ogLocale"),
+                twitter_card=item.get("twitterCard"),
+                twitter_title=item.get("twitterTitle"),
+                twitter_description=item.get("twitterDescription"),
+                twitter_image=item.get("twitterImage"),
+                twitter_site=item.get("twitterSite"),
+                twitter_creator=item.get("twitterCreator"),
+                fb_app_id=item.get("fbAppId"),
+                fb_admins=item.get("fbAdmins"),
+                http_status_code=item.get("httpStatusCode"),
+                apify_loaded_url=item.get("loadedUrl"),
+                apify_loaded_time=item.get("loadedTime"),
+                apify_referrer_url=item.get("referrerUrl"),
+                apify_crawl_depth=item.get("crawlDepth"),
+                apify_request_handler_mode=item.get("requestHandlerMode"),
+                apify_has_html=item.get("hasHtml"),
+                apify_has_markdown=item.get("hasMarkdown"),
+                apify_has_screenshot=item.get("hasScreenshot"),
+                screenshot_url=item.get("screenshotUrl"),
+                screenshot_file=item.get("screenshotFile"),
+                html_lang=item.get("htmlLang"),
+                html_dir=item.get("htmlDir"),
+                charset=item.get("charset"),
+                favicon=item.get("favicon"),
+                form_count=item.get("formCount"),
+                input_count=item.get("inputCount"),
+                button_count=item.get("buttonCount"),
+                script_count=item.get("scriptCount"),
+                style_count=item.get("styleCount"),
+                external_scripts=item.get("externalScripts"),
+                external_stylesheets=item.get("externalStylesheets"),
+                language=item.get("language"),
+                author=item.get("author"),
+                crawled_at=get_utcnow(),
+            )
+            self.db.add(version)
+            pages_processed += 1
 
         await self.db.commit()
 
-        logger.info(
-            f"✅ Crawl processing complete: {pages_processed} pages, "
-            f"{embeddings_generated} embeddings, {similarity_calculated} similarities"
-        )
+        logger.info(f"✓ Processed {pages_processed} pages from crawl: {crawl_run_id}")
+
+        # TODO: Generate embeddings (if enabled)
+        # TODO: Calculate similarity (if enabled)
 
         return {
             "pages_processed": pages_processed,
             "embeddings_generated": embeddings_generated,
             "embedding_errors": embedding_errors,
-            "similarity_calculated": similarity_calculated,
+            "similarity_calculated": 0,
         }
-
-    async def _get_or_create_client_page(
-        self,
-        client_id: uuid.UUID,
-        url: str,
-    ) -> Optional[ClientPage]:
-        """Get existing or create new ClientPage."""
-        # Check if page exists
-        result = await self.db.execute(
-            select(ClientPage).where(
-                ClientPage.client_id == client_id,
-                ClientPage.url == url,
-            )
-        )
-        page = result.scalar_one_or_none()
-
-        if page:
-            return page
-
-        # Create new page
-        page = ClientPage(
-            client_id=client_id,
-            url=url,
-        )
-        self.db.add(page)
-        await self.db.commit()
-        await self.db.refresh(page)
-
-        return page
-
-    async def _get_next_version_number(self, client_page_id: uuid.UUID) -> int:
-        """Get next version number for a client page."""
-        result = await self.db.execute(
-            select(ClientPageVersion)
-            .where(ClientPageVersion.client_page_id == client_page_id)
-            .order_by(ClientPageVersion.version.desc())
-        )
-        latest = result.first()
-
-        if latest:
-            return latest[0].version + 1
-
-        return 1
-
-    async def _create_page_version(
-        self,
-        client_page_id: uuid.UUID,
-        crawl_run_id: uuid.UUID,
-        version: int,
-        item: Dict[str, Any],
-    ) -> Optional[ClientPageVersion]:
-        """Create ClientPageVersion from Apify item data (all 83 columns)."""
-        try:
-            # Map all 83 Apify fields to ClientPageVersion model
-            page_version = ClientPageVersion(
-                client_page_id=client_page_id,
-                crawl_run_id=crawl_run_id,
-                version=version,
-
-                # Core Metadata
-                url=item.get("url"),
-                slug=item.get("slug"),
-                crawled_at=datetime.fromisoformat(item["crawledAt"].replace("Z", "+00:00")) if item.get("crawledAt") else None,
-                load_time_ms=item.get("loadedTime"),
-                http_status_code=item.get("httpStatusCode"),
-
-                # Page Content
-                page_title=item.get("metadata", {}).get("title"),
-                meta_description=item.get("metadata", {}).get("description"),
-                h1=item.get("metadata", {}).get("h1"),
-                h2=item.get("metadata", {}).get("h2"),
-                h3=item.get("metadata", {}).get("h3"),
-                raw_text=item.get("text"),
-                markdown=item.get("markdown"),
-                html=item.get("html"),
-
-                # SEO & Social
-                canonical_url=item.get("metadata", {}).get("canonicalUrl"),
-                og_title=item.get("metadata", {}).get("openGraph", {}).get("title"),
-                og_description=item.get("metadata", {}).get("openGraph", {}).get("description"),
-                og_image=item.get("metadata", {}).get("openGraph", {}).get("image"),
-                twitter_title=item.get("metadata", {}).get("twitter", {}).get("title"),
-                twitter_description=item.get("metadata", {}).get("twitter", {}).get("description"),
-                twitter_image=item.get("metadata", {}).get("twitter", {}).get("image"),
-
-                # Language & Locale
-                language=item.get("metadata", {}).get("languageCode"),
-
-                # Links
-                internal_links=item.get("metadata", {}).get("jsonLd"),  # Simplified
-                external_links=item.get("metadata", {}).get("jsonLd"),  # Simplified
-
-                # Images
-                screenshot_url=item.get("screenshotUrl"),
-
-                # Metrics
-                word_count=len(item.get("text", "").split()) if item.get("text") else 0,
-
-                # Schema & Structured Data
-                schema_types=item.get("metadata", {}).get("jsonLd"),
-
-                # Author & Date
-                author=item.get("metadata", {}).get("author"),
-                published_date=item.get("metadata", {}).get("date"),
-                modified_date=item.get("metadata", {}).get("modifiedTime"),
-            )
-
-            self.db.add(page_version)
-            await self.db.commit()
-            await self.db.refresh(page_version)
-
-            return page_version
-
-        except Exception as e:
-            logger.error(f"Error creating page version: {str(e)}", exc_info=True)
-            await self.db.rollback()
-            return None
-
-    async def _generate_embeddings_for_page(
-        self,
-        page_version: ClientPageVersion,
-    ) -> bool:
-        """Generate 3 embeddings for a page: raw_text, page_title, slug."""
-        try:
-            # Generate embedding for raw_text
-            if page_version.raw_text:
-                result = await self.embeddings_service.generate_embedding(
-                    page_version.raw_text,
-                    truncate=True,
-                )
-                if result:
-                    embedding, tokens, cost = result
-                    page_version.embedding_raw_text = embedding
-
-            # Generate embedding for page_title
-            if page_version.page_title:
-                result = await self.embeddings_service.generate_embedding(
-                    page_version.page_title,
-                    truncate=True,
-                )
-                if result:
-                    embedding, tokens, cost = result
-                    page_version.embedding_page_title = embedding
-
-            # Generate embedding for slug
-            if page_version.slug:
-                result = await self.embeddings_service.generate_embedding(
-                    page_version.slug,
-                    truncate=True,
-                )
-                if result:
-                    embedding, tokens, cost = result
-                    page_version.embedding_slug = embedding
-
-            await self.db.commit()
-            return True
-
-        except Exception as e:
-            logger.error(f"Error generating embeddings: {str(e)}", exc_info=True)
-            await self.db.rollback()
-            return False
-
-    async def _calculate_similarity_for_crawl(
-        self,
-        crawl_run_id: uuid.UUID,
-    ) -> int:
-        """Calculate 'similar to' for all pages in a crawl run."""
-        # Get all page versions from this crawl
-        result = await self.db.execute(
-            select(ClientPageVersion).where(
-                ClientPageVersion.crawl_run_id == crawl_run_id,
-                ClientPageVersion.embedding_raw_text.isnot(None),
-            )
-        )
-        pages = result.scalars().all()
-
-        if not pages or len(pages) < 2:
-            logger.info("Not enough pages with embeddings for similarity calculation")
-            return 0
-
-        similarity_count = 0
-
-        # Calculate similarity for each page
-        for page in pages:
-            similar_pages = []
-
-            # Compare with all other pages
-            for other_page in pages:
-                if page.id == other_page.id:
-                    continue
-
-                if not other_page.embedding_raw_text:
-                    continue
-
-                # Calculate cosine similarity
-                similarity = self.embeddings_service.calculate_cosine_similarity(
-                    page.embedding_raw_text,
-                    other_page.embedding_raw_text,
-                )
-
-                similar_pages.append({
-                    "page_id": str(other_page.id),
-                    "url": other_page.url,
-                    "title": other_page.page_title,
-                    "similarity": float(similarity),
-                })
-
-            # Sort by similarity and keep top 10
-            similar_pages.sort(key=lambda x: x["similarity"], reverse=True)
-            page.similar_to = similar_pages[:10]
-
-            similarity_count += 1
-
-        await self.db.commit()
-
-        logger.info(f"✅ Calculated similarity for {similarity_count} pages")
-
-        return similarity_count
-
-
-# Singleton instance
-_crawler_service: Optional[CrawlerService] = None
 
 
 def get_crawler_service(db: AsyncSession) -> CrawlerService:
-    """
-    Get CrawlerService instance.
-
-    Args:
-        db: Database session
-
-    Returns:
-        CrawlerService instance
-    """
+    """Get crawler service instance."""
     return CrawlerService(db)
