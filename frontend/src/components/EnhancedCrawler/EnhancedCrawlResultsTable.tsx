@@ -4,7 +4,7 @@
  * Comprehensive table showing all crawled pages with historical tracking.
  * Similar to Screaming Frog - always shows all URLs with datapoints + history per cell.
  */
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -33,6 +33,7 @@ import {
 } from '@mui/icons-material';
 import { useEnhancedCrawlResults, EnhancedCrawlPageData } from '@/hooks/api/useEnhancedCrawlResults';
 import { HistoricalDropdown } from './HistoricalDropdown';
+import { ColumnManagementModal, ColumnDefinition } from './ColumnManagementModal';
 import { ModernCard, LoadingState } from '@/components/ui';
 
 interface EnhancedCrawlResultsTableProps {
@@ -40,6 +41,22 @@ interface EnhancedCrawlResultsTableProps {
   clientName?: string;
   lastCrawl?: string;
 }
+
+// Column definitions with metadata
+const COLUMN_DEFINITIONS: ColumnDefinition[] = [
+  { id: 'url', label: 'URL', minWidth: 300, isPrimary: true, defaultVisible: true },
+  { id: 'h1', label: 'H1', minWidth: 200, isPrimary: false, defaultVisible: true },
+  { id: 'meta_title', label: 'META-TITLE', minWidth: 200, isPrimary: false, defaultVisible: true },
+  { id: 'meta_description', label: 'Meta-desc', minWidth: 200, isPrimary: false, defaultVisible: true },
+  { id: 'word_count', label: 'Word Count', minWidth: 150, isPrimary: false, defaultVisible: true },
+  { id: 'image_count', label: 'Images', minWidth: 120, isPrimary: false, defaultVisible: true },
+  { id: 'internal_link_count', label: 'Links (I)', minWidth: 120, isPrimary: false, defaultVisible: true },
+  { id: 'external_link_count', label: 'Links (E)', minWidth: 120, isPrimary: false, defaultVisible: true },
+  { id: 'status_code', label: 'Status', minWidth: 120, isPrimary: false, defaultVisible: true },
+];
+
+// LocalStorage key for column preferences
+const getColumnPrefsKey = (clientId: string) => `enhanced-table-columns-${clientId}`;
 
 export const EnhancedCrawlResultsTable: React.FC<EnhancedCrawlResultsTableProps> = ({
   clientId,
@@ -51,6 +68,29 @@ export const EnhancedCrawlResultsTable: React.FC<EnhancedCrawlResultsTableProps>
   const [rowsPerPage, setRowsPerPage] = useState(50);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
+  const [columnManagementOpen, setColumnManagementOpen] = useState(false);
+  const [visibleColumns, setVisibleColumns] = useState<string[]>(() => {
+    // Load from localStorage on mount
+    const stored = localStorage.getItem(getColumnPrefsKey(clientId));
+    if (stored) {
+      try {
+        const prefs = JSON.parse(stored);
+        return prefs.visibleColumns || COLUMN_DEFINITIONS.map((col) => col.id);
+      } catch {
+        return COLUMN_DEFINITIONS.map((col) => col.id);
+      }
+    }
+    return COLUMN_DEFINITIONS.map((col) => col.id);
+  });
+
+  // Persist column preferences to localStorage
+  useEffect(() => {
+    const prefs = {
+      visibleColumns,
+      updatedAt: new Date().toISOString(),
+    };
+    localStorage.setItem(getColumnPrefsKey(clientId), JSON.stringify(prefs));
+  }, [visibleColumns, clientId]);
 
   // Fetch data
   const { data, isLoading, error } = useEnhancedCrawlResults({
@@ -181,6 +221,7 @@ export const EnhancedCrawlResultsTable: React.FC<EnhancedCrawlResultsTableProps>
             variant="outlined"
             size="small"
             startIcon={<ViewColumn />}
+            onClick={() => setColumnManagementOpen(true)}
           >
             Manage columns
           </Button>
@@ -208,36 +249,24 @@ export const EnhancedCrawlResultsTable: React.FC<EnhancedCrawlResultsTableProps>
                   onChange={handleSelectAll}
                 />
               </TableCell>
-              <TableCell sx={{ fontWeight: 600, minWidth: 300, backgroundColor: theme.palette.background.paper }}>
-                URL
-              </TableCell>
-              <TableCell sx={{ fontWeight: 600, minWidth: 200, backgroundColor: theme.palette.background.paper }}>
-                H1
-              </TableCell>
-              <TableCell sx={{ fontWeight: 600, minWidth: 200, backgroundColor: theme.palette.background.paper }}>
-                META-TITLE
-              </TableCell>
-              <TableCell sx={{ fontWeight: 600, minWidth: 200, backgroundColor: theme.palette.background.paper }}>
-                Meta-desc
-              </TableCell>
-              <TableCell sx={{ fontWeight: 600, minWidth: 150, backgroundColor: theme.palette.background.paper }}>
-                Word Count
-              </TableCell>
-              <TableCell sx={{ fontWeight: 600, minWidth: 120, backgroundColor: theme.palette.background.paper }}>
-                Images
-              </TableCell>
-              <TableCell sx={{ fontWeight: 600, minWidth: 150, backgroundColor: theme.palette.background.paper }}>
-                Links (I/E)
-              </TableCell>
-              <TableCell sx={{ fontWeight: 600, minWidth: 120, backgroundColor: theme.palette.background.paper }}>
-                Status
-              </TableCell>
+              {COLUMN_DEFINITIONS.filter((col) => visibleColumns.includes(col.id)).map((column) => (
+                <TableCell
+                  key={column.id}
+                  sx={{
+                    fontWeight: 600,
+                    minWidth: column.minWidth,
+                    backgroundColor: theme.palette.background.paper,
+                  }}
+                >
+                  {column.label}
+                </TableCell>
+              ))}
             </TableRow>
           </TableHead>
           <TableBody>
             {data.pages.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={9} sx={{ textAlign: 'center', py: 4 }}>
+                <TableCell colSpan={visibleColumns.length + 1} sx={{ textAlign: 'center', py: 4 }}>
                   <Typography variant="body2" color="text.secondary">
                     No pages found. Start a crawl to see data here.
                   </Typography>
@@ -265,57 +294,92 @@ export const EnhancedCrawlResultsTable: React.FC<EnhancedCrawlResultsTableProps>
                       />
                     </TableCell>
 
-                    <TableCell>
-                      <Typography
-                        variant="body2"
-                        sx={{
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                          maxWidth: 300,
-                        }}
-                      >
-                        {pageData.url}
-                      </Typography>
-                    </TableCell>
+                    {COLUMN_DEFINITIONS.filter((col) => visibleColumns.includes(col.id)).map((column) => {
+                      // Render cell based on column type
+                      if (column.id === 'url') {
+                        return (
+                          <TableCell key={column.id}>
+                            <Typography
+                              variant="body2"
+                              sx={{
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                                maxWidth: 300,
+                              }}
+                            >
+                              {pageData.url}
+                            </Typography>
+                          </TableCell>
+                        );
+                      }
 
-                    <TableCell>
-                      <HistoricalDropdown datapoint={pageData.h1} fieldName="H1" />
-                    </TableCell>
+                      if (column.id === 'h1') {
+                        return (
+                          <TableCell key={column.id}>
+                            <HistoricalDropdown datapoint={pageData.h1} fieldName="H1" />
+                          </TableCell>
+                        );
+                      }
 
-                    <TableCell>
-                      <HistoricalDropdown datapoint={pageData.meta_title} fieldName="Meta Title" />
-                    </TableCell>
+                      if (column.id === 'meta_title') {
+                        return (
+                          <TableCell key={column.id}>
+                            <HistoricalDropdown datapoint={pageData.meta_title} fieldName="Meta Title" />
+                          </TableCell>
+                        );
+                      }
 
-                    <TableCell>
-                      <HistoricalDropdown datapoint={pageData.meta_description} fieldName="Meta Description" />
-                    </TableCell>
+                      if (column.id === 'meta_description') {
+                        return (
+                          <TableCell key={column.id}>
+                            <HistoricalDropdown datapoint={pageData.meta_description} fieldName="Meta Description" />
+                          </TableCell>
+                        );
+                      }
 
-                    <TableCell>
-                      <HistoricalDropdown datapoint={pageData.word_count} fieldName="Word Count" />
-                    </TableCell>
+                      if (column.id === 'word_count') {
+                        return (
+                          <TableCell key={column.id}>
+                            <HistoricalDropdown datapoint={pageData.word_count} fieldName="Word Count" />
+                          </TableCell>
+                        );
+                      }
 
-                    <TableCell>
-                      <HistoricalDropdown datapoint={pageData.image_count} fieldName="Images" />
-                    </TableCell>
+                      if (column.id === 'image_count') {
+                        return (
+                          <TableCell key={column.id}>
+                            <HistoricalDropdown datapoint={pageData.image_count} fieldName="Images" />
+                          </TableCell>
+                        );
+                      }
 
-                    <TableCell>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                        <HistoricalDropdown
-                          datapoint={pageData.internal_link_count}
-                          fieldName="Internal Links"
-                        />
-                        <Typography variant="body2" color="text.secondary">/</Typography>
-                        <HistoricalDropdown
-                          datapoint={pageData.external_link_count}
-                          fieldName="External Links"
-                        />
-                      </Box>
-                    </TableCell>
+                      if (column.id === 'internal_link_count') {
+                        return (
+                          <TableCell key={column.id}>
+                            <HistoricalDropdown datapoint={pageData.internal_link_count} fieldName="Links (I)" />
+                          </TableCell>
+                        );
+                      }
 
-                    <TableCell>
-                      <HistoricalDropdown datapoint={pageData.status_code} fieldName="Status Code" />
-                    </TableCell>
+                      if (column.id === 'external_link_count') {
+                        return (
+                          <TableCell key={column.id}>
+                            <HistoricalDropdown datapoint={pageData.external_link_count} fieldName="Links (E)" />
+                          </TableCell>
+                        );
+                      }
+
+                      if (column.id === 'status_code') {
+                        return (
+                          <TableCell key={column.id}>
+                            <HistoricalDropdown datapoint={pageData.status_code} fieldName="Status Code" />
+                          </TableCell>
+                        );
+                      }
+
+                      return null;
+                    })}
                   </TableRow>
                 );
               })
@@ -336,6 +400,17 @@ export const EnhancedCrawlResultsTable: React.FC<EnhancedCrawlResultsTableProps>
           rowsPerPageOptions={[25, 50, 100]}
         />
       )}
+
+      {/* Column Management Modal */}
+      <ColumnManagementModal
+        open={columnManagementOpen}
+        onClose={() => setColumnManagementOpen(false)}
+        columns={COLUMN_DEFINITIONS}
+        visibleColumns={visibleColumns}
+        onApply={(newVisibleColumns) => {
+          setVisibleColumns(newVisibleColumns);
+        }}
+      />
     </ModernCard>
   );
 };
