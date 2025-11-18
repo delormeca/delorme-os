@@ -64,6 +64,7 @@ export type { ProjectLeadCreate } from './models/ProjectLeadCreate';
 export type { ProjectLeadRead } from './models/ProjectLeadRead';
 export type { ProjectLeadUpdate } from './models/ProjectLeadUpdate';
 export type { ProrationPreviewRequest } from './models/ProrationPreviewRequest';
+export type { PullPagesResponse } from './models/PullPagesResponse';
 export type { ResearchRequestCreate } from './models/ResearchRequestCreate';
 export type { ResearchRequestDetail } from './models/ResearchRequestDetail';
 export type { ResearchRequestRead } from './models/ResearchRequestRead';

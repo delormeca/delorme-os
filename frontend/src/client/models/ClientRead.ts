@@ -27,5 +27,6 @@ export type ClientRead = {
     created_by: string;
     created_at: string;
     updated_at: string;
+    base_url?: (string | null);
 };
 

@@ -7,6 +7,7 @@ import type { CrawlControlResponse } from '../models/CrawlControlResponse';
 import type { CrawlProcessResponse } from '../models/CrawlProcessResponse';
 import type { CrawlStartRequest } from '../models/CrawlStartRequest';
 import type { CrawlStartResponse } from '../models/CrawlStartResponse';
+import type { PullPagesResponse } from '../models/PullPagesResponse';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import { OpenAPI } from '../core/OpenAPI';
 import { request as __request } from '../core/request';
@@ -221,6 +222,41 @@ export class ApifyCrawlerService {
             },
             query: {
                 'limit': limit,
+            },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * Pull Pages From Sitemap
+     * **Pull latest pages from sitemap tracker and add them to the client.**
+     *
+     * This endpoint:
+     * 1. Gets the latest completed sitemap tracker run
+     * 2. Extracts all URLs from the sitemap
+     * 3. Checks which URLs don't already exist in ClientPage
+     * 4. Adds only the new URLs to ClientPage
+     *
+     * **Purpose:**
+     * - Allows crawler to import pages discovered by sitemap tracker
+     * - Only adds pages that haven't been added yet (no duplicates)
+     * - Works alongside manual page addition
+     *
+     * **Usage:**
+     * Call this endpoint before starting a crawl to ensure all sitemap URLs are available.
+     * @param clientId
+     * @returns PullPagesResponse Successful Response
+     * @throws ApiError
+     */
+    public static pullPagesFromSitemapApiClientsClientIdPullFromSitemapPost(
+        clientId: string,
+    ): CancelablePromise<PullPagesResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/clients/{client_id}/pull-from-sitemap',
+            path: {
+                'client_id': clientId,
             },
             errors: {
                 422: `Validation Error`,
