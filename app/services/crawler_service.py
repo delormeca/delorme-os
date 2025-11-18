@@ -76,12 +76,16 @@ class CrawlerService:
             logger.error(f"Client not found: {client_id}")
             return None
 
+        # Store client attributes before session operations to avoid lazy loading issues
+        client_name = client.name
+        client_base_url = client.base_url
+
         # Use client base_url if no URLs provided
         if not urls:
-            if not client.base_url:
+            if not client_base_url:
                 logger.error(f"No URLs provided and client has no base_url: {client_id}")
                 return None
-            urls = [client.base_url]
+            urls = [client_base_url]
 
         # Create database record for crawl run
         crawl_run = ApifyCrawlRun(
@@ -93,12 +97,12 @@ class CrawlerService:
         await self.db.commit()
         await self.db.refresh(crawl_run)
 
-        logger.info(f"🚀 Starting crawl for client: {client.name} (ID: {client_id})")
+        logger.info(f"🚀 Starting crawl for client: {client_name} (ID: {client_id})")
 
         # Start Apify crawl
         apify_result = await self.apify_service.start_crawl(
             urls=urls,
-            client_name=client.name,
+            client_name=client_name,
             max_depth=max_depth,
             save_html=save_html,
             save_markdown=save_markdown,
