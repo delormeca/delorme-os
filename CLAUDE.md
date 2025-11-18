@@ -179,6 +179,15 @@ export default MyComponent;
 - Test user interactions, not implementation details
 - Use `renderWithProviders` helper for components needing context
 
+### Playwright Browser Testing
+- Use Playwright for end-to-end testing on staging environment
+- Staging URL: `https://delorme-os-staging-frontend.onrender.com`
+- **Test Credentials:**
+  - Email: `tommy@delorme.ca`
+  - Password: `Hockey999!!!`
+- Always use these credentials when testing with Playwright browser automation
+- Navigate to specific client pages after login to test features
+
 ## Repository Workflow
 
 ### Git Conventions

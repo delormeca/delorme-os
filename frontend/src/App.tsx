@@ -47,9 +47,11 @@ import ClientLandingPage from "./pages/Clients/ClientLandingPage";
 import ClientSitemapPage from "./pages/Clients/ClientSitemapPage";
 import ClientCrawlerPage from "./pages/Clients/ClientCrawlerPage";
 import ClientWorkflowPage from "./pages/Clients/ClientWorkflowPage";
+import SitemapTrackerRunsPage from "./pages/Clients/SitemapTrackerRunsPage";
 import DeepResearchList from "./pages/DeepResearch/DeepResearchList";
 import CreateResearch from "./pages/DeepResearch/CreateResearch";
 import ResearchDetail from "./pages/DeepResearch/ResearchDetail";
+import N8N from "./pages/N8N";
 
 export const UserContext = createContext<CurrentUserResponse | undefined>(
   undefined
@@ -130,12 +132,16 @@ function App(props: { disableCustomTheme?: boolean }) {
                     <Route path="clients/:clientId/edit" element={<EditClient />} />
                     <Route path="clients/:clientId/sitemap" element={<ClientSitemapPage />} />
                     <Route path="clients/:clientId/crawler" element={<ClientCrawlerPage />} />
+                    <Route path="clients/:clientId/sitemap-tracker/runs" element={<SitemapTrackerRunsPage />} />
                     <Route path="clients/:clientId/workflows/:workflowType" element={<ClientWorkflowPage />} />
 
                     {/* Deep Researcher routes */}
                     <Route path="dashboard/deep-researcher" element={<DeepResearchList />} />
                     <Route path="dashboard/deep-researcher/new" element={<CreateResearch />} />
                     <Route path="dashboard/deep-researcher/:researchId" element={<ResearchDetail />} />
+
+                    {/* N8N Workflow Automation (Superadmin only) */}
+                    <Route path="dashboard/n8n" element={<N8N />} />
                   </Route>
                   
                   {/* Catch-all route for 404 - must be last */}

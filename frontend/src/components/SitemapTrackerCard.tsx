@@ -41,6 +41,7 @@ import {
 } from '@/hooks/api/useSitemapTracker';
 import { ModernCard, StandardButton } from '@/components/ui';
 import { useTheme } from '@mui/material';
+import { SitemapChangesTable } from '@/components/SitemapTracker/SitemapChangesTable';
 
 interface SitemapTrackerCardProps {
   clientId: string;
@@ -307,6 +308,23 @@ export const SitemapTrackerCard: React.FC<SitemapTrackerCardProps> = ({ clientId
                         <Alert severity="error" sx={{ mt: 1 }}>
                           {latestRun.error_message}
                         </Alert>
+                      )}
+
+                      {/* Recent Changes Table */}
+                      {latestRun.status === 'completed' && (
+                        <>
+                          <Divider sx={{ my: 1 }} />
+                          <Box>
+                            <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, display: 'block', mb: 1.5 }}>
+                              Recent Changes
+                            </Typography>
+                            <SitemapChangesTable
+                              runId={latestRun.id}
+                              compact={true}
+                              maxRows={10}
+                            />
+                          </Box>
+                        </>
                       )}
                     </Stack>
                   </Box>

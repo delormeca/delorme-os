@@ -21,6 +21,7 @@ import {
   LoadingState,
 } from '@/components/ui';
 import { SitemapTrackerCard } from '@/components/SitemapTrackerCard';
+import { ClientPagesTable } from '@/components/ApifyCrawler';
 
 const ClientSitemapPage: React.FC = () => {
   const { clientId } = useParams<{ clientId: string }>();
@@ -78,7 +79,14 @@ const ClientSitemapPage: React.FC = () => {
         </Box>
 
         {/* Sitemap Tracker Card */}
-        <SitemapTrackerCard clientId={client.id} client={client} />
+        <Box sx={{ mb: 4 }}>
+          <SitemapTrackerCard clientId={client.id} client={client} />
+        </Box>
+
+        {/* Sitemap URLs Table - All pages from sitemap */}
+        <Box sx={{ mb: 4 }}>
+          <ClientPagesTable clientId={client.id} />
+        </Box>
       </Box>
     </DashboardLayout>
   );
