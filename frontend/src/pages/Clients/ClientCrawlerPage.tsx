@@ -20,7 +20,7 @@ import {
   StandardIconButton,
   LoadingState,
 } from '@/components/ui';
-import { ApifyCrawlerControlPanel, ApifyCrawlHistory, ApifyCrawlResultsTable, ClientPagesTable } from '@/components/ApifyCrawler';
+import { ApifyCrawlerControlPanel, ApifyCrawlHistory, ApifyCrawlResultsTable } from '@/components/ApifyCrawler';
 
 const ClientCrawlerPage: React.FC = () => {
   const { clientId } = useParams<{ clientId: string }>();
@@ -85,11 +85,6 @@ const ClientCrawlerPage: React.FC = () => {
             clientName={client.name}
             baseUrl={client.base_url || undefined}
           />
-        </Box>
-
-        {/* Available Pages Table - Shows all pages ready for crawling */}
-        <Box sx={{ mb: 4 }}>
-          <ClientPagesTable clientId={client.id} />
         </Box>
 
         {/* Crawl History */}
