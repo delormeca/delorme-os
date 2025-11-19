@@ -364,6 +364,15 @@ class SitemapTrackerService:
 
             # Removed URLs
             for url in removed_urls:
+                # Parse lastmod string to datetime if it exists
+                last_seen_str = previous_urls[url].get("lastmod")
+                last_seen_dt = None
+                if last_seen_str:
+                    try:
+                        last_seen_dt = datetime.fromisoformat(last_seen_str)
+                    except (ValueError, TypeError):
+                        logger.warning(f"Could not parse lastmod '{last_seen_str}' for URL {url}")
+
                 change = SitemapChange(
                     client_id=run.client_id,
                     sitemap_tracker_run_id=run.id,
@@ -371,7 +380,7 @@ class SitemapTrackerService:
                     change_type=ChangeType.REMOVED,
                     old_status_code=200,
                     detected_at=get_utcnow(),
-                    last_seen_at=previous_urls[url].get("lastmod"),
+                    last_seen_at=last_seen_dt,
                     pushed_to_crawler=False,
                 )
                 changes_to_add.append(change)
