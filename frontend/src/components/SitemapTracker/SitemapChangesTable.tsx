@@ -73,11 +73,11 @@ export const SitemapChangesTable: React.FC<SitemapChangesTableProps> = ({
 
   const getChangeIcon = (changeType: string) => {
     switch (changeType) {
-      case 'new':
+      case 'added':
         return <AddCircle color="success" />;
       case 'removed':
         return <RemoveCircle color="error" />;
-      case 'status_code_change':
+      case 'status_changed':
         return <ChangeCircle color="warning" />;
       default:
         return null;
@@ -86,11 +86,11 @@ export const SitemapChangesTable: React.FC<SitemapChangesTableProps> = ({
 
   const getChangeLabel = (changeType: string) => {
     switch (changeType) {
-      case 'new':
+      case 'added':
         return 'New';
       case 'removed':
         return 'Removed';
-      case 'status_code_change':
+      case 'status_changed':
         return 'Status Change';
       default:
         return changeType;
@@ -99,11 +99,11 @@ export const SitemapChangesTable: React.FC<SitemapChangesTableProps> = ({
 
   const getChangeColor = (changeType: string) => {
     switch (changeType) {
-      case 'new':
+      case 'added':
         return 'success';
       case 'removed':
         return 'error';
-      case 'status_code_change':
+      case 'status_changed':
         return 'warning';
       default:
         return 'default';
@@ -157,9 +157,9 @@ export const SitemapChangesTable: React.FC<SitemapChangesTableProps> = ({
           aria-label="change type filter"
         >
           <Tab label="All Changes" value="all" />
-          <Tab label="New URLs" value="new" />
+          <Tab label="New URLs" value="added" />
           <Tab label="Removed" value="removed" />
-          <Tab label="Status Changes" value="status_code_change" />
+          <Tab label="Status Changes" value="status_changed" />
         </Tabs>
       </Box>
 

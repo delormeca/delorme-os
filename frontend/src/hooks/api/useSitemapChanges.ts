@@ -6,7 +6,7 @@ export interface SitemapChange {
   client_id: string;
   sitemap_tracker_run_id: string;
   url: string;
-  change_type: string; // 'new', 'removed', 'status_code_change'
+  change_type: string; // 'added', 'removed', 'status_changed'
   old_status_code: number | null;
   new_status_code: number | null;
   detected_at: string;
@@ -26,7 +26,7 @@ export interface SitemapChangeList {
 
 export interface SitemapChangesParams {
   run_id: string;
-  change_type?: string; // Optional filter: 'new', 'removed', 'status_code_change'
+  change_type?: string; // Optional filter: 'added', 'removed', 'status_changed'
   page?: number;
   page_size?: number;
 }

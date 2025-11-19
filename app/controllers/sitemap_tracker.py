@@ -196,7 +196,7 @@ async def list_client_tracker_runs(
 @router.get("/runs/{run_id}/changes", response_model=SitemapChangeList)
 async def list_run_changes(
     run_id: UUID = Path(..., description="ID of the tracker run to get changes for"),
-    change_type: Optional[str] = Query(None, description="Filter by change type: 'new', 'removed', 'status_code_change'"),
+    change_type: Optional[str] = Query(None, description="Filter by change type: 'added', 'removed', 'status_changed'"),
     page: int = Query(1, ge=1, description="Page number (starts at 1)"),
     page_size: int = Query(50, ge=1, le=100, description="Number of items per page"),
     db: AsyncSession = Depends(get_async_db_session),
@@ -206,9 +206,9 @@ async def list_run_changes(
     List all changes detected in a specific tracker run (paginated).
 
     Optionally filter by change type:
-    - 'new': Newly discovered URLs
+    - 'added': Newly discovered URLs
     - 'removed': URLs that are no longer in the sitemap
-    - 'status_code_change': URLs with HTTP status code changes
+    - 'status_changed': URLs with HTTP status code changes
 
     Returns changes with detailed information about old and new states.
     """
