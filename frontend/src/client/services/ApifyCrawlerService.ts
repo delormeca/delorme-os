@@ -4,6 +4,8 @@
 /* eslint-disable */
 import type { app__controllers__apify_crawler__CrawlStatusResponse } from '../models/app__controllers__apify_crawler__CrawlStatusResponse';
 import type { CrawlControlResponse } from '../models/CrawlControlResponse';
+import type { CrawlDownloadResponse } from '../models/CrawlDownloadResponse';
+import type { CrawlImportRequest } from '../models/CrawlImportRequest';
 import type { CrawlProcessResponse } from '../models/CrawlProcessResponse';
 import type { CrawlStartRequest } from '../models/CrawlStartRequest';
 import type { CrawlStartResponse } from '../models/CrawlStartResponse';
@@ -191,6 +193,82 @@ export class ApifyCrawlerService {
                 'generate_embeddings': generateEmbeddings,
                 'calculate_similarity': calculateSimilarity,
             },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * Download Crawl Json
+     * **Phase 1: Download crawl results from Apify and save to JSON file.**
+     *
+     * This endpoint fetches completed crawl results from Apify and stores them
+     * in a JSON file in storage/crawls/ for later processing.
+     *
+     * **Features:**
+     * - Downloads all 83 data points from Apify dataset
+     * - Stores in JSON format with metadata header
+     * - Returns file path and statistics
+     * - Files persist indefinitely for future imports
+     *
+     * **Usage:**
+     * 1. Wait for crawl to complete (status = SUCCEEDED)
+     * 2. Call this endpoint to download results to JSON
+     * 3. Use returned json_storage_path for Phase 2 import
+     * @param crawlRunId
+     * @returns CrawlDownloadResponse Successful Response
+     * @throws ApiError
+     */
+    public static downloadCrawlJsonApiCrawlCrawlRunIdDownloadJsonGet(
+        crawlRunId: string,
+    ): CancelablePromise<CrawlDownloadResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/crawl/{crawl_run_id}/download-json',
+            path: {
+                'crawl_run_id': crawlRunId,
+            },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * Import Crawl From Json
+     * **Phase 2: Import crawl results from JSON file into database.**
+     *
+     * This endpoint loads the JSON file created by download-json and processes
+     * all items into the database. Can be run multiple times (idempotent).
+     *
+     * **Features:**
+     * - Loads data from persistent JSON file
+     * - Processes all 83 data points per page
+     * - Creates ClientPage and ClientPageVersion records
+     * - Optional embedding generation
+     * - Optional similarity calculation
+     * - Idempotent (can import same data multiple times)
+     *
+     * **Usage:**
+     * 1. Ensure download-json has been called first
+     * 2. Call this endpoint to import JSON data to database
+     * 3. Can re-import if needed (updates existing records)
+     * @param crawlRunId
+     * @param requestBody
+     * @returns CrawlProcessResponse Successful Response
+     * @throws ApiError
+     */
+    public static importCrawlFromJsonApiCrawlCrawlRunIdImportFromJsonPost(
+        crawlRunId: string,
+        requestBody: CrawlImportRequest,
+    ): CancelablePromise<CrawlProcessResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/crawl/{crawl_run_id}/import-from-json',
+            path: {
+                'crawl_run_id': crawlRunId,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
             errors: {
                 422: `Validation Error`,
             },

@@ -3,7 +3,7 @@
  *
  * Provides START/STOP/PAUSE controls for Apify crawls with real-time status monitoring.
  */
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -34,6 +34,8 @@ import {
   HourglassEmpty,
   Timeline,
   Sync,
+  Download,
+  Upload,
 } from '@mui/icons-material';
 import { ModernCard, StandardButton } from '@/components/ui';
 import {
@@ -41,8 +43,9 @@ import {
   useStopCrawl,
   usePauseCrawl,
   useCrawlStatus,
-  useProcessCrawl,
   usePullPagesFromSitemap,
+  useImportCrawlFromJson,
+  useClientCrawls,
 } from '@/hooks/api/useCrawler';
 import { CrawlStartRequest } from '@/client';
 
@@ -72,13 +75,30 @@ export const ApifyCrawlerControlPanel: React.FC<ApifyCrawlerControlPanelProps> =
   const { mutate: startCrawl, isPending: isStarting } = useStartCrawl();
   const { mutate: stopCrawl, isPending: isStopping } = useStopCrawl();
   const { mutate: pauseCrawl, isPending: isPausing } = usePauseCrawl();
-  const { mutate: processCrawl, isPending: isProcessing } = useProcessCrawl();
   const { mutate: pullPages, isPending: isPullingPages } = usePullPagesFromSitemap();
+  const { mutate: importFromJson, isPending: isImportingJson } = useImportCrawlFromJson();
+
+  // Fetch client crawls list
+  const { data: crawlsList } = useClientCrawls(clientId, 10);
 
   // Status monitoring (with automatic polling for active crawls)
   const { data: status, isLoading: isLoadingStatus } = useCrawlStatus(activeCrawlRunId || '', {
     enabled: !!activeCrawlRunId,
   });
+
+  // Auto-load the most recent in-progress or recently completed crawl
+  useEffect(() => {
+    if (!activeCrawlRunId && crawlsList && crawlsList.length > 0) {
+      // Find the most recent crawl that's either in progress or recently completed
+      const recentCrawl = crawlsList.find((crawl: any) =>
+        ['READY', 'RUNNING', 'starting', 'SUCCEEDED', 'ABORTED', 'TIMED-OUT', 'FAILED'].includes(crawl.status)
+      );
+
+      if (recentCrawl) {
+        setActiveCrawlRunId(recentCrawl.id);
+      }
+    }
+  }, [crawlsList, activeCrawlRunId]);
 
   // Determine if crawl is active
   const isActive = status && ['READY', 'RUNNING', 'starting'].includes(status.status);
@@ -129,16 +149,10 @@ export const ApifyCrawlerControlPanel: React.FC<ApifyCrawlerControlPanelProps> =
   // Handle start crawl
   const handleStartCrawl = () => {
     // Parse custom URLs if provided
+    // If no custom URLs, send undefined so backend fetches all URLs from ClientPage table
     const urls = customUrls.trim()
       ? customUrls.split('\n').map(u => u.trim()).filter(Boolean)
-      : baseUrl
-      ? [baseUrl]
-      : undefined;
-
-    if (!urls || urls.length === 0) {
-      alert('Please provide at least one URL to crawl');
-      return;
-    }
+      : undefined;  // Changed: send undefined instead of [baseUrl] to trigger backend URL fetching
 
     const crawlData: CrawlStartRequest = {
       client_id: clientId,
@@ -309,17 +323,59 @@ export const ApifyCrawlerControlPanel: React.FC<ApifyCrawlerControlPanelProps> =
           </>
         )}
 
-        {status?.status === 'SUCCEEDED' && (
-          <StandardButton
-            variant="contained"
-            color="success"
-            startIcon={<CloudDownload />}
-            onClick={handleProcessResults}
-            disabled={isProcessing}
-            size="small"
+        {/* Auto-download status indicator */}
+        {['SUCCEEDED', 'ABORTED', 'TIMED-OUT', 'FAILED'].includes(status?.status || '') &&
+         !status?.json_storage_path &&
+         status?.pages_crawled > 0 && (
+          <Alert
+            severity="info"
+            sx={{
+              py: 0.5,
+              px: 1.5,
+              fontSize: '0.875rem',
+              display: 'flex',
+              alignItems: 'center',
+              '& .MuiAlert-icon': { fontSize: '1.25rem' }
+            }}
           >
-            {isProcessing ? 'Processing...' : 'Process Results'}
-          </StandardButton>
+            <Download sx={{ mr: 1, fontSize: '1rem' }} />
+            Auto-downloading {status?.pages_crawled} pages...
+          </Alert>
+        )}
+
+        {/* JSON ready indicator */}
+        {status?.json_storage_path && (
+          <Alert
+            severity="success"
+            sx={{
+              py: 0.5,
+              px: 1.5,
+              fontSize: '0.875rem',
+              '& .MuiAlert-icon': { fontSize: '1.25rem' }
+            }}
+          >
+            ✓ JSON ready ({status?.pages_crawled} pages)
+          </Alert>
+        )}
+
+        {/* Import from JSON - only shown after auto-download completes */}
+        {status?.json_storage_path && (
+          <Tooltip title="Import crawl data from JSON to database (can run multiple times)">
+            <StandardButton
+              variant="contained"
+              color="primary"
+              startIcon={<Upload />}
+              onClick={() => importFromJson({
+                crawlRunId: activeCrawlRunId!,
+                generateEmbeddings: true,
+                calculateSimilarity: false
+              })}
+              disabled={isImportingJson}
+              size="small"
+            >
+              {isImportingJson ? 'Importing...' : 'Import to Database'}
+            </StandardButton>
+          </Tooltip>
         )}
 
         {activeCrawlRunId && (
@@ -423,15 +479,32 @@ export const ApifyCrawlerControlPanel: React.FC<ApifyCrawlerControlPanelProps> =
         <Alert severity="info" sx={{ mt: 2 }}>
           <AlertTitle>Apify Website Crawler</AlertTitle>
           This crawler uses Apify's cloud infrastructure to crawl websites with full control.
-          Click "Start Crawl" to begin. You can stop or pause anytime.
+          Click "Start Crawl" to begin. Results are automatically downloaded when complete.
+        </Alert>
+      )}
+
+      {/* Partial Crawl Recovery Notice */}
+      {['ABORTED', 'TIMED-OUT'].includes(status?.status || '') && status?.pages_crawled > 0 && (
+        <Alert severity="warning" sx={{ mt: 2 }}>
+          <AlertTitle>Partial Crawl Data Available</AlertTitle>
+          {status.pages_crawled} page{status.pages_crawled > 1 ? 's were' : ' was'} crawled before {status.status === 'ABORTED' ? 'stopping' : 'timeout'}.
+          Data is being automatically downloaded - you've already paid for these API credits!
         </Alert>
       )}
 
       {/* Error Display */}
-      {status?.status === 'FAILED' && (
+      {status?.status === 'FAILED' && status?.pages_crawled > 0 && (
+        <Alert severity="error" sx={{ mt: 2 }}>
+          <AlertTitle>Crawl Failed - Partial Data Available</AlertTitle>
+          The crawl encountered an error, but {status.pages_crawled} page{status.pages_crawled > 1 ? 's were' : ' was'} successfully crawled.
+          Data is being automatically downloaded so you can still import this partial data.
+        </Alert>
+      )}
+
+      {status?.status === 'FAILED' && !status?.pages_crawled && (
         <Alert severity="error" sx={{ mt: 2 }}>
           <AlertTitle>Crawl Failed</AlertTitle>
-          The crawl encountered an error. Check the Apify dashboard for details.
+          The crawl encountered an error before any pages could be crawled. Check the Apify dashboard for details.
         </Alert>
       )}
     </ModernCard>

@@ -560,6 +560,14 @@ class ApifyCrawlRun(UUIDModelBase, table=True):
 
     client_id: uuid.UUID = Field(foreign_key="client.id", nullable=False, index=True)
     apify_run_id: Optional[str] = Field(default=None, index=True)  # Apify platform run ID
+    apify_dataset_id: Optional[str] = Field(
+        default=None,
+        description="Apify dataset ID for retrieving crawl results"
+    )
+    json_storage_path: Optional[str] = Field(
+        default=None,
+        description="Local filesystem path to stored JSON results (e.g., storage/crawls/{id}.json)"
+    )
     apify_actor_id: str = Field(default="apify/website-content-crawler", nullable=False)
     status: str = Field(default="pending", nullable=False, index=True)  # pending, running, completed, failed
 

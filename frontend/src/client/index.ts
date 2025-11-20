@@ -30,6 +30,8 @@ export type { ClientSitemapTest } from './models/ClientSitemapTest';
 export type { ClientSitemapTestResult } from './models/ClientSitemapTestResult';
 export type { ClientUpdate } from './models/ClientUpdate';
 export type { CrawlControlResponse } from './models/CrawlControlResponse';
+export type { CrawlDownloadResponse } from './models/CrawlDownloadResponse';
+export type { CrawlImportRequest } from './models/CrawlImportRequest';
 export type { CrawlProcessResponse } from './models/CrawlProcessResponse';
 export type { CrawlStartRequest } from './models/CrawlStartRequest';
 export type { CrawlStartResponse } from './models/CrawlStartResponse';

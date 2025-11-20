@@ -281,3 +281,100 @@ export const usePullPagesFromSitemap = () => {
     },
   });
 };
+
+/**
+ * Hook to download crawl results to JSON file (Phase 1).
+ *
+ * Fetches completed crawl results from Apify and stores them in a persistent
+ * JSON file for later processing.
+ *
+ * @example
+ * const { mutate: downloadJson, isPending } = useDownloadCrawlJson();
+ * downloadJson("crawl-run-uuid");
+ */
+export const useDownloadCrawlJson = () => {
+  const queryClient = useQueryClient();
+  const { createSnackBar } = useSnackBarContext();
+
+  return useMutation({
+    mutationFn: (crawlRunId: string) =>
+      ApifyCrawlerService.downloadCrawlJsonApiCrawlCrawlRunIdDownloadJsonGet(crawlRunId),
+    onSuccess: (response) => {
+      queryClient.invalidateQueries({
+        queryKey: ["crawl-status", response.crawl_run_id],
+      });
+      createSnackBar({
+        content: `Downloaded ${response.total_items} items to JSON (${response.file_size_mb} MB)`,
+        severity: "success",
+        autoHide: true,
+      });
+    },
+    onError: (error: any) => {
+      const errorMessage = error.body?.detail || error.message || "Failed to download crawl to JSON";
+      createSnackBar({
+        content: errorMessage,
+        severity: "error",
+        autoHide: false,
+      });
+    },
+  });
+};
+
+/**
+ * Hook to import crawl results from JSON file into database (Phase 2).
+ *
+ * Loads the JSON file created by download-json and processes all items
+ * into the database. Can be run multiple times (idempotent).
+ *
+ * @example
+ * const { mutate: importFromJson, isPending } = useImportCrawlFromJson();
+ * importFromJson({
+ *   crawlRunId: "crawl-run-uuid",
+ *   generateEmbeddings: true,
+ *   calculateSimilarity: false
+ * });
+ */
+export const useImportCrawlFromJson = () => {
+  const queryClient = useQueryClient();
+  const { createSnackBar } = useSnackBarContext();
+
+  return useMutation({
+    mutationFn: ({
+      crawlRunId,
+      generateEmbeddings = true,
+      calculateSimilarity = true,
+    }: {
+      crawlRunId: string;
+      generateEmbeddings?: boolean;
+      calculateSimilarity?: boolean;
+    }) =>
+      ApifyCrawlerService.importCrawlFromJsonApiCrawlCrawlRunIdImportFromJsonPost(
+        crawlRunId,
+        { generate_embeddings: generateEmbeddings, calculate_similarity: calculateSimilarity }
+      ),
+    onSuccess: (response) => {
+      queryClient.invalidateQueries({
+        queryKey: ["crawl-status"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["client-crawls"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["client-pages"],
+      });
+      createSnackBar({
+        content: `Successfully imported ${response.pages_processed} pages from JSON! Generated ${response.embeddings_generated} embeddings.`,
+        severity: "success",
+        autoHide: true,
+      });
+    },
+    onError: (error: any) => {
+      const errorMessage = error.body?.detail || error.message || "Failed to import from JSON";
+      createSnackBar({
+        content: errorMessage,
+        severity: "error",
+        autoHide: false,
+      });
+    },
+  });
+};
